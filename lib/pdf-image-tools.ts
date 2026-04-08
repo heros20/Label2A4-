@@ -1,0 +1,70 @@
+"use client"
+
+import { getPdfJs } from "@/lib/pdfjs-client"
+
+export interface RenderedPdfImage {
+  blob: Blob
+  width: number
+  height: number
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max)
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement) {
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error("Impossible de generer l aperçu."))
+        return
+      }
+
+      resolve(blob)
+    }, "image/png")
+  })
+}
+
+export async function renderPdfPageToImage(file: File, pageNumber = 1, scale = 1.4): Promise<RenderedPdfImage> {
+  const pdfjs = await getPdfJs()
+  const inputBytes = new Uint8Array(await file.arrayBuffer())
+  const loadingTask = pdfjs.getDocument({
+    data: inputBytes,
+    verbosity: pdfjs.VerbosityLevel.ERRORS,
+  })
+  const source = await loadingTask.promise
+
+  try {
+    if (!Number.isInteger(pageNumber) || pageNumber < 1 || pageNumber > source.numPages) {
+      throw new Error(`La page ${pageNumber} est hors limites.`)
+    }
+
+    const page = await source.getPage(pageNumber)
+    const viewport = page.getViewport({ scale: clamp(scale, 0.75, 3) })
+    const canvas = document.createElement("canvas")
+    canvas.width = Math.max(1, Math.round(viewport.width))
+    canvas.height = Math.max(1, Math.round(viewport.height))
+
+    const context = canvas.getContext("2d", { alpha: false })
+    if (!context) {
+      throw new Error("Impossible d initialiser le canvas d aperçu.")
+    }
+
+    context.fillStyle = "#ffffff"
+    context.fillRect(0, 0, canvas.width, canvas.height)
+
+    await page.render({
+      canvas,
+      canvasContext: context,
+      viewport,
+    }).promise
+
+    return {
+      blob: await canvasToBlob(canvas),
+      width: canvas.width,
+      height: canvas.height,
+    }
+  } finally {
+    await loadingTask.destroy()
+  }
+}
