@@ -1,55 +1,60 @@
 import { PDFDocument } from "pdf-lib"
+import { getLabelProfile, type LabelCropRule, type LabelProfileId } from "@/lib/label-profiles"
 
 const A4_PORTRAIT = { width: 595.28, height: 841.89 }
 const PAGE_MARGIN = 18
 const GRID_GAP = 12
 const ROWS = 2
 const COLUMNS = 2
+
+// The user wants labels to fill the A4 in this exact order.
 const SLOT_ORDER = [1, 0, 3, 2] as const
-
-export type LabelCropProfile = "chronopost" | "vinted"
-
-const PROFILE_CROP_RULES: Record<
-  LabelCropProfile,
-  {
-    side: "left" | "right"
-    portion: number
-    verticalSide?: "top" | "bottom"
-    verticalPortion?: number
-  }
-> = {
-  chronopost: { side: "right", portion: 0.4 },
-  vinted: { side: "left", portion: 0.54, verticalSide: "top", verticalPortion: 0.4 },
-}
 
 function sanitizePdfName(name: string) {
   return name.toLowerCase().endsWith(".pdf") ? name.slice(0, -4) : name
 }
 
-function cropPageToPortion(page: {
-  getWidth: () => number
-  getHeight: () => number
-  translateContent: (x: number, y: number) => void
-  resetPosition?: () => void
-  setMediaBox: (x: number, y: number, width: number, height: number) => void
-  setCropBox?: (x: number, y: number, width: number, height: number) => void
-  setTrimBox?: (x: number, y: number, width: number, height: number) => void
-  setBleedBox?: (x: number, y: number, width: number, height: number) => void
-  setArtBox?: (x: number, y: number, width: number, height: number) => void
-}, side: "left" | "right", portion: number, verticalSide?: "top" | "bottom", verticalPortion?: number) {
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max)
+}
+
+function normalizeCropRule(cropRule: LabelCropRule): Required<LabelCropRule> {
+  return {
+    side: cropRule.side,
+    portion: clamp(cropRule.portion, 0.01, 1),
+    verticalSide: cropRule.verticalSide ?? "bottom",
+    verticalPortion: clamp(cropRule.verticalPortion ?? 1, 0.01, 1),
+  }
+}
+
+function cropPageToRule(
+  page: {
+    getWidth: () => number
+    getHeight: () => number
+    translateContent: (x: number, y: number) => void
+    resetPosition?: () => void
+    setMediaBox: (x: number, y: number, width: number, height: number) => void
+    setCropBox?: (x: number, y: number, width: number, height: number) => void
+    setTrimBox?: (x: number, y: number, width: number, height: number) => void
+    setBleedBox?: (x: number, y: number, width: number, height: number) => void
+    setArtBox?: (x: number, y: number, width: number, height: number) => void
+  },
+  cropRule: LabelCropRule,
+) {
+  const rule = normalizeCropRule(cropRule)
   const left = 0
   const bottom = 0
   const right = page.getWidth()
   const top = page.getHeight()
   const width = right - left
   const height = top - bottom
-  const keptWidth = width * portion
-  const resolvedVerticalPortion = verticalPortion ?? 1
-  const keptHeight = height * resolvedVerticalPortion
-  const x0 = side === "right" ? left + width * (1 - portion) : left
-  const y0 = verticalSide === "top" ? top - keptHeight : bottom
-  const x1 = side === "right" ? right : left + keptWidth
-  const y1 = verticalSide === "top" ? top : bottom + keptHeight
+
+  const keptWidth = width * rule.portion
+  const keptHeight = height * rule.verticalPortion
+  const x0 = rule.side === "right" ? left + width * (1 - rule.portion) : left
+  const x1 = rule.side === "right" ? right : left + keptWidth
+  const y0 = rule.verticalSide === "top" ? top - keptHeight : bottom
+  const y1 = rule.verticalSide === "top" ? top : bottom + keptHeight
   const croppedWidth = x1 - x0
   const croppedHeight = y1 - y0
 
@@ -90,12 +95,12 @@ export async function getPdfPageCount(file: File) {
   return document.getPageCount()
 }
 
-export async function buildLabelA4Pdf(files: File[], profile: LabelCropProfile) {
+export async function buildLabelA4Pdf(files: File[], profileId: LabelProfileId) {
   if (files.length === 0) {
     throw new Error("Ajoutez au moins un PDF.")
   }
 
-  const cropRule = PROFILE_CROP_RULES[profile]
+  const profile = getLabelProfile(profileId)
   const output = await PDFDocument.create()
   let currentSheet = output.addPage([A4_PORTRAIT.width, A4_PORTRAIT.height])
   let itemIndex = 0
@@ -105,13 +110,7 @@ export async function buildLabelA4Pdf(files: File[], profile: LabelCropProfile) 
     const copiedPages = await output.copyPages(source, source.getPageIndices())
 
     for (const copiedPage of copiedPages) {
-      const croppedSize = cropPageToPortion(
-        copiedPage,
-        cropRule.side,
-        cropRule.portion,
-        cropRule.verticalSide,
-        cropRule.verticalPortion,
-      )
+      const croppedSize = cropPageToRule(copiedPage, profile.crop)
       const embeddedPage = await output.embedPage(copiedPage)
       const slot = getSlotRect(SLOT_ORDER[itemIndex % 4])
       const scale = Math.min(slot.width / croppedSize.width, slot.height / croppedSize.height)
@@ -147,6 +146,7 @@ export async function buildLabelA4Pdf(files: File[], profile: LabelCropProfile) 
   })
 }
 
-export function buildLabelPdfName(files: File[], profile: LabelCropProfile) {
-  return `${sanitizePdfName(files[0].name)}_${profile}_a4_x4.pdf`
+export function buildLabelPdfName(files: File[], profileId: LabelProfileId) {
+  const profile = getLabelProfile(profileId)
+  return `${sanitizePdfName(files[0].name)}_${profile.slug}_a4_x4.pdf`
 }

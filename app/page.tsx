@@ -3,42 +3,23 @@
 import { useEffect, useMemo, useState } from "react"
 import { Download, FileText, MoveDown, MoveUp, Trash2, Upload } from "lucide-react"
 import { downloadBlob } from "@/lib/download"
-import {
-  buildLabelA4Pdf,
-  buildLabelPdfName,
-  getPdfPageCount,
-  type LabelCropProfile,
-} from "@/lib/pdf-tools"
+import { LABEL_PROFILES, type LabelProfileId } from "@/lib/label-profiles"
+import { buildLabelA4Pdf, buildLabelPdfName, getPdfPageCount } from "@/lib/pdf-tools"
 import { cn, formatFileSize } from "@/lib/utils"
 
 type FileWithId = File & { id: string }
 
-const PROFILE_COPY: Record<
-  LabelCropProfile,
-  { title: string; description: string; badge: string }
-> = {
-  chronopost: {
-    title: "Rognage Chronopost",
-    description: "Conserve les 40% de droite uniquement.",
-    badge: "40% droite",
-  },
-  vinted: {
-    title: "Rognage Vinted",
-    description: "Conserve les 54% de gauche et les 40% du haut.",
-    badge: "54% gauche + haut 40%",
-  },
-}
-
 export default function HomePage() {
   const [files, setFiles] = useState<FileWithId[]>([])
   const [focusedFileId, setFocusedFileId] = useState<string | null>(null)
-  const [profile, setProfile] = useState<LabelCropProfile>("chronopost")
+  const [profileId, setProfileId] = useState<LabelProfileId>(LABEL_PROFILES[0].id)
   const [pageCounts, setPageCounts] = useState<Record<string, number>>({})
   const [result, setResult] = useState<{ blob: Blob; name: string } | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [resultError, setResultError] = useState("")
   const [resultUrl, setResultUrl] = useState<string | null>(null)
 
+  const selectedProfile = LABEL_PROFILES.find((profile) => profile.id === profileId) ?? LABEL_PROFILES[0]
   const focusedFile = files.find((file) => file.id === focusedFileId) ?? files[0] ?? null
 
   useEffect(() => {
@@ -89,10 +70,10 @@ export default function HomePage() {
     setIsGenerating(true)
     setResultError("")
 
-    buildLabelA4Pdf(files, profile)
+    buildLabelA4Pdf(files, profileId)
       .then((blob) => {
         if (active) {
-          setResult({ blob, name: buildLabelPdfName(files, profile) })
+          setResult({ blob, name: buildLabelPdfName(files, profileId) })
         }
       })
       .catch((error) => {
@@ -110,11 +91,13 @@ export default function HomePage() {
     return () => {
       active = false
     }
-  }, [files, profile])
+  }, [files, profileId])
 
   const updateFiles = (nextFiles: FileWithId[]) => {
     setFiles(nextFiles)
-    setFocusedFileId((current) => nextFiles.find((file) => file.id === current)?.id ?? nextFiles[0]?.id ?? null)
+    setFocusedFileId(
+      (current) => nextFiles.find((file) => file.id === current)?.id ?? nextFiles[0]?.id ?? null,
+    )
   }
 
   const addFiles = (incomingFiles: File[]) => {
@@ -140,7 +123,6 @@ export default function HomePage() {
     () => files.reduce((sum, file) => sum + (pageCounts[file.id] ?? 0), 0),
     [files, pageCounts],
   )
-
   const totalSheets = Math.ceil(totalLabels / 4)
 
   return (
@@ -151,40 +133,36 @@ export default function HomePage() {
             Fusion + rognage + planche A4 x4
           </div>
           <h1 className="text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl">
-            Glissez vos PDF, choisissez Chronopost ou Vinted, puis sortez des feuilles A4 de 4 etiquettes
+            Glissez vos PDF, choisissez un profil d etiquette, puis sortez des feuilles A4 de 4 etiquettes
           </h1>
           <p className="mt-4 max-w-3xl text-lg leading-8 text-slate-600">
-            Le flux est fixe : fusionner, rogner selon le script choisi, redimensionner automatiquement
+            Le flux reste fixe : fusionner, rogner selon le profil choisi, redimensionner automatiquement
             et placer les etiquettes par 4 sur chaque feuille A4 en commencant en haut a droite.
           </p>
         </div>
 
         <div className="mt-8 grid gap-4 md:grid-cols-2">
-          {(Object.keys(PROFILE_COPY) as LabelCropProfile[]).map((key) => {
-            const item = PROFILE_COPY[key]
-
-            return (
-              <button
-                key={key}
-                type="button"
-                className={cn(
-                  "rounded-[24px] border px-5 py-5 text-left transition",
-                  profile === key
-                    ? "border-violet-500 bg-violet-50 shadow-sm"
-                    : "border-slate-200 bg-white hover:border-violet-300",
-                )}
-                onClick={() => setProfile(key)}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-xl font-semibold text-slate-950">{item.title}</div>
-                  <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                    {item.badge}
-                  </div>
+          {LABEL_PROFILES.map((profile) => (
+            <button
+              key={profile.id}
+              type="button"
+              className={cn(
+                "rounded-[24px] border px-5 py-5 text-left transition",
+                profileId === profile.id
+                  ? "border-violet-500 bg-violet-50 shadow-sm"
+                  : "border-slate-200 bg-white hover:border-violet-300",
+              )}
+              onClick={() => setProfileId(profile.id)}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-xl font-semibold text-slate-950">{profile.title}</div>
+                <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                  {profile.badge}
                 </div>
-                <p className="mt-2 text-sm leading-6 text-slate-600">{item.description}</p>
-              </button>
-            )
-          })}
+              </div>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{profile.description}</p>
+            </button>
+          ))}
         </div>
 
         <label
@@ -210,7 +188,9 @@ export default function HomePage() {
           </div>
           <h2 className="mt-5 text-2xl font-semibold text-slate-950">Glissez deposez vos PDF ici</h2>
           <p className="mt-2 text-slate-600">Le lot est fusionne dans l ordre de la liste, puis compose en A4 x4</p>
-          <p className="mt-1 text-sm text-slate-500">Ordre de placement : haut droite, haut gauche, bas droite, bas gauche</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Ordre de placement : haut droite, haut gauche, bas droite, bas gauche
+          </p>
         </label>
       </section>
 
@@ -292,7 +272,7 @@ export default function HomePage() {
               <h2 className="text-xl font-semibold text-slate-950">Pipeline applique</h2>
               <div className="mt-4 grid gap-3 md:grid-cols-4">
                 <div className="rounded-[20px] bg-slate-50 p-4 text-sm text-slate-700">1. Fusion dans l ordre</div>
-                <div className="rounded-[20px] bg-slate-50 p-4 text-sm text-slate-700">2. Rognage {profile}</div>
+                <div className="rounded-[20px] bg-slate-50 p-4 text-sm text-slate-700">2. Rognage {selectedProfile.shortLabel}</div>
                 <div className="rounded-[20px] bg-slate-50 p-4 text-sm text-slate-700">3. Resize auto</div>
                 <div className="rounded-[20px] bg-slate-50 p-4 text-sm text-slate-700">4. Placement A4 x4</div>
               </div>
@@ -309,7 +289,7 @@ export default function HomePage() {
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
                 <div className="rounded-[20px] bg-slate-50 p-4">
                   <div className="text-sm text-slate-500">Profil</div>
-                  <div className="mt-1 font-medium capitalize text-slate-900">{profile}</div>
+                  <div className="mt-1 font-medium text-slate-900">{selectedProfile.shortLabel}</div>
                 </div>
                 <div className="rounded-[20px] bg-slate-50 p-4">
                   <div className="text-sm text-slate-500">Etiquettes</div>
