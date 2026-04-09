@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Download, FileText, MoveDown, MoveUp, Trash2, Upload } from "lucide-react"
 import { downloadBlob } from "@/lib/download"
 import { LABEL_PROFILES, type LabelProfileId } from "@/lib/label-profiles"
@@ -15,10 +15,10 @@ import { cn, formatFileSize } from "@/lib/utils"
 type FileWithId = File & { id: string }
 
 const SINGLE_LABEL_PLACEMENTS: Array<{ id: SingleLabelSlot; label: string }> = [
-  { id: "top-right", label: "Haut droite" },
   { id: "top-left", label: "Haut gauche" },
-  { id: "bottom-right", label: "Bas droite" },
+  { id: "top-right", label: "Haut droite" },
   { id: "bottom-left", label: "Bas gauche" },
+  { id: "bottom-right", label: "Bas droite" },
 ]
 
 export default function HomePage() {
@@ -31,6 +31,7 @@ export default function HomePage() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [resultError, setResultError] = useState("")
   const [resultUrl, setResultUrl] = useState<string | null>(null)
+  const workspaceRef = useRef<HTMLElement | null>(null)
 
   const selectedProfile = LABEL_PROFILES.find((profile) => profile.id === profileId) ?? LABEL_PROFILES[0]
   const focusedFile = files.find((file) => file.id === focusedFileId) ?? files[0] ?? null
@@ -72,6 +73,17 @@ export default function HomePage() {
       active = false
     }
   }, [files])
+
+  useEffect(() => {
+    if (files.length === 0) {
+      return
+    }
+
+    workspaceRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    })
+  }, [files.length])
 
   useEffect(() => {
     if (files.length === 0) {
@@ -209,7 +221,7 @@ export default function HomePage() {
       </section>
 
       {files.length > 0 && (
-        <section className="mt-8 grid gap-8 xl:grid-cols-[1.05fr_0.95fr]">
+        <section ref={workspaceRef} className="mt-8 grid gap-8 xl:grid-cols-[1.05fr_0.95fr]">
           <div className="space-y-8">
             <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex items-center justify-between gap-4">
