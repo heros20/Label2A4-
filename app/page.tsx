@@ -167,30 +167,6 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div className="mt-8 grid gap-4 md:grid-cols-2">
-          {LABEL_PROFILES.map((profile) => (
-            <button
-              key={profile.id}
-              type="button"
-              className={cn(
-                "rounded-[24px] border px-5 py-5 text-left transition",
-                profileId === profile.id
-                  ? "border-violet-500 bg-violet-50 shadow-sm"
-                  : "border-slate-200 bg-white hover:border-violet-300",
-              )}
-              onClick={() => setProfileId(profile.id)}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-xl font-semibold text-slate-950">{profile.title}</div>
-                <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                  {profile.badge}
-                </div>
-              </div>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{profile.description}</p>
-            </button>
-          ))}
-        </div>
-
         <label
           className={cn(
             "mt-8 flex min-h-[240px] cursor-pointer flex-col items-center justify-center rounded-[28px] border-2 border-dashed border-slate-300 bg-slate-50 px-6 text-center transition",
@@ -218,6 +194,30 @@ export default function HomePage() {
             Ordre de placement : haut droite, haut gauche, bas droite, bas gauche
           </p>
         </label>
+
+        <div className="mt-8 grid gap-4 md:grid-cols-2">
+          {LABEL_PROFILES.map((profile) => (
+            <button
+              key={profile.id}
+              type="button"
+              className={cn(
+                "rounded-[24px] border px-5 py-5 text-left transition",
+                profileId === profile.id
+                  ? "border-violet-500 bg-violet-50 shadow-sm"
+                  : "border-slate-200 bg-white hover:border-violet-300",
+              )}
+              onClick={() => setProfileId(profile.id)}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-xl font-semibold text-slate-950">{profile.title}</div>
+                <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                  {profile.badge}
+                </div>
+              </div>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{profile.description}</p>
+            </button>
+          ))}
+        </div>
       </section>
 
       {files.length > 0 && (
