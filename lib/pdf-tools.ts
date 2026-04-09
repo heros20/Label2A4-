@@ -9,6 +9,16 @@ const COLUMNS = 2
 
 // The user wants labels to fill the A4 in this exact order.
 const SLOT_ORDER = [1, 0, 3, 2] as const
+const SINGLE_LABEL_SLOT_ORDER = ["top-right", "top-left", "bottom-right", "bottom-left"] as const
+
+export type SingleLabelSlot = (typeof SINGLE_LABEL_SLOT_ORDER)[number]
+
+const SINGLE_LABEL_SLOT_MAP: Record<SingleLabelSlot, number> = {
+  "top-right": 1,
+  "top-left": 0,
+  "bottom-right": 3,
+  "bottom-left": 2,
+}
 
 function sanitizePdfName(name: string) {
   return name.toLowerCase().endsWith(".pdf") ? name.slice(0, -4) : name
@@ -95,7 +105,11 @@ export async function getPdfPageCount(file: File) {
   return document.getPageCount()
 }
 
-export async function buildLabelA4Pdf(files: File[], profileId: LabelProfileId) {
+export async function buildLabelA4Pdf(
+  files: File[],
+  profileId: LabelProfileId,
+  singleLabelSlot?: SingleLabelSlot,
+) {
   if (files.length === 0) {
     throw new Error("Ajoutez au moins un PDF.")
   }
@@ -112,7 +126,12 @@ export async function buildLabelA4Pdf(files: File[], profileId: LabelProfileId) 
     for (const copiedPage of copiedPages) {
       const croppedSize = cropPageToRule(copiedPage, profile.crop)
       const embeddedPage = await output.embedPage(copiedPage)
-      const slot = getSlotRect(SLOT_ORDER[itemIndex % 4])
+      const isSingleSourcePdf = files.length === 1
+      const slotIndex =
+        isSingleSourcePdf && singleLabelSlot
+          ? SINGLE_LABEL_SLOT_MAP[singleLabelSlot]
+          : SLOT_ORDER[itemIndex % 4]
+      const slot = getSlotRect(slotIndex)
       const scale = Math.min(slot.width / croppedSize.width, slot.height / croppedSize.height)
       const drawWidth = croppedSize.width * scale
       const drawHeight = croppedSize.height * scale

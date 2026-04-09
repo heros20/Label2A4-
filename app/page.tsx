@@ -4,15 +4,28 @@ import { useEffect, useMemo, useState } from "react"
 import { Download, FileText, MoveDown, MoveUp, Trash2, Upload } from "lucide-react"
 import { downloadBlob } from "@/lib/download"
 import { LABEL_PROFILES, type LabelProfileId } from "@/lib/label-profiles"
-import { buildLabelA4Pdf, buildLabelPdfName, getPdfPageCount } from "@/lib/pdf-tools"
+import {
+  buildLabelA4Pdf,
+  buildLabelPdfName,
+  getPdfPageCount,
+  type SingleLabelSlot,
+} from "@/lib/pdf-tools"
 import { cn, formatFileSize } from "@/lib/utils"
 
 type FileWithId = File & { id: string }
+
+const SINGLE_LABEL_PLACEMENTS: Array<{ id: SingleLabelSlot; label: string }> = [
+  { id: "top-right", label: "Haut droite" },
+  { id: "top-left", label: "Haut gauche" },
+  { id: "bottom-right", label: "Bas droite" },
+  { id: "bottom-left", label: "Bas gauche" },
+]
 
 export default function HomePage() {
   const [files, setFiles] = useState<FileWithId[]>([])
   const [focusedFileId, setFocusedFileId] = useState<string | null>(null)
   const [profileId, setProfileId] = useState<LabelProfileId>(LABEL_PROFILES[0].id)
+  const [singleLabelSlot, setSingleLabelSlot] = useState<SingleLabelSlot>("top-right")
   const [pageCounts, setPageCounts] = useState<Record<string, number>>({})
   const [result, setResult] = useState<{ blob: Blob; name: string } | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -21,6 +34,7 @@ export default function HomePage() {
 
   const selectedProfile = LABEL_PROFILES.find((profile) => profile.id === profileId) ?? LABEL_PROFILES[0]
   const focusedFile = files.find((file) => file.id === focusedFileId) ?? files[0] ?? null
+  const isSingleSourcePdf = files.length === 1
 
   useEffect(() => {
     if (!result?.blob) {
@@ -70,7 +84,7 @@ export default function HomePage() {
     setIsGenerating(true)
     setResultError("")
 
-    buildLabelA4Pdf(files, profileId)
+    buildLabelA4Pdf(files, profileId, singleLabelSlot)
       .then((blob) => {
         if (active) {
           setResult({ blob, name: buildLabelPdfName(files, profileId) })
@@ -91,7 +105,7 @@ export default function HomePage() {
     return () => {
       active = false
     }
-  }, [files, profileId])
+  }, [files, profileId, singleLabelSlot])
 
   const updateFiles = (nextFiles: FileWithId[]) => {
     setFiles(nextFiles)
@@ -277,13 +291,42 @@ export default function HomePage() {
                 <div className="rounded-[20px] bg-slate-50 p-4 text-sm text-slate-700">4. Placement A4 x4</div>
               </div>
             </div>
+
+            {isSingleSourcePdf && (
+              <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="text-xl font-semibold text-slate-950">Placement de l etiquette unique</h2>
+                <p className="mt-2 text-slate-600">
+                  Quand un seul PDF est charge, vous pouvez choisir le quart de feuille A4 a utiliser.
+                </p>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {SINGLE_LABEL_PLACEMENTS.map((placement) => (
+                    <button
+                      key={placement.id}
+                      type="button"
+                      className={cn(
+                        "rounded-[20px] border px-4 py-4 text-left text-sm font-medium transition",
+                        singleLabelSlot === placement.id
+                          ? "border-violet-500 bg-violet-50 text-violet-800"
+                          : "border-slate-200 bg-slate-50 text-slate-700 hover:border-violet-300",
+                      )}
+                      onClick={() => setSingleLabelSlot(placement.id)}
+                    >
+                      {placement.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-8">
             <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
               <h2 className="text-xl font-semibold text-slate-950">Resultat final</h2>
               <p className="mt-2 text-slate-600">
-                Sortie composee par 4 sur feuille A4, en commencant en haut a droite.
+                {isSingleSourcePdf
+                  ? "Sortie placee sur le quart de feuille A4 choisi."
+                  : "Sortie composee par 4 sur feuille A4, en commencant en haut a droite."}
               </p>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -300,6 +343,15 @@ export default function HomePage() {
                   <div className="mt-1 font-medium text-slate-900">{totalSheets || 0}</div>
                 </div>
               </div>
+
+              {isSingleSourcePdf && (
+                <div className="mt-3 rounded-[20px] bg-slate-50 p-4">
+                  <div className="text-sm text-slate-500">Position</div>
+                  <div className="mt-1 font-medium text-slate-900">
+                    {SINGLE_LABEL_PLACEMENTS.find((placement) => placement.id === singleLabelSlot)?.label}
+                  </div>
+                </div>
+              )}
 
               <div className="mt-6 overflow-hidden rounded-[24px] border border-slate-200 bg-slate-50">
                 {resultUrl ? (
