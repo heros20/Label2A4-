@@ -16,7 +16,7 @@ function canvasToBlob(canvas: HTMLCanvasElement) {
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((blob) => {
       if (!blob) {
-        reject(new Error("Impossible de generer l aperçu."))
+        reject(new Error("Impossible de générer l’aperçu."))
         return
       }
 
@@ -25,21 +25,21 @@ function canvasToBlob(canvas: HTMLCanvasElement) {
   })
 }
 
-export async function renderPdfPageToImage(file: File, pageNumber = 1, scale = 1.4): Promise<RenderedPdfImage> {
+export async function renderPdfPageToImage(source: Blob, pageNumber = 1, scale = 1.4): Promise<RenderedPdfImage> {
   const pdfjs = await getPdfJs()
-  const inputBytes = new Uint8Array(await file.arrayBuffer())
+  const inputBytes = new Uint8Array(await source.arrayBuffer())
   const loadingTask = pdfjs.getDocument({
     data: inputBytes,
     verbosity: pdfjs.VerbosityLevel.ERRORS,
   })
-  const source = await loadingTask.promise
+  const pdfDocument = await loadingTask.promise
 
   try {
-    if (!Number.isInteger(pageNumber) || pageNumber < 1 || pageNumber > source.numPages) {
+    if (!Number.isInteger(pageNumber) || pageNumber < 1 || pageNumber > pdfDocument.numPages) {
       throw new Error(`La page ${pageNumber} est hors limites.`)
     }
 
-    const page = await source.getPage(pageNumber)
+    const page = await pdfDocument.getPage(pageNumber)
     const viewport = page.getViewport({ scale: clamp(scale, 0.75, 3) })
     const canvas = document.createElement("canvas")
     canvas.width = Math.max(1, Math.round(viewport.width))
@@ -47,7 +47,7 @@ export async function renderPdfPageToImage(file: File, pageNumber = 1, scale = 1
 
     const context = canvas.getContext("2d", { alpha: false })
     if (!context) {
-      throw new Error("Impossible d initialiser le canvas d aperçu.")
+      throw new Error("Impossible d’initialiser le canvas d’aperçu.")
     }
 
     context.fillStyle = "#ffffff"

@@ -3,7 +3,7 @@ import "./globals.css"
 
 export const metadata: Metadata = {
   title: "Label2A4",
-  description: "Convertissez des PDF d etiquettes d expedition en planches A4 prêtes à imprimer.",
+  description: "Convertissez des PDF d’étiquettes d’expédition en planches A4 prêtes à imprimer.",
   robots: {
     index: false,
     follow: false,

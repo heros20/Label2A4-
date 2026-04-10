@@ -1,17 +1,32 @@
 import { PDFDocument } from "pdf-lib"
-import { getLabelProfile, type LabelCropRule, type LabelProfileId } from "@/lib/label-profiles"
+import {
+  DEFAULT_MANUAL_CROP_RECT,
+  getLabelProfile,
+  type LabelCropRule,
+  type LabelProfileId,
+  type ManualCropRect,
+} from "@/lib/label-profiles"
 
 const A4_PORTRAIT = { width: 595.28, height: 841.89 }
 const PAGE_MARGIN = 18
 const GRID_GAP = 12
 const ROWS = 2
 const COLUMNS = 2
+const MIN_CROP_SIZE = 0.01
 
 // The user wants labels to fill the A4 in this exact order.
 const SLOT_ORDER = [1, 0, 3, 2] as const
 const SINGLE_LABEL_SLOT_ORDER = ["top-right", "top-left", "bottom-right", "bottom-left"] as const
 
 export type SingleLabelSlot = (typeof SINGLE_LABEL_SLOT_ORDER)[number]
+
+type PdfInputFile = File & { id?: string }
+
+export interface BuildLabelOptions {
+  singleLabelSlot?: SingleLabelSlot
+  manualCrop?: ManualCropRect | null
+  manualCropsByFileId?: Record<string, ManualCropRect>
+}
 
 const SINGLE_LABEL_SLOT_MAP: Record<SingleLabelSlot, number> = {
   "top-right": 1,
@@ -28,12 +43,56 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
 }
 
+function applyCropBox(
+  page: {
+    translateContent: (x: number, y: number) => void
+    resetPosition?: () => void
+    setMediaBox: (x: number, y: number, width: number, height: number) => void
+    setCropBox?: (x: number, y: number, width: number, height: number) => void
+    setTrimBox?: (x: number, y: number, width: number, height: number) => void
+    setBleedBox?: (x: number, y: number, width: number, height: number) => void
+    setArtBox?: (x: number, y: number, width: number, height: number) => void
+  },
+  x0: number,
+  y0: number,
+  width: number,
+  height: number,
+) {
+  if (width <= 0 || height <= 0) {
+    throw new Error("Le rognage produit une page vide.")
+  }
+
+  page.translateContent(-x0, -y0)
+  page.resetPosition?.()
+  page.setMediaBox(0, 0, width, height)
+  page.setCropBox?.(0, 0, width, height)
+  page.setTrimBox?.(0, 0, width, height)
+  page.setBleedBox?.(0, 0, width, height)
+  page.setArtBox?.(0, 0, width, height)
+
+  return { width, height }
+}
+
 function normalizeCropRule(cropRule: LabelCropRule): Required<LabelCropRule> {
   return {
     side: cropRule.side,
-    portion: clamp(cropRule.portion, 0.01, 1),
+    portion: clamp(cropRule.portion, MIN_CROP_SIZE, 1),
     verticalSide: cropRule.verticalSide ?? "bottom",
-    verticalPortion: clamp(cropRule.verticalPortion ?? 1, 0.01, 1),
+    verticalPortion: clamp(cropRule.verticalPortion ?? 1, MIN_CROP_SIZE, 1),
+  }
+}
+
+export function normalizeManualCropRect(cropRect: ManualCropRect): ManualCropRect {
+  const x = clamp(cropRect.x, 0, 1 - MIN_CROP_SIZE)
+  const y = clamp(cropRect.y, 0, 1 - MIN_CROP_SIZE)
+  const width = clamp(cropRect.width, MIN_CROP_SIZE, 1 - x)
+  const height = clamp(cropRect.height, MIN_CROP_SIZE, 1 - y)
+
+  return {
+    x,
+    y,
+    width,
+    height,
   }
 }
 
@@ -52,35 +111,40 @@ function cropPageToRule(
   cropRule: LabelCropRule,
 ) {
   const rule = normalizeCropRule(cropRule)
-  const left = 0
-  const bottom = 0
-  const right = page.getWidth()
-  const top = page.getHeight()
-  const width = right - left
-  const height = top - bottom
+  const pageWidth = page.getWidth()
+  const pageHeight = page.getHeight()
 
-  const keptWidth = width * rule.portion
-  const keptHeight = height * rule.verticalPortion
-  const x0 = rule.side === "right" ? left + width * (1 - rule.portion) : left
-  const x1 = rule.side === "right" ? right : left + keptWidth
-  const y0 = rule.verticalSide === "top" ? top - keptHeight : bottom
-  const y1 = rule.verticalSide === "top" ? top : bottom + keptHeight
-  const croppedWidth = x1 - x0
-  const croppedHeight = y1 - y0
+  const keptWidth = pageWidth * rule.portion
+  const keptHeight = pageHeight * rule.verticalPortion
+  const x0 = rule.side === "right" ? pageWidth * (1 - rule.portion) : 0
+  const y0 = rule.verticalSide === "top" ? pageHeight - keptHeight : 0
 
-  if (croppedWidth <= 0 || croppedHeight <= 0) {
-    throw new Error("Le rognage produit une page vide.")
-  }
+  return applyCropBox(page, x0, y0, keptWidth, keptHeight)
+}
 
-  page.translateContent(-x0, -y0)
-  page.resetPosition?.()
-  page.setMediaBox(0, 0, croppedWidth, croppedHeight)
-  page.setCropBox?.(0, 0, croppedWidth, croppedHeight)
-  page.setTrimBox?.(0, 0, croppedWidth, croppedHeight)
-  page.setBleedBox?.(0, 0, croppedWidth, croppedHeight)
-  page.setArtBox?.(0, 0, croppedWidth, croppedHeight)
+function cropPageToManualRect(
+  page: {
+    getWidth: () => number
+    getHeight: () => number
+    translateContent: (x: number, y: number) => void
+    resetPosition?: () => void
+    setMediaBox: (x: number, y: number, width: number, height: number) => void
+    setCropBox?: (x: number, y: number, width: number, height: number) => void
+    setTrimBox?: (x: number, y: number, width: number, height: number) => void
+    setBleedBox?: (x: number, y: number, width: number, height: number) => void
+    setArtBox?: (x: number, y: number, width: number, height: number) => void
+  },
+  cropRect: ManualCropRect,
+) {
+  const rect = normalizeManualCropRect(cropRect)
+  const pageWidth = page.getWidth()
+  const pageHeight = page.getHeight()
+  const x0 = pageWidth * rect.x
+  const y0 = pageHeight * (1 - rect.y - rect.height)
+  const width = pageWidth * rect.width
+  const height = pageHeight * rect.height
 
-  return { width: croppedWidth, height: croppedHeight }
+  return applyCropBox(page, x0, y0, width, height)
 }
 
 function getSlotRect(slotIndex: number) {
@@ -99,22 +163,24 @@ function getSlotRect(slotIndex: number) {
   }
 }
 
-export async function getPdfPageCount(file: File) {
+export async function getPdfPageCount(file: Blob) {
   const bytes = await file.arrayBuffer()
   const document = await PDFDocument.load(bytes)
   return document.getPageCount()
 }
 
 export async function buildLabelA4Pdf(
-  files: File[],
+  files: PdfInputFile[],
   profileId: LabelProfileId,
-  singleLabelSlot?: SingleLabelSlot,
+  options: BuildLabelOptions = {},
 ) {
   if (files.length === 0) {
     throw new Error("Ajoutez au moins un PDF.")
   }
 
   const profile = getLabelProfile(profileId)
+  const manualCropsByFileId = options.manualCropsByFileId ?? {}
+  const fallbackManualCrop = options.manualCrop ?? DEFAULT_MANUAL_CROP_RECT
   const output = await PDFDocument.create()
   let currentSheet = output.addPage([A4_PORTRAIT.width, A4_PORTRAIT.height])
   let itemIndex = 0
@@ -124,12 +190,26 @@ export async function buildLabelA4Pdf(
     const copiedPages = await output.copyPages(source, source.getPageIndices())
 
     for (const copiedPage of copiedPages) {
-      const croppedSize = cropPageToRule(copiedPage, profile.crop)
+      let croppedSize: { width: number; height: number }
+
+      if (profile.mode === "manual") {
+        const fileCrop =
+          (file.id ? manualCropsByFileId[file.id] : undefined) ?? fallbackManualCrop
+
+        croppedSize = cropPageToManualRect(copiedPage, fileCrop)
+      } else if ("cropRect" in profile && profile.cropRect) {
+        croppedSize = cropPageToManualRect(copiedPage, profile.cropRect)
+      } else if ("crop" in profile && profile.crop) {
+        croppedSize = cropPageToRule(copiedPage, profile.crop)
+      } else {
+        throw new Error("Le profil de rognage est incomplet.")
+      }
+
       const embeddedPage = await output.embedPage(copiedPage)
       const isSingleSourcePdf = files.length === 1
       const slotIndex =
-        isSingleSourcePdf && singleLabelSlot
-          ? SINGLE_LABEL_SLOT_MAP[singleLabelSlot]
+        isSingleSourcePdf && options.singleLabelSlot
+          ? SINGLE_LABEL_SLOT_MAP[options.singleLabelSlot]
           : SLOT_ORDER[itemIndex % 4]
       const slot = getSlotRect(slotIndex)
       const scale = Math.min(slot.width / croppedSize.width, slot.height / croppedSize.height)
