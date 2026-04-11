@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f6f7fb;
+  --background: #edf3f8;
   --foreground: #0f172a;
   --card: #ffffff;
-  --muted: #eef2ff;
-  --muted-foreground: #475569;
-  --border: #dbe2f0;
-  --primary: #4f46e5;
+  --muted: #e8f0f6;
+  --muted-foreground: #526072;
+  --border: #d6e2ee;
+  --primary: #0369a1;
   --primary-foreground: #ffffff;
-  --accent: #7c3aed;
+  --accent: #f59e0b;
   --destructive: #dc2626;
 }
 
@@ -19,17 +19,52 @@
 
 html {
   background: var(--background);
+  color-scheme: light;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background: linear-gradient(180deg, #eef2ff 0%, var(--background) 220px);
+  background:
+    radial-gradient(circle at top left, rgba(14, 165, 233, 0.16), transparent 32%),
+    radial-gradient(circle at top right, rgba(245, 158, 11, 0.12), transparent 24%),
+    linear-gradient(180deg, #f8fbfd 0%, #eff5fa 45%, var(--background) 100%);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Aptos", "Segoe UI Variable Text", "Segoe UI", "Helvetica Neue", sans-serif;
+  position: relative;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+  background-size: 36px 36px;
+  mask-image: linear-gradient(180deg, rgba(255, 255, 255, 0.7), transparent 88%);
+  pointer-events: none;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  left: 50%;
+  bottom: -220px;
+  width: min(960px, 88vw);
+  height: 520px;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, rgba(8, 145, 178, 0.12), transparent 68%);
+  filter: blur(18px);
+  pointer-events: none;
 }
 
 button,
 input {
   font: inherit;
+}
+
+::selection {
+  background: #bae6fd;
+  color: #082f49;
 }

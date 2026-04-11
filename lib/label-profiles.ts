@@ -8,42 +8,83 @@ export interface LabelCropRule {
   verticalPortion?: number
 }
 
-export interface LabelProfile {
+export interface ManualCropRect {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+export const DEFAULT_MANUAL_CROP_RECT: ManualCropRect = {
+  x: 0,
+  y: 0,
+  width: 1,
+  height: 1,
+}
+
+interface BaseLabelProfile {
   id: string
   slug: string
   title: string
   shortLabel: string
-  description: string
-  badge: string
-  crop: LabelCropRule
 }
+
+export interface PresetLabelProfile extends BaseLabelProfile {
+  mode: "preset"
+  crop?: LabelCropRule
+  cropRect?: ManualCropRect
+}
+
+export interface ManualLabelProfile extends BaseLabelProfile {
+  mode: "manual"
+}
+
+export type LabelProfile = PresetLabelProfile | ManualLabelProfile
 
 export const LABEL_PROFILES = [
   {
     id: "chronopost",
     slug: "chronopost",
-    title: "Rognage Chronopost",
+    title: "Chronopost",
     shortLabel: "Chronopost",
-    description: "Conserve les 40% de droite uniquement.",
-    badge: "40% droite",
+    mode: "preset",
     crop: {
       side: "right",
       portion: 0.4,
     },
   },
   {
-    id: "vinted",
-    slug: "vinted",
-    title: "Rognage Vinted",
-    shortLabel: "Vinted",
-    description: "Conserve les 54% de gauche et les 40% du haut.",
-    badge: "54% gauche + haut 40%",
+    id: "colissimo",
+    slug: "colissimo",
+    title: "Colissimo",
+    shortLabel: "Colissimo",
+    mode: "preset",
+    cropRect: {
+      x: 0.08,
+      y: 0.32,
+      width: 0.36,
+      height: 0.29,
+    },
+  },
+  {
+    id: "mondial-relay",
+    slug: "mondial-relay",
+    title: "Mondial Relay",
+    shortLabel: "Mondial Relay",
+    mode: "preset",
     crop: {
       side: "left",
       portion: 0.54,
       verticalSide: "top",
       verticalPortion: 0.4,
     },
+  },
+  {
+    id: "manual",
+    slug: "manuel",
+    title: "Rognage manuel",
+    shortLabel: "Manuel",
+    mode: "manual",
   },
 ] as const satisfies readonly LabelProfile[]
 
