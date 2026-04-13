@@ -1,14 +1,18 @@
 "use client"
 
 import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react"
-import { Download, FileText, MoveDown, MoveUp, Trash2, Upload } from "lucide-react"
+import { Download, FileText, MoveDown, MoveUp, RotateCcw, RotateCw, Trash2, Upload } from "lucide-react"
 import { ManualCropEditor } from "@/components/manual-crop-editor"
 import { downloadBlob } from "@/lib/download"
 import {
   DEFAULT_MANUAL_CROP_RECT,
+  DEFAULT_MONDIAL_RELAY_VARIANT_ID,
   LABEL_PROFILES,
+  MONDIAL_RELAY_VARIANTS,
+  getResolvedLabelProfile,
   type LabelProfileId,
   type ManualCropRect,
+  type MondialRelayVariantId,
 } from "@/lib/label-profiles"
 import { renderPdfPageToImage } from "@/lib/pdf-image-tools"
 import {
@@ -16,6 +20,8 @@ import {
   buildLabelPdfName,
   getPdfPageCount,
   normalizeManualCropRect,
+  normalizePdfRotation,
+  type PdfRotation,
   type SingleLabelSlot,
 } from "@/lib/pdf-tools"
 import { cn, formatFileSize } from "@/lib/utils"
@@ -24,6 +30,12 @@ type FileWithId = File & { id: string }
 type PreviewImage = { url: string; width: number; height: number }
 
 const MOBILE_MEDIA_QUERY = "(max-width: 1023px)"
+const PDF_ROTATION_PRESETS: Array<{ value: PdfRotation; label: string }> = [
+  { value: 0, label: "0\u00B0" },
+  { value: 90, label: "90\u00B0" },
+  { value: 180, label: "180\u00B0" },
+  { value: 270, label: "270\u00B0" },
+]
 
 const SINGLE_LABEL_PLACEMENTS: Array<{ id: SingleLabelSlot; label: string }> = [
   { id: "top-left", label: "En haut à gauche" },
@@ -68,8 +80,12 @@ export default function HomePage() {
   const [files, setFiles] = useState<FileWithId[]>([])
   const [focusedFileId, setFocusedFileId] = useState<string | null>(null)
   const [profileId, setProfileId] = useState<LabelProfileId>(LABEL_PROFILES[0].id)
+  const [mondialRelayVariantId, setMondialRelayVariantId] = useState<MondialRelayVariantId>(
+    DEFAULT_MONDIAL_RELAY_VARIANT_ID,
+  )
   const [singleLabelSlot, setSingleLabelSlot] = useState<SingleLabelSlot>("top-right")
   const [manualCropsByFileId, setManualCropsByFileId] = useState<Record<string, ManualCropRect>>({})
+  const [rotationsByFileId, setRotationsByFileId] = useState<Record<string, PdfRotation>>({})
   const [pageCounts, setPageCounts] = useState<Record<string, number>>({})
   const [manualPreview, setManualPreview] = useState<PreviewImage | null>(null)
   const [isLoadingManualPreview, setIsLoadingManualPreview] = useState(false)
@@ -85,14 +101,19 @@ export default function HomePage() {
   const [isLoadingResultPreview, setIsLoadingResultPreview] = useState(false)
   const [resultPreviewError, setResultPreviewError] = useState("")
   const workspaceRef = useRef<HTMLElement | null>(null)
+  const appendFilesInputRef = useRef<HTMLInputElement | null>(null)
 
-  const selectedProfile = LABEL_PROFILES.find((profile) => profile.id === profileId) ?? LABEL_PROFILES[0]
+  const baseSelectedProfile = LABEL_PROFILES.find((profile) => profile.id === profileId) ?? LABEL_PROFILES[0]
+  const selectedProfile = getResolvedLabelProfile(profileId, { mondialRelayVariantId })
   const focusedFile = files.find((file) => file.id === focusedFileId) ?? files[0] ?? null
   const focusedFileIndex = focusedFile ? files.findIndex((file) => file.id === focusedFile.id) : -1
   const focusedManualCrop = focusedFile ? manualCropsByFileId[focusedFile.id] ?? DEFAULT_MANUAL_CROP_RECT : DEFAULT_MANUAL_CROP_RECT
+  const focusedRotation = focusedFile ? rotationsByFileId[focusedFile.id] ?? 0 : 0
   const isSingleSourcePdf = files.length === 1
+  const isMondialRelayProfile = baseSelectedProfile.id === "mondial-relay"
   const isManualProfile = selectedProfile.mode === "manual"
   const deferredManualCropsByFileId = useDeferredValue(manualCropsByFileId)
+  const deferredRotationsByFileId = useDeferredValue(rotationsByFileId)
   const activeManualCropsByFileId = isManualProfile ? deferredManualCropsByFileId : undefined
   const usesImageResultPreview = isMobileViewport
 
@@ -104,6 +125,10 @@ export default function HomePage() {
   const customManualCropCount = useMemo(
     () => files.reduce((sum, file) => sum + (manualCropsByFileId[file.id] ? 1 : 0), 0),
     [files, manualCropsByFileId],
+  )
+  const rotatedFileCount = useMemo(
+    () => files.reduce((sum, file) => sum + ((rotationsByFileId[file.id] ?? 0) !== 0 ? 1 : 0), 0),
+    [files, rotationsByFileId],
   )
 
   useEffect(() => {
@@ -271,7 +296,7 @@ export default function HomePage() {
     setIsLoadingManualPreview(true)
     setManualPreviewError("")
 
-    renderPdfPageToImage(focusedFile)
+    renderPdfPageToImage(focusedFile, 1, 1.4, focusedRotation)
       .then((preview) => {
         if (!active) {
           return
@@ -303,7 +328,7 @@ export default function HomePage() {
         URL.revokeObjectURL(previewUrl)
       }
     }
-  }, [focusedFile, isManualProfile])
+  }, [focusedFile, focusedRotation, isManualProfile])
 
   useEffect(() => {
     if (files.length === 0) {
@@ -318,11 +343,16 @@ export default function HomePage() {
 
     buildLabelA4Pdf(files, profileId, {
       manualCropsByFileId: activeManualCropsByFileId,
+      mondialRelayVariantId,
+      rotationsByFileId: deferredRotationsByFileId,
       singleLabelSlot,
     })
       .then((blob) => {
         if (active) {
-          setResult({ blob, name: buildLabelPdfName(files, profileId) })
+          setResult({
+            blob,
+            name: buildLabelPdfName(files, profileId, { mondialRelayVariantId }),
+          })
         }
       })
       .catch((error) => {
@@ -340,7 +370,7 @@ export default function HomePage() {
     return () => {
       active = false
     }
-  }, [activeManualCropsByFileId, files, profileId, singleLabelSlot])
+  }, [activeManualCropsByFileId, deferredRotationsByFileId, files, mondialRelayVariantId, profileId, singleLabelSlot])
 
   const updateFiles = (nextFiles: FileWithId[]) => {
     setFiles(nextFiles)
@@ -352,6 +382,14 @@ export default function HomePage() {
         nextFiles.flatMap((file) => {
           const crop = current[file.id]
           return crop ? [[file.id, crop] as const] : []
+        }),
+      ),
+    )
+    setRotationsByFileId((current) =>
+      Object.fromEntries(
+        nextFiles.flatMap((file) => {
+          const rotation = current[file.id]
+          return rotation ? [[file.id, rotation] as const] : []
         }),
       ),
     )
@@ -428,6 +466,47 @@ export default function HomePage() {
       setManualCropsByFileId(
         Object.fromEntries(files.map((file) => [file.id, normalized] as const)),
       )
+    })
+  }
+
+  const setRotationForFile = (fileId: string, rotation: number) => {
+    const normalized = normalizePdfRotation(rotation)
+
+    startTransition(() => {
+      setRotationsByFileId((current) => {
+        const next = { ...current }
+
+        if (normalized === 0) {
+          delete next[fileId]
+        } else {
+          next[fileId] = normalized
+        }
+
+        return next
+      })
+    })
+  }
+
+  const rotateFocusedFile = (delta: -90 | 90) => {
+    if (!focusedFile) {
+      return
+    }
+
+    setRotationForFile(focusedFile.id, focusedRotation + delta)
+  }
+
+  const rotateFile = (fileId: string, delta: -90 | 90) => {
+    setRotationForFile(fileId, (rotationsByFileId[fileId] ?? 0) + delta)
+  }
+
+  const applyRotationToAllFiles = (rotation: PdfRotation) => {
+    startTransition(() => {
+      if (rotation === 0) {
+        setRotationsByFileId({})
+        return
+      }
+
+      setRotationsByFileId(Object.fromEntries(files.map((file) => [file.id, rotation] as const)))
     })
   }
 
@@ -571,6 +650,47 @@ export default function HomePage() {
             </button>
           ))}
         </div>
+
+        {isMondialRelayProfile && (
+          <div className="relative mt-4 rounded-[28px] border border-slate-200/80 bg-white/82 p-4 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.2)]">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h3 className="text-base font-semibold text-slate-950">Variantes Mondial Relay</h3>
+                <p className="mt-1 text-sm text-slate-600">
+                  Choisissez la variante de rognage a appliquer au lot.
+                </p>
+              </div>
+              <div className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
+                Variante active :{" "}
+                {MONDIAL_RELAY_VARIANTS.find((variant) => variant.id === mondialRelayVariantId)?.title}
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {MONDIAL_RELAY_VARIANTS.map((variant) => (
+                <button
+                  key={variant.id}
+                  type="button"
+                  className={cn(
+                    "rounded-[22px] border px-4 py-4 text-left transition duration-200",
+                    mondialRelayVariantId === variant.id
+                      ? "border-sky-400 bg-[linear-gradient(135deg,rgba(240,249,255,0.95),rgba(255,255,255,0.96))] shadow-[0_18px_40px_-34px_rgba(2,132,199,0.36)]"
+                      : "border-slate-200/80 bg-slate-50/80 hover:border-slate-300 hover:bg-white",
+                  )}
+                  onClick={() => setMondialRelayVariantId(variant.id)}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="font-medium text-slate-950">{variant.title}</div>
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                      {variant.shortLabel}
+                    </span>
+                  </div>
+                  <div className="mt-2 text-sm text-slate-600">{variant.description}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       {files.length > 0 && (
@@ -584,18 +704,78 @@ export default function HomePage() {
                     {files.length} fichier(s) · {totalLabels || "?"} étiquette(s) · {totalSheets || 0} feuille(s) A4
                   </p>
                 </div>
-                <button
-                  type="button"
-                  className="rounded-full border border-slate-200/80 bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-red-300 hover:text-red-600"
-                  onClick={() => updateFiles([])}
-                >
-                  Vider
-                </button>
+                <div className="flex flex-wrap items-center gap-3">
+                  <input
+                    ref={appendFilesInputRef}
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    multiple
+                    className="hidden"
+                    onChange={(event) => {
+                      addFiles(Array.from(event.target.files ?? []))
+                      event.currentTarget.value = ""
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className={pillButtonClass}
+                    onClick={() => appendFilesInputRef.current?.click()}
+                  >
+                    <Upload className="mr-2 inline h-4 w-4" />
+                    Ajouter des PDF
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-full border border-slate-200/80 bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-red-300 hover:text-red-600"
+                    onClick={() => updateFiles([])}
+                  >
+                    Vider
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-5 rounded-[24px] border border-slate-200/80 bg-slate-50/80 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <div className="text-sm font-medium text-slate-900">Rotation du lot</div>
+                    <div className="mt-1 text-sm text-slate-500">
+                      Appliquez un angle commun a tous les PDF, puis ajustez fichier par fichier si besoin.
+                    </div>
+                  </div>
+                  <div className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">
+                    {rotatedFileCount}/{files.length} fichier(s) pivotes
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {PDF_ROTATION_PRESETS.map((rotationPreset) => {
+                    const allFilesUsePreset =
+                      files.length > 0 &&
+                      files.every((file) => (rotationsByFileId[file.id] ?? 0) === rotationPreset.value)
+
+                    return (
+                      <button
+                        key={rotationPreset.value}
+                        type="button"
+                        className={cn(
+                          "rounded-full border px-4 py-2 text-sm font-medium transition",
+                          allFilesUsePreset
+                            ? "border-sky-400 bg-sky-50 text-sky-900"
+                            : "border-slate-200/80 bg-white text-slate-700 hover:border-sky-300 hover:text-sky-800",
+                        )}
+                        onClick={() => applyRotationToAllFiles(rotationPreset.value)}
+                      >
+                        Tout en {rotationPreset.label}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
 
               <div className="mt-6 space-y-3">
                 {files.map((file, index) => {
                   const hasCustomManualCrop = Boolean(manualCropsByFileId[file.id])
+                  const fileRotation = rotationsByFileId[file.id] ?? 0
 
                   return (
                     <div
@@ -620,6 +800,17 @@ export default function HomePage() {
                           <div className="text-sm text-slate-500">
                             {formatFileSize(file.size)} · {pageCounts[file.id] ?? "?"} page(s)
                           </div>
+                          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                            <span
+                              className={cn(
+                                "rounded-full px-2.5 py-1 font-medium",
+                                fileRotation === 0 ? "bg-slate-100 text-slate-600" : "bg-amber-100 text-amber-800",
+                              )}
+                            >
+                              Rotation {fileRotation}
+                              {"\u00B0"}
+                            </span>
+                          </div>
                           {isManualProfile && (
                             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                               <span
@@ -639,7 +830,28 @@ export default function HomePage() {
                           )}
                         </div>
                       </button>
-                      <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
+                      <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-nowrap">
+                        <button
+                          type="button"
+                          className="rounded-full border border-slate-200/80 bg-white/80 p-2 text-slate-600 transition hover:border-sky-300 hover:text-sky-800"
+                          onClick={() => rotateFile(file.id, -90)}
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded-full border border-slate-200/80 bg-white/80 px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-sky-300 hover:text-sky-800"
+                          onClick={() => setRotationForFile(file.id, 0)}
+                        >
+                          {"0\u00B0"}
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded-full border border-slate-200/80 bg-white/80 p-2 text-slate-600 transition hover:border-sky-300 hover:text-sky-800"
+                          onClick={() => rotateFile(file.id, 90)}
+                        >
+                          <RotateCw className="h-4 w-4" />
+                        </button>
                         <button
                           type="button"
                           className="rounded-full border border-slate-200/80 bg-white/80 p-2 text-slate-600 transition hover:border-sky-300 hover:text-sky-800 disabled:opacity-40"
@@ -703,6 +915,33 @@ export default function HomePage() {
                         </button>
                       </>
                     )}
+                    <button
+                      type="button"
+                      className={pillButtonClass}
+                      disabled={!focusedFile}
+                      onClick={() => rotateFocusedFile(-90)}
+                    >
+                      <RotateCcw className="mr-2 inline h-4 w-4" />
+                      {"-90\u00B0"}
+                    </button>
+                    <button
+                      type="button"
+                      className={pillButtonClass}
+                      disabled={!focusedFile}
+                      onClick={() => focusedFile && setRotationForFile(focusedFile.id, 0)}
+                    >
+                      Rotation {focusedRotation}
+                      {"\u00B0"}
+                    </button>
+                    <button
+                      type="button"
+                      className={pillButtonClass}
+                      disabled={!focusedFile}
+                      onClick={() => rotateFocusedFile(90)}
+                    >
+                      <RotateCw className="mr-2 inline h-4 w-4" />
+                      {"+90\u00B0"}
+                    </button>
                     <button
                       type="button"
                       className={pillButtonClass}
@@ -887,6 +1126,15 @@ export default function HomePage() {
                   <div className="mt-1 font-medium text-slate-900">{totalSheets || 0}</div>
                 </div>
               </div>
+
+              {rotatedFileCount > 0 && (
+                <div className={cn("mt-3", metricClass)}>
+                  <div className="text-sm text-slate-500">Rotation</div>
+                  <div className="mt-1 font-medium text-slate-900">
+                    {rotatedFileCount}/{files.length} fichier(s) avec une orientation adaptee
+                  </div>
+                </div>
+              )}
 
               {isManualProfile && (
                 <div className={cn("mt-3", metricClass)}>
