@@ -92,17 +92,6 @@ function normalizeCropRule(cropRule: LabelCropRule): Required<LabelCropRule> {
   }
 }
 
-function cropRuleToManualRect(cropRule: LabelCropRule): ManualCropRect {
-  const rule = normalizeCropRule(cropRule)
-
-  return normalizeManualCropRect({
-    x: rule.side === "right" ? 1 - rule.portion : 0,
-    y: rule.verticalSide === "bottom" ? 1 - rule.verticalPortion : 0,
-    width: rule.portion,
-    height: rule.verticalPortion,
-  })
-}
-
 export function normalizeManualCropRect(cropRect: ManualCropRect): ManualCropRect {
   const x = clamp(cropRect.x, 0, 1 - MIN_CROP_SIZE)
   const y = clamp(cropRect.y, 0, 1 - MIN_CROP_SIZE)
@@ -141,39 +130,6 @@ function cropPageToRule(
   const y0 = rule.verticalSide === "top" ? pageHeight - keptHeight : 0
 
   return applyCropBox(page, x0, y0, keptWidth, keptHeight)
-}
-
-function rotateManualCropRect(cropRect: ManualCropRect, rotation: PdfRotation) {
-  const rect = normalizeManualCropRect(cropRect)
-
-  if (rotation === 90) {
-    return normalizeManualCropRect({
-      x: rect.y,
-      y: 1 - rect.x - rect.width,
-      width: rect.height,
-      height: rect.width,
-    })
-  }
-
-  if (rotation === 180) {
-    return normalizeManualCropRect({
-      x: 1 - rect.x - rect.width,
-      y: 1 - rect.y - rect.height,
-      width: rect.width,
-      height: rect.height,
-    })
-  }
-
-  if (rotation === 270) {
-    return normalizeManualCropRect({
-      x: 1 - rect.y - rect.height,
-      y: rect.x,
-      width: rect.height,
-      height: rect.width,
-    })
-  }
-
-  return rect
 }
 
 function cropPageToManualRect(
@@ -288,19 +244,19 @@ export async function buildLabelA4Pdf(
 
     for (const copiedPage of copiedPages) {
       const rotation = normalizePdfRotation((file.id ? rotationsByFileId[file.id] : undefined) ?? 0)
-      let displayCropRect: ManualCropRect
+      let croppedSize: { width: number; height: number }
 
       if (profile.mode === "manual") {
-        displayCropRect = (file.id ? manualCropsByFileId[file.id] : undefined) ?? fallbackManualCrop
+        const fileCrop = (file.id ? manualCropsByFileId[file.id] : undefined) ?? fallbackManualCrop
+        croppedSize = cropPageToManualRect(copiedPage, fileCrop)
       } else if ("cropRect" in profile && profile.cropRect) {
-        displayCropRect = profile.cropRect
+        croppedSize = cropPageToManualRect(copiedPage, profile.cropRect)
       } else if ("crop" in profile && profile.crop) {
-        displayCropRect = cropRuleToManualRect(profile.crop)
+        croppedSize = cropPageToRule(copiedPage, profile.crop)
       } else {
         throw new Error("Le profil de rognage est incomplet.")
       }
 
-      const croppedSize = cropPageToManualRect(copiedPage, rotateManualCropRect(displayCropRect, rotation))
       const embeddedPage = await output.embedPage(copiedPage)
       const isSingleSourcePdf = files.length === 1
       const slotIndex =

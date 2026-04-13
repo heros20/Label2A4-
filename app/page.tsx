@@ -296,7 +296,7 @@ export default function HomePage() {
     setIsLoadingManualPreview(true)
     setManualPreviewError("")
 
-    renderPdfPageToImage(focusedFile, 1, 1.4, focusedRotation)
+    renderPdfPageToImage(focusedFile, 1, 1.4)
       .then((preview) => {
         if (!active) {
           return
@@ -328,7 +328,7 @@ export default function HomePage() {
         URL.revokeObjectURL(previewUrl)
       }
     }
-  }, [focusedFile, focusedRotation, isManualProfile])
+  }, [focusedFile, isManualProfile])
 
   useEffect(() => {
     if (files.length === 0) {
@@ -739,7 +739,7 @@ export default function HomePage() {
                   <div>
                     <div className="text-sm font-medium text-slate-900">Rotation du lot</div>
                     <div className="mt-1 text-sm text-slate-500">
-                      Appliquez un angle commun a tous les PDF, puis ajustez fichier par fichier si besoin.
+                      Appliquez un angle commun apres le rognage, puis ajustez fichier par fichier si besoin.
                     </div>
                   </div>
                   <div className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">
