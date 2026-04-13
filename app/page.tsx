@@ -1,9 +1,11 @@
 "use client"
 
+import Link from "next/link"
 import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react"
-import { Download, FileText, MoveDown, MoveUp, RotateCcw, RotateCw, Trash2, Upload } from "lucide-react"
+import { Download, FileText, MoveDown, MoveUp, Printer, RotateCcw, RotateCw, Trash2, Upload } from "lucide-react"
 import { ManualCropEditor } from "@/components/manual-crop-editor"
-import { downloadBlob } from "@/lib/download"
+import { trackClientEvent } from "@/lib/client-analytics"
+import { downloadBlob, printBlob } from "@/lib/download"
 import {
   DEFAULT_MANUAL_CROP_RECT,
   DEFAULT_MONDIAL_RELAY_VARIANT_ID,
@@ -24,10 +26,20 @@ import {
   type PdfRotation,
   type SingleLabelSlot,
 } from "@/lib/pdf-tools"
+import { reportClientError } from "@/lib/client-monitoring"
+import type { AccessSnapshot } from "@/lib/monetization-types"
+import { formatEuroFromCents, getPlanLabel, siteConfig } from "@/lib/site-config"
 import { cn, formatFileSize } from "@/lib/utils"
 
 type FileWithId = File & { id: string }
 type PreviewImage = { url: string; width: number; height: number }
+type AccessResponsePayload = { access?: AccessSnapshot; error?: string }
+type ExportResponsePayload = {
+  allowed?: boolean
+  error?: string
+  reason?: string
+  snapshot?: AccessSnapshot
+}
 
 const MOBILE_MEDIA_QUERY = "(max-width: 1023px)"
 const PDF_ROTATION_PRESETS: Array<{ value: PdfRotation; label: string }> = [
@@ -100,6 +112,11 @@ export default function HomePage() {
   const [resultPreview, setResultPreview] = useState<PreviewImage | null>(null)
   const [isLoadingResultPreview, setIsLoadingResultPreview] = useState(false)
   const [resultPreviewError, setResultPreviewError] = useState("")
+  const [accessSnapshot, setAccessSnapshot] = useState<AccessSnapshot | null>(null)
+  const [isLoadingAccess, setIsLoadingAccess] = useState(true)
+  const [accessError, setAccessError] = useState("")
+  const [exportError, setExportError] = useState("")
+  const [activeExportAction, setActiveExportAction] = useState<"download" | "print" | null>(null)
   const workspaceRef = useRef<HTMLElement | null>(null)
   const appendFilesInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -122,6 +139,14 @@ export default function HomePage() {
     [files, pageCounts],
   )
   const totalSheets = Math.ceil(totalLabels / 4)
+  const estimatedSheetCountForExport = useMemo(() => {
+    if (files.length === 0) {
+      return 0
+    }
+
+    const labels = files.reduce((sum, file) => sum + Math.max(pageCounts[file.id] ?? 1, 1), 0)
+    return Math.max(Math.ceil(labels / 4), 1)
+  }, [files, pageCounts])
   const customManualCropCount = useMemo(
     () => files.reduce((sum, file) => sum + (manualCropsByFileId[file.id] ? 1 : 0), 0),
     [files, manualCropsByFileId],
@@ -130,6 +155,7 @@ export default function HomePage() {
     () => files.reduce((sum, file) => sum + ((rotationsByFileId[file.id] ?? 0) !== 0 ? 1 : 0), 0),
     [files, rotationsByFileId],
   )
+  const premiumPlanLabel = accessSnapshot?.plan && accessSnapshot.plan !== "free" ? getPlanLabel(accessSnapshot.plan) : null
 
   useEffect(() => {
     if (!result?.blob) {
@@ -142,6 +168,53 @@ export default function HomePage() {
 
     return () => URL.revokeObjectURL(url)
   }, [result])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    let active = true
+
+    setIsLoadingAccess(true)
+
+    fetch("/api/access", {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const payload = (await response.json()) as AccessResponsePayload
+
+        if (!response.ok || !payload.access) {
+          throw new Error(payload.error ?? "Impossible de charger votre quota.")
+        }
+
+        if (active) {
+          setAccessSnapshot(payload.access)
+          setAccessError("")
+        }
+      })
+      .catch((error) => {
+        if (!active || (error instanceof DOMException && error.name === "AbortError")) {
+          return
+        }
+
+        reportClientError("access-fetch", error)
+
+        if (active) {
+          setAccessError(
+            "Le statut gratuit/premium n'a pas pu être chargé. Les exports resteront revérifiés au moment du téléchargement.",
+          )
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setIsLoadingAccess(false)
+        }
+      })
+
+    return () => {
+      active = false
+      controller.abort()
+    }
+  }, [])
 
   useEffect(() => {
     const mediaQuery = window.matchMedia(MOBILE_MEDIA_QUERY)
@@ -227,6 +300,7 @@ export default function HomePage() {
       })
       .catch((error) => {
         if (active) {
+          reportClientError("result-preview", error, { page: resultPreviewPage })
           setResultPreview(null)
           setResultPreviewError(error instanceof Error ? error.message : "Impossible de générer l’aperçu du résultat.")
         }
@@ -311,6 +385,9 @@ export default function HomePage() {
       })
       .catch((error) => {
         if (active) {
+          reportClientError("manual-preview", error, {
+            fileName: focusedFile.name,
+          })
           setManualPreview(null)
           setManualPreviewError(error instanceof Error ? error.message : "Impossible de générer l’aperçu du PDF.")
         }
@@ -334,12 +411,14 @@ export default function HomePage() {
     if (files.length === 0) {
       setResult(null)
       setResultError("")
+      setExportError("")
       return
     }
 
     let active = true
     setIsGenerating(true)
     setResultError("")
+    setExportError("")
 
     buildLabelA4Pdf(files, profileId, {
       manualCropsByFileId: activeManualCropsByFileId,
@@ -357,6 +436,10 @@ export default function HomePage() {
       })
       .catch((error) => {
         if (active) {
+          reportClientError("result-build", error, {
+            fileCount: files.length,
+            profileId,
+          })
           setResult(null)
           setResultError(error instanceof Error ? error.message : "Impossible de générer le PDF.")
         }
@@ -371,6 +454,67 @@ export default function HomePage() {
       active = false
     }
   }, [activeManualCropsByFileId, deferredRotationsByFileId, files, mondialRelayVariantId, profileId, singleLabelSlot])
+
+  const applyAccessSnapshot = (snapshot?: AccessSnapshot) => {
+    if (!snapshot) {
+      return
+    }
+
+    setAccessSnapshot(snapshot)
+    setAccessError("")
+  }
+
+  const handleExportAction = async (action: "download" | "print") => {
+    if (!result) {
+      return
+    }
+
+    setActiveExportAction(action)
+    setExportError("")
+
+    try {
+      const response = await fetch("/api/exports", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action,
+          fileName: result.name,
+          sheetCount: estimatedSheetCountForExport || 1,
+        }),
+      })
+
+      const payload = (await response.json()) as ExportResponsePayload
+      applyAccessSnapshot(payload.snapshot)
+
+      if (!response.ok || !payload.allowed) {
+        if (payload.reason === "quota-exceeded") {
+          throw new Error(
+            `Votre quota gratuit du jour est atteint. Passez en illimité pour exporter ${estimatedSheetCountForExport || 1} planche(s) A4 supplémentaire(s).`,
+          )
+        }
+
+        throw new Error(payload.error ?? "Impossible de valider cet export.")
+      }
+
+      if (action === "download") {
+        downloadBlob(result.blob, result.name)
+      } else {
+        printBlob(result.blob)
+      }
+    } catch (error) {
+      reportClientError("protected-export", error, {
+        action,
+        fileName: result.name,
+        sheetCount: estimatedSheetCountForExport || 1,
+      })
+
+      setExportError(error instanceof Error ? error.message : "Impossible de lancer cet export.")
+    } finally {
+      setActiveExportAction(null)
+    }
+  }
 
   const updateFiles = (nextFiles: FileWithId[]) => {
     setFiles(nextFiles)
@@ -578,6 +722,50 @@ export default function HomePage() {
               <span className="rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 shadow-sm">
                 Placement A4 x4 automatique
               </span>
+            </div>
+
+            <div className="mt-6 rounded-[28px] border border-slate-200/80 bg-white/86 p-5 shadow-[0_22px_50px_-40px_rgba(15,23,42,0.28)]">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div className="space-y-1.5">
+                  <div className="text-sm font-semibold uppercase tracking-[0.16em] text-sky-800">
+                    Gratuit et premium
+                  </div>
+                  <div className="text-base font-medium text-slate-900">
+                    {isLoadingAccess
+                      ? "Chargement de votre quota..."
+                      : accessSnapshot?.isPremium
+                        ? `${premiumPlanLabel ?? "Accès premium"} actif`
+                        : `${accessSnapshot?.remainingSheetsToday ?? siteConfig.pricing.freeDailyA4Sheets} planche(s) A4 restante(s) aujourd'hui sur ${accessSnapshot?.dailyLimit ?? siteConfig.pricing.freeDailyA4Sheets}`}
+                  </div>
+                  <p className="max-w-2xl text-sm leading-6 text-slate-600">
+                    {accessSnapshot?.isPremium
+                      ? "Les exports sont illimités sur ce navigateur tant que votre accès premium reste actif."
+                      : `Passez en illimité dès ${formatEuroFromCents(siteConfig.pricing.monthlyPriceCents)} / mois ou prenez un pass 24h pour les gros lots ponctuels.`}
+                  </p>
+                  {accessSnapshot?.expiresAt && (
+                    <p className="text-sm text-slate-500">
+                      Accès actif jusqu'au {new Date(accessSnapshot.expiresAt).toLocaleString("fr-FR")}.
+                    </p>
+                  )}
+                  {accessError && <p className="text-sm text-amber-700">{accessError}</p>}
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  <Link
+                    href="/tarifs"
+                    className="inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white shadow-[0_18px_40px_-30px_rgba(15,23,42,0.45)]"
+                    onClick={() => trackClientEvent("home_pricing_link_clicked", { path: window.location.pathname })}
+                  >
+                    Voir les tarifs
+                  </Link>
+                  <Link
+                    href={accessSnapshot?.isPremium ? "/compte" : "/faq"}
+                    className="inline-flex items-center rounded-full border border-slate-200/80 bg-white px-5 py-3 text-sm font-semibold text-slate-800 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.2)]"
+                  >
+                    {accessSnapshot?.isPremium ? "Ouvrir mon compte" : "Questions fréquentes"}
+                  </Link>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -988,6 +1176,17 @@ export default function HomePage() {
                   )}
                 </div>
 
+                {manualPreviewError && (
+                  <div className="mt-4 rounded-[24px] border border-amber-200 bg-amber-50/90 p-4 text-sm leading-6 text-amber-900">
+                    L'aperçu du PDF a échoué. Vérifiez que le fichier n'est pas corrompu, puis réessayez. Si le
+                    problème persiste, utilisez la page{" "}
+                    <Link href="/contact" className="font-medium underline">
+                      Support
+                    </Link>
+                    .
+                  </div>
+                )}
+
                 <p className="mt-4 text-sm text-slate-500">
                   Sur mobile, affinez aussi la zone avec les champs ci-dessous pour éviter les manipulations trop fines
                   au doigt.
@@ -1219,18 +1418,50 @@ export default function HomePage() {
                 )}
               </div>
 
+              {(resultError || exportError) && (
+                <div className="mt-4 rounded-[24px] border border-amber-200 bg-amber-50/90 p-4 text-sm leading-6 text-amber-900">
+                  <div className="font-semibold">Export ou génération interrompu</div>
+                  <p className="mt-1">{exportError || resultError}</p>
+                  <p className="mt-2">
+                    Vous pouvez retenter avec un autre PDF, consulter les{" "}
+                    <Link href="/faq" className="font-medium underline">
+                      questions fréquentes
+                    </Link>
+                    {" "}ou contacter{" "}
+                    <a href={`mailto:${siteConfig.supportEmail}`} className="font-medium underline">
+                      {siteConfig.supportEmail}
+                    </a>
+                    .
+                  </p>
+                </div>
+              )}
+
               <div className="mt-6 flex flex-wrap items-center gap-4">
                 <button
                   type="button"
                   className="inline-flex items-center rounded-full bg-[linear-gradient(135deg,#0f172a,#0369a1)] px-5 py-3 font-medium text-white shadow-[0_22px_46px_-26px_rgba(3,105,161,0.75)] transition hover:brightness-110 disabled:opacity-50"
-                  disabled={!result}
-                  onClick={() => result && downloadBlob(result.blob, result.name)}
+                  disabled={!result || activeExportAction !== null}
+                  onClick={() => handleExportAction("download")}
                 >
                   <Download className="mr-2 h-4 w-4" />
-                  Télécharger le PDF A4
+                  {activeExportAction === "download" ? "Validation..." : "Télécharger le PDF A4"}
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex items-center rounded-full border border-slate-200/80 bg-white px-5 py-3 font-medium text-slate-800 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.2)] transition hover:border-sky-300 hover:text-sky-800 disabled:opacity-50"
+                  disabled={!result || activeExportAction !== null}
+                  onClick={() => handleExportAction("print")}
+                >
+                  <Printer className="mr-2 h-4 w-4" />
+                  {activeExportAction === "print" ? "Validation..." : "Imprimer"}
                 </button>
                 <div className="text-sm text-slate-500">
                   {isGenerating ? "Recalcul en cours..." : result?.name ?? "En attente de génération"}
+                  {accessSnapshot && !accessSnapshot.isPremium && (
+                    <span className="block text-xs text-slate-400">
+                      Quota restant aujourd'hui : {accessSnapshot.remainingSheetsToday}/{accessSnapshot.dailyLimit}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -1252,12 +1483,21 @@ export default function HomePage() {
               </div>
               <button
                 type="button"
+                className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+                disabled={!result || activeExportAction !== null}
+                onClick={() => handleExportAction("print")}
+              >
+                <Printer className="mr-2 h-4 w-4" />
+                {activeExportAction === "print" ? "Validation..." : "Imprimer"}
+              </button>
+              <button
+                type="button"
                 className="inline-flex items-center rounded-full bg-sky-500 px-4 py-2.5 text-sm font-semibold text-slate-950 disabled:opacity-50"
-                disabled={!result}
-                onClick={() => result && downloadBlob(result.blob, result.name)}
+                disabled={!result || activeExportAction !== null}
+                onClick={() => handleExportAction("download")}
               >
                 <Download className="mr-2 h-4 w-4" />
-                Télécharger
+                {activeExportAction === "download" ? "Validation..." : "Télécharger"}
               </button>
             </div>
           </div>

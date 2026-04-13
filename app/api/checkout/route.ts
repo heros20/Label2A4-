@@ -1,0 +1,112 @@
+import { NextRequest, NextResponse } from "next/server"
+import { ensureAnonymousId, getRequestOrigin } from "@/lib/access-control"
+import type { PremiumPlanId } from "@/lib/monetization-types"
+import { trackServerEvent } from "@/lib/server-analytics"
+import { getStripe, getStripePriceId, isStripeConfigured } from "@/lib/stripe"
+
+export const runtime = "nodejs"
+
+function isPremiumPlanId(value: unknown): value is PremiumPlanId {
+  return value === "monthly" || value === "annual" || value === "day-pass"
+}
+
+export async function POST(request: NextRequest) {
+  const cookieDraft = new NextResponse()
+
+  try {
+    if (!isStripeConfigured()) {
+      return NextResponse.json(
+        { error: "Stripe n'est pas encore configuré sur cet environnement." },
+        { status: 503 },
+      )
+    }
+
+    const payload = (await request.json()) as {
+      immediateAccessConsent?: boolean
+      planId?: PremiumPlanId
+      withdrawalWaiver?: boolean
+    }
+
+    if (!isPremiumPlanId(payload.planId)) {
+      return NextResponse.json({ error: "Offre premium inconnue." }, { status: 400 })
+    }
+
+    if (!payload.immediateAccessConsent || !payload.withdrawalWaiver) {
+      return NextResponse.json(
+        {
+          error:
+            "Vous devez confirmer l'activation immédiate du service et votre renonciation au droit de rétractation avant paiement.",
+        },
+        { status: 400 },
+      )
+    }
+
+    const stripe = getStripe()
+    const anonymousId = ensureAnonymousId(request, cookieDraft)
+    const origin = getRequestOrigin(request)
+    const priceId = getStripePriceId(payload.planId)
+
+    if (!priceId) {
+      return NextResponse.json({ error: "Prix Stripe manquant pour cette offre." }, { status: 503 })
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      allow_promotion_codes: true,
+      billing_address_collection: "auto",
+      cancel_url: `${origin}/paiement/annule`,
+      client_reference_id: anonymousId,
+      custom_text: {
+        submit: {
+          message:
+            "En payant, vous demandez l'activation immédiate du service premium et renoncez à votre droit de rétractation une fois l'accès activé.",
+        },
+      },
+      line_items: [{ price: priceId, quantity: 1 }],
+      locale: "fr",
+      metadata: {
+        anonymousId,
+        immediateAccessConsent: "true",
+        planId: payload.planId,
+        withdrawalWaiver: "true",
+      },
+      mode: payload.planId === "day-pass" ? "payment" : "subscription",
+      success_url: `${origin}/api/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      ...(payload.planId === "day-pass"
+        ? {
+            customer_creation: "if_required" as const,
+            invoice_creation: {
+              enabled: true,
+            },
+            payment_intent_data: {
+              metadata: {
+                anonymousId,
+                immediateAccessConsent: "true",
+                planId: payload.planId,
+                withdrawalWaiver: "true",
+              },
+            },
+          }
+        : {
+            subscription_data: {
+              metadata: {
+                anonymousId,
+                immediateAccessConsent: "true",
+                planId: payload.planId,
+                withdrawalWaiver: "true",
+              },
+            },
+          }),
+    })
+
+    const response = NextResponse.json({ url: session.url })
+    cookieDraft.cookies.getAll().forEach((cookie) => response.cookies.set(cookie))
+    await trackServerEvent(request, "checkout_session_created", {
+      mode: payload.planId === "day-pass" ? "payment" : "subscription",
+      planId: payload.planId,
+    })
+    return response
+  } catch (error) {
+    console.error("[label2a4-checkout]", error)
+    return NextResponse.json({ error: "Impossible de démarrer le paiement." }, { status: 500 })
+  }
+}
