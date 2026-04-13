@@ -12,6 +12,10 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
 }
 
+function normalizeRotation(rotation: number) {
+  return ((Math.round(rotation / 90) * 90) % 360 + 360) % 360
+}
+
 function canvasToBlob(canvas: HTMLCanvasElement) {
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((blob) => {
@@ -25,7 +29,12 @@ function canvasToBlob(canvas: HTMLCanvasElement) {
   })
 }
 
-export async function renderPdfPageToImage(source: Blob, pageNumber = 1, scale = 1.4): Promise<RenderedPdfImage> {
+export async function renderPdfPageToImage(
+  source: Blob,
+  pageNumber = 1,
+  scale = 1.4,
+  rotation = 0,
+): Promise<RenderedPdfImage> {
   const pdfjs = await getPdfJs()
   const inputBytes = new Uint8Array(await source.arrayBuffer())
   const loadingTask = pdfjs.getDocument({
@@ -40,7 +49,10 @@ export async function renderPdfPageToImage(source: Blob, pageNumber = 1, scale =
     }
 
     const page = await pdfDocument.getPage(pageNumber)
-    const viewport = page.getViewport({ scale: clamp(scale, 0.75, 3) })
+    const viewport = page.getViewport({
+      scale: clamp(scale, 0.75, 3),
+      rotation: normalizeRotation((page.rotate ?? 0) + rotation),
+    })
     const canvas = document.createElement("canvas")
     canvas.width = Math.max(1, Math.round(viewport.width))
     canvas.height = Math.max(1, Math.round(viewport.height))

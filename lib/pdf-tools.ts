@@ -1,10 +1,11 @@
-import { PDFDocument } from "pdf-lib"
+import { degrees, PDFDocument } from "pdf-lib"
 import {
   DEFAULT_MANUAL_CROP_RECT,
-  getLabelProfile,
+  getResolvedLabelProfile,
   type LabelCropRule,
   type LabelProfileId,
   type ManualCropRect,
+  type MondialRelayVariantId,
 } from "@/lib/label-profiles"
 
 const A4_PORTRAIT = { width: 595.28, height: 841.89 }
@@ -17,8 +18,10 @@ const MIN_CROP_SIZE = 0.01
 // The user wants labels to fill the A4 in this exact order.
 const SLOT_ORDER = [1, 0, 3, 2] as const
 const SINGLE_LABEL_SLOT_ORDER = ["top-right", "top-left", "bottom-right", "bottom-left"] as const
+const PDF_ROTATIONS = [0, 90, 180, 270] as const
 
 export type SingleLabelSlot = (typeof SINGLE_LABEL_SLOT_ORDER)[number]
+export type PdfRotation = (typeof PDF_ROTATIONS)[number]
 
 type PdfInputFile = File & { id?: string }
 
@@ -26,6 +29,8 @@ export interface BuildLabelOptions {
   singleLabelSlot?: SingleLabelSlot
   manualCrop?: ManualCropRect | null
   manualCropsByFileId?: Record<string, ManualCropRect>
+  mondialRelayVariantId?: MondialRelayVariantId
+  rotationsByFileId?: Record<string, PdfRotation>
 }
 
 const SINGLE_LABEL_SLOT_MAP: Record<SingleLabelSlot, number> = {
@@ -41,6 +46,11 @@ function sanitizePdfName(name: string) {
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
+}
+
+export function normalizePdfRotation(rotation: number): PdfRotation {
+  const normalized = ((Math.round(rotation / 90) * 90) % 360 + 360) % 360
+  return (PDF_ROTATIONS.find((value) => value === normalized) ?? 0) as PdfRotation
 }
 
 function applyCropBox(
@@ -82,6 +92,17 @@ function normalizeCropRule(cropRule: LabelCropRule): Required<LabelCropRule> {
   }
 }
 
+function cropRuleToManualRect(cropRule: LabelCropRule): ManualCropRect {
+  const rule = normalizeCropRule(cropRule)
+
+  return normalizeManualCropRect({
+    x: rule.side === "right" ? 1 - rule.portion : 0,
+    y: rule.verticalSide === "bottom" ? 1 - rule.verticalPortion : 0,
+    width: rule.portion,
+    height: rule.verticalPortion,
+  })
+}
+
 export function normalizeManualCropRect(cropRect: ManualCropRect): ManualCropRect {
   const x = clamp(cropRect.x, 0, 1 - MIN_CROP_SIZE)
   const y = clamp(cropRect.y, 0, 1 - MIN_CROP_SIZE)
@@ -120,6 +141,39 @@ function cropPageToRule(
   const y0 = rule.verticalSide === "top" ? pageHeight - keptHeight : 0
 
   return applyCropBox(page, x0, y0, keptWidth, keptHeight)
+}
+
+function rotateManualCropRect(cropRect: ManualCropRect, rotation: PdfRotation) {
+  const rect = normalizeManualCropRect(cropRect)
+
+  if (rotation === 90) {
+    return normalizeManualCropRect({
+      x: rect.y,
+      y: 1 - rect.x - rect.width,
+      width: rect.height,
+      height: rect.width,
+    })
+  }
+
+  if (rotation === 180) {
+    return normalizeManualCropRect({
+      x: 1 - rect.x - rect.width,
+      y: 1 - rect.y - rect.height,
+      width: rect.width,
+      height: rect.height,
+    })
+  }
+
+  if (rotation === 270) {
+    return normalizeManualCropRect({
+      x: 1 - rect.y - rect.height,
+      y: rect.x,
+      width: rect.height,
+      height: rect.width,
+    })
+  }
+
+  return rect
 }
 
 function cropPageToManualRect(
@@ -163,6 +217,46 @@ function getSlotRect(slotIndex: number) {
   }
 }
 
+function getRotatedSize(size: { width: number; height: number }, rotation: PdfRotation) {
+  if (rotation === 90 || rotation === 270) {
+    return {
+      width: size.height,
+      height: size.width,
+    }
+  }
+
+  return size
+}
+
+function getRotationDrawOffset(
+  rotation: PdfRotation,
+  size: { width: number; height: number },
+  scale: number,
+) {
+  if (rotation === 90) {
+    return {
+      x: 0,
+      y: size.width * scale,
+    }
+  }
+
+  if (rotation === 180) {
+    return {
+      x: size.width * scale,
+      y: size.height * scale,
+    }
+  }
+
+  if (rotation === 270) {
+    return {
+      x: size.height * scale,
+      y: 0,
+    }
+  }
+
+  return { x: 0, y: 0 }
+}
+
 export async function getPdfPageCount(file: Blob) {
   const bytes = await file.arrayBuffer()
   const document = await PDFDocument.load(bytes)
@@ -178,9 +272,12 @@ export async function buildLabelA4Pdf(
     throw new Error("Ajoutez au moins un PDF.")
   }
 
-  const profile = getLabelProfile(profileId)
+  const profile = getResolvedLabelProfile(profileId, {
+    mondialRelayVariantId: options.mondialRelayVariantId,
+  })
   const manualCropsByFileId = options.manualCropsByFileId ?? {}
   const fallbackManualCrop = options.manualCrop ?? DEFAULT_MANUAL_CROP_RECT
+  const rotationsByFileId = options.rotationsByFileId ?? {}
   const output = await PDFDocument.create()
   let currentSheet = output.addPage([A4_PORTRAIT.width, A4_PORTRAIT.height])
   let itemIndex = 0
@@ -190,21 +287,20 @@ export async function buildLabelA4Pdf(
     const copiedPages = await output.copyPages(source, source.getPageIndices())
 
     for (const copiedPage of copiedPages) {
-      let croppedSize: { width: number; height: number }
+      const rotation = normalizePdfRotation((file.id ? rotationsByFileId[file.id] : undefined) ?? 0)
+      let displayCropRect: ManualCropRect
 
       if (profile.mode === "manual") {
-        const fileCrop =
-          (file.id ? manualCropsByFileId[file.id] : undefined) ?? fallbackManualCrop
-
-        croppedSize = cropPageToManualRect(copiedPage, fileCrop)
+        displayCropRect = (file.id ? manualCropsByFileId[file.id] : undefined) ?? fallbackManualCrop
       } else if ("cropRect" in profile && profile.cropRect) {
-        croppedSize = cropPageToManualRect(copiedPage, profile.cropRect)
+        displayCropRect = profile.cropRect
       } else if ("crop" in profile && profile.crop) {
-        croppedSize = cropPageToRule(copiedPage, profile.crop)
+        displayCropRect = cropRuleToManualRect(profile.crop)
       } else {
         throw new Error("Le profil de rognage est incomplet.")
       }
 
+      const croppedSize = cropPageToManualRect(copiedPage, rotateManualCropRect(displayCropRect, rotation))
       const embeddedPage = await output.embedPage(copiedPage)
       const isSingleSourcePdf = files.length === 1
       const slotIndex =
@@ -212,17 +308,20 @@ export async function buildLabelA4Pdf(
           ? SINGLE_LABEL_SLOT_MAP[options.singleLabelSlot]
           : SLOT_ORDER[itemIndex % 4]
       const slot = getSlotRect(slotIndex)
-      const scale = Math.min(slot.width / croppedSize.width, slot.height / croppedSize.height)
-      const drawWidth = croppedSize.width * scale
-      const drawHeight = croppedSize.height * scale
+      const rotatedSize = getRotatedSize(croppedSize, rotation)
+      const scale = Math.min(slot.width / rotatedSize.width, slot.height / rotatedSize.height)
+      const drawWidth = rotatedSize.width * scale
+      const drawHeight = rotatedSize.height * scale
       const x = slot.x + (slot.width - drawWidth) / 2
       const y = slot.y + (slot.height - drawHeight) / 2
+      const drawOffset = getRotationDrawOffset(rotation, croppedSize, scale)
 
       currentSheet.drawPage(embeddedPage, {
-        x,
-        y,
-        width: drawWidth,
-        height: drawHeight,
+        x: x + drawOffset.x,
+        y: y + drawOffset.y,
+        xScale: scale,
+        yScale: scale,
+        rotate: degrees(-rotation),
       })
 
       itemIndex += 1
@@ -245,7 +344,13 @@ export async function buildLabelA4Pdf(
   })
 }
 
-export function buildLabelPdfName(files: File[], profileId: LabelProfileId) {
-  const profile = getLabelProfile(profileId)
+export function buildLabelPdfName(
+  files: File[],
+  profileId: LabelProfileId,
+  options: { mondialRelayVariantId?: MondialRelayVariantId } = {},
+) {
+  const profile = getResolvedLabelProfile(profileId, {
+    mondialRelayVariantId: options.mondialRelayVariantId,
+  })
   return `${sanitizePdfName(files[0].name)}_${profile.slug}_a4_x4.pdf`
 }
