@@ -4,6 +4,9 @@ export type ActivePlan = "free" | PremiumPlanId
 
 export interface AccessSnapshot {
   anonymousId: string
+  userId?: string | null
+  userEmail?: string | null
+  isAuthenticated: boolean
   plan: ActivePlan
   isPremium: boolean
   dayKey: string

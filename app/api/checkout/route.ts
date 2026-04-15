@@ -1,13 +1,32 @@
 import { NextRequest, NextResponse } from "next/server"
 import { ensureAnonymousId, getRequestOrigin } from "@/lib/access-control"
+import { getOrCreateStripeCustomerForUser } from "@/lib/billing-service"
 import type { PremiumPlanId } from "@/lib/monetization-types"
 import { trackServerEvent } from "@/lib/server-analytics"
 import { getStripe, getStripePriceId, isStripeConfigured } from "@/lib/stripe"
+import { getAuthenticatedUser } from "@/lib/supabase/auth"
+import { isSupabaseAuthConfigured } from "@/lib/supabase/config"
 
 export const runtime = "nodejs"
 
 function isPremiumPlanId(value: unknown): value is PremiumPlanId {
   return value === "monthly" || value === "annual" || value === "day-pass"
+}
+
+function buildStripeMetadata(input: {
+  anonymousId: string
+  planId: PremiumPlanId
+  userEmail?: string | null
+  userId?: string
+}) {
+  return {
+    anonymousId: input.anonymousId,
+    immediateAccessConsent: "true",
+    planId: input.planId,
+    ...(input.userId ? { userId: input.userId } : {}),
+    ...(input.userEmail ? { email: input.userEmail } : {}),
+    withdrawalWaiver: "true",
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -43,18 +62,45 @@ export async function POST(request: NextRequest) {
 
     const stripe = getStripe()
     const anonymousId = ensureAnonymousId(request, cookieDraft)
+    const authenticatedUser = await getAuthenticatedUser(request, cookieDraft)
+    const authModeEnabled = isSupabaseAuthConfigured()
     const origin = getRequestOrigin(request)
     const priceId = getStripePriceId(payload.planId)
+
+    if (authModeEnabled && !authenticatedUser) {
+      return NextResponse.json(
+        {
+          code: "auth_required",
+          error: "Connectez-vous pour continuer votre achat premium.",
+          redirectTo: `/compte?checkoutPlan=${encodeURIComponent(payload.planId)}`,
+        },
+        { status: 401 },
+      )
+    }
 
     if (!priceId) {
       return NextResponse.json({ error: "Prix Stripe manquant pour cette offre." }, { status: 503 })
     }
 
+    const stripeMetadata = buildStripeMetadata({
+      anonymousId,
+      planId: payload.planId,
+      userEmail: authenticatedUser?.email,
+      userId: authenticatedUser?.id,
+    })
+    const stripeCustomerId = authenticatedUser
+      ? await getOrCreateStripeCustomerForUser({
+          userId: authenticatedUser.id,
+          email: authenticatedUser.email,
+        })
+      : null
+
     const session = await stripe.checkout.sessions.create({
       allow_promotion_codes: true,
       billing_address_collection: "auto",
       cancel_url: `${origin}/paiement/annule`,
-      client_reference_id: anonymousId,
+      client_reference_id: authenticatedUser?.id ?? anonymousId,
+      ...(stripeCustomerId ? { customer: stripeCustomerId } : {}),
       custom_text: {
         submit: {
           message:
@@ -63,37 +109,26 @@ export async function POST(request: NextRequest) {
       },
       line_items: [{ price: priceId, quantity: 1 }],
       locale: "fr",
-      metadata: {
-        anonymousId,
-        immediateAccessConsent: "true",
-        planId: payload.planId,
-        withdrawalWaiver: "true",
-      },
+      metadata: stripeMetadata,
       mode: payload.planId === "day-pass" ? "payment" : "subscription",
       success_url: `${origin}/api/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       ...(payload.planId === "day-pass"
         ? {
-            customer_creation: "if_required" as const,
+            ...(!stripeCustomerId
+              ? {
+                  customer_creation: "if_required" as const,
+                }
+              : {}),
             invoice_creation: {
               enabled: true,
             },
             payment_intent_data: {
-              metadata: {
-                anonymousId,
-                immediateAccessConsent: "true",
-                planId: payload.planId,
-                withdrawalWaiver: "true",
-              },
+              metadata: stripeMetadata,
             },
           }
         : {
             subscription_data: {
-              metadata: {
-                anonymousId,
-                immediateAccessConsent: "true",
-                planId: payload.planId,
-                withdrawalWaiver: "true",
-              },
+              metadata: stripeMetadata,
             },
           }),
     })

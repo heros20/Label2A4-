@@ -739,7 +739,7 @@ export default function HomePage() {
                   </div>
                   <p className="max-w-2xl text-sm leading-6 text-slate-600">
                     {accessSnapshot?.isPremium
-                      ? "Les exports sont illimités sur ce navigateur tant que votre accès premium reste actif."
+                      ? "Les exports sont illimités tant que votre accès premium reste actif."
                       : `Passez en illimité dès ${formatEuroFromCents(siteConfig.pricing.monthlyPriceCents)} / mois ou prenez un pass 24h pour les gros lots ponctuels.`}
                   </p>
                   {accessSnapshot?.expiresAt && (

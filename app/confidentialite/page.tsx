@@ -10,7 +10,7 @@ export default function ConfidentialitePage() {
   return (
     <PageShell
       title="Politique de confidentialité"
-      intro="Cette page décrit les données traitées par le service, leur finalité, leur durée de conservation et l'usage de la mesure d'audience."
+      intro=""
     >
       <LegalWarning />
 
@@ -18,8 +18,8 @@ export default function ConfidentialitePage() {
         <h2 className="text-xl font-semibold text-slate-950">1. Données traitées</h2>
         <p>
           Le site traite les fichiers PDF déposés pour produire le résultat demandé, les identifiants techniques
-          nécessaires au quota gratuit, les informations de paiement transmises par Stripe et les données minimales de
-          support si vous nous contactez.
+          nécessaires au quota gratuit et à la prévention d&apos;abus, les informations de paiement transmises par Stripe
+          et les données minimales de support si vous nous contactez.
         </p>
       </section>
 
@@ -49,8 +49,8 @@ export default function ConfidentialitePage() {
         </p>
         <p>
           Les cookies techniques et informations d&apos;accès sont conservés pendant la durée strictement nécessaire au
-          fonctionnement du service. Les journaux techniques liés aux erreurs, au quota et à la prévention d&apos;abus
-          sont conservés pendant {siteConfig.dataHandling.technicalLogRetentionDays} jours.
+          fonctionnement du service. Les journaux techniques et données minimales liées au quota et à la prévention
+          d&apos;abus sont conservés pendant {siteConfig.dataHandling.technicalLogRetentionDays} jours.
         </p>
       </section>
 

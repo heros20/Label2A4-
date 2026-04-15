@@ -9,13 +9,14 @@ export default function CookiesPage() {
   return (
     <PageShell
       title="Politique cookies"
-      intro="Cette page décrit les cookies nécessaires au fonctionnement du site et la mesure d'audience optionnelle."
+      intro=""
     >
       <section className="space-y-3">
         <h2 className="text-xl font-semibold text-slate-950">Cookies strictement nécessaires</h2>
         <p>
-          Le site utilise des cookies techniques pour mémoriser votre identifiant anonyme, votre état d&apos;accès gratuit
-          ou premium, et assurer le fonctionnement du quota, du paiement et de la résiliation.
+          Le site utilise des cookies techniques pour mémoriser votre identifiant anonyme et votre état d&apos;accès
+          premium. Le quota gratuit peut aussi s&apos;appuyer sur un stockage serveur minimal afin d&apos;éviter qu&apos;un
+          simple vidage du cache ou des cookies ne réinitialise la limite quotidienne.
         </p>
       </section>
 

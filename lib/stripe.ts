@@ -12,6 +12,10 @@ export function isStripeConfigured() {
   )
 }
 
+export function getStripeWebhookSecret() {
+  return process.env.STRIPE_WEBHOOK_SECRET ?? ""
+}
+
 export function getStripe() {
   const secretKey = process.env.STRIPE_SECRET_KEY
 
@@ -36,4 +40,24 @@ export function getStripePriceId(planId: PremiumPlanId) {
   }
 
   return process.env.STRIPE_PRICE_DAY_PASS ?? ""
+}
+
+export function getPlanIdFromStripePriceId(priceId: string | undefined | null): PremiumPlanId | null {
+  if (!priceId) {
+    return null
+  }
+
+  if (priceId === process.env.STRIPE_PRICE_MONTHLY) {
+    return "monthly"
+  }
+
+  if (priceId === process.env.STRIPE_PRICE_ANNUAL) {
+    return "annual"
+  }
+
+  if (priceId === process.env.STRIPE_PRICE_DAY_PASS) {
+    return "day-pass"
+  }
+
+  return null
 }

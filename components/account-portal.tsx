@@ -2,11 +2,15 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
+import { AccountAuthCard } from "@/components/account-auth-card"
 import { BillingPortalButton } from "@/components/billing-portal-button"
+import { CheckoutButton } from "@/components/checkout-button"
 import { trackClientEvent } from "@/lib/client-analytics"
 import { reportClientError } from "@/lib/client-monitoring"
-import type { AccessSnapshot } from "@/lib/monetization-types"
-import { getPlanLabel, siteConfig } from "@/lib/site-config"
+import type { AccessSnapshot, PremiumPlanId } from "@/lib/monetization-types"
+import { getPlanLabel, getPlanPriceLabel, siteConfig } from "@/lib/site-config"
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
+import { isSupabaseAuthConfigured } from "@/lib/supabase/config"
 
 type AccessResponsePayload = { access?: AccessSnapshot; error?: string }
 
@@ -21,79 +25,108 @@ function formatDate(value?: string | null) {
   return new Date(value).toLocaleString("fr-FR")
 }
 
+function isCheckoutPlanId(value: string | null): value is PremiumPlanId {
+  return value === "monthly" || value === "annual" || value === "day-pass"
+}
+
 export function AccountPortal() {
   const [accessSnapshot, setAccessSnapshot] = useState<AccessSnapshot | null>(null)
+  const [checkoutPlanId, setCheckoutPlanId] = useState<PremiumPlanId | null>(null)
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(true)
+  const accountsEnabled = isSupabaseAuthConfigured()
+
+  const loadAccessSnapshot = async () => {
+    setIsLoading(true)
+
+    try {
+      const response = await fetch("/api/access", {
+        cache: "no-store",
+      })
+      const payload = (await response.json()) as AccessResponsePayload
+
+      if (!response.ok || !payload.access) {
+        throw new Error(payload.error ?? "Impossible de charger votre espace client.")
+      }
+
+      setAccessSnapshot(payload.access)
+      setError("")
+    } catch (caughtError) {
+      reportClientError("account-portal", caughtError)
+      setError(
+        "Impossible de charger votre espace client pour le moment. Réessayez dans quelques instants.",
+      )
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const controller = new AbortController()
-    let active = true
+    void loadAccessSnapshot()
+  }, [])
 
-    fetch("/api/access", {
-      cache: "no-store",
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        const payload = (await response.json()) as AccessResponsePayload
+  useEffect(() => {
+    const planId = new URLSearchParams(window.location.search).get("checkoutPlan")
 
-        if (!response.ok || !payload.access) {
-          throw new Error(payload.error ?? "Impossible de charger votre espace client.")
-        }
-
-        if (active) {
-          setAccessSnapshot(payload.access)
-          setError("")
-        }
-      })
-      .catch((caughtError) => {
-        if (!active || (caughtError instanceof DOMException && caughtError.name === "AbortError")) {
-          return
-        }
-
-        reportClientError("account-portal", caughtError)
-
-        if (active) {
-          setError(
-            "Impossible de charger votre état d’abonnement pour ce navigateur. Réessayez dans quelques instants.",
-          )
-        }
-      })
-      .finally(() => {
-        if (active) {
-          setIsLoading(false)
-        }
-      })
-
-    return () => {
-      active = false
-      controller.abort()
+    if (isCheckoutPlanId(planId)) {
+      setCheckoutPlanId(planId)
     }
   }, [])
 
+  useEffect(() => {
+    if (!accountsEnabled) {
+      return
+    }
+
+    const supabase = getSupabaseBrowserClient()
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      void loadAccessSnapshot()
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [accountsEnabled])
+
   const planLabel =
     accessSnapshot?.plan && accessSnapshot.plan !== "free" ? getPlanLabel(accessSnapshot.plan) : "Accès gratuit"
+  const checkoutPlanLabel = checkoutPlanId ? getPlanLabel(checkoutPlanId) : null
+  const checkoutPlanPriceLabel = checkoutPlanId ? getPlanPriceLabel(checkoutPlanId) : null
 
   return (
     <div className="space-y-6">
       <section className={cardClass}>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <div className="text-sm font-semibold uppercase tracking-[0.16em] text-sky-800">Mon accès</div>
+            <div className="text-sm font-semibold uppercase tracking-[0.16em] text-sky-800">Compte et accès</div>
             <h2 className="mt-2 text-2xl font-semibold text-slate-950">
               {isLoading ? "Chargement..." : planLabel}
             </h2>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-              Cet espace vous permet de vérifier l’état du plan actif sur ce navigateur et d’ouvrir le portail Stripe
-              pour la facturation, les reçus, le moyen de paiement et la résiliation.
+              {accountsEnabled
+                ? "Votre compte Label2A4 centralise vos achats, votre portail Stripe et vos accès premium sur tous vos appareils."
+                : "Cet espace vous permet de vérifier votre état d'accès, votre quota et vos liens de facturation."}
             </p>
           </div>
 
           <div className="rounded-[20px] border border-slate-200/80 bg-slate-50/80 px-4 py-3 text-sm text-slate-600">
             <div>
               <strong>Statut :</strong>{" "}
-              {isLoading ? "Chargement..." : accessSnapshot?.isPremium ? "Premium actif" : "Gratuit"}
+              {isLoading
+                ? "Chargement..."
+                : accessSnapshot?.isPremium
+                  ? "Premium actif"
+                  : accessSnapshot?.isAuthenticated
+                    ? "Compte connecté"
+                    : "Invité"}
             </div>
+            {accessSnapshot?.userEmail && (
+              <div className="mt-1">
+                <strong>Email :</strong> {accessSnapshot.userEmail}
+              </div>
+            )}
             {accessSnapshot?.subscriptionStatus && (
               <div className="mt-1">
                 <strong>État Stripe :</strong> {accessSnapshot.subscriptionStatus}
@@ -114,6 +147,47 @@ export function AccountPortal() {
         </section>
       )}
 
+      {accountsEnabled && (
+        <section id="connexion" className={cardClass}>
+          <h2 className="text-xl font-semibold text-slate-950">
+            {checkoutPlanId ? "Connexion et achat premium" : "Connexion"}
+          </h2>
+          <p className="mt-3 text-sm leading-6 text-slate-600">
+            {checkoutPlanId && checkoutPlanLabel && !accessSnapshot?.isAuthenticated
+              ? `Vous avez choisi ${checkoutPlanLabel}${checkoutPlanPriceLabel ? ` (${checkoutPlanPriceLabel})` : ""}. Connectez-vous avec votre email pour rattacher l'achat à votre compte avant le paiement.`
+              : "Connectez-vous avec votre email pour rattacher vos achats à un compte et retrouver votre accès premium sur tous vos appareils."}
+          </p>
+          <div className="mt-5 max-w-md">
+            <AccountAuthCard
+              email={accessSnapshot?.userEmail}
+              isAuthenticated={Boolean(accessSnapshot?.isAuthenticated)}
+              onSessionChanged={loadAccessSnapshot}
+            />
+          </div>
+          {checkoutPlanId && accessSnapshot?.isAuthenticated && (
+            <div className="mt-5 max-w-md rounded-[20px] border border-sky-100 bg-sky-50/70 p-4">
+              {accessSnapshot.isPremium ? (
+                <p className="text-sm leading-6 text-sky-950">
+                  Votre accès premium est déjà actif. Vous pouvez retrouver vos informations de facturation plus bas.
+                </p>
+              ) : (
+                <>
+                  <p className="mb-4 text-sm leading-6 text-sky-950">
+                    Compte connecté. Vous pouvez maintenant continuer vers le paiement Stripe pour{" "}
+                    <strong>{checkoutPlanLabel}</strong>.
+                  </p>
+                  <CheckoutButton
+                    planId={checkoutPlanId}
+                    label="Continuer vers le paiement"
+                    className="w-full bg-slate-950 text-white hover:bg-slate-800"
+                  />
+                </>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
       <div className="grid gap-4 lg:grid-cols-2">
         <section className={cardClass}>
           <h2 className="text-xl font-semibold text-slate-950">Utilisation</h2>
@@ -121,14 +195,14 @@ export function AccountPortal() {
             {isLoading
               ? "Chargement du quota en cours."
               : accessSnapshot?.isPremium
-                ? "Votre plan premium supprime la limite quotidienne d’export sur ce navigateur."
-                : `Il vous reste ${accessSnapshot?.remainingSheetsToday ?? siteConfig.pricing.freeDailyA4Sheets} planche(s) A4 aujourd’hui sur ${accessSnapshot?.dailyLimit ?? siteConfig.pricing.freeDailyA4Sheets}.`}
+                ? "Votre plan premium supprime la limite quotidienne d'export tant qu'il reste actif."
+                : `Il vous reste ${accessSnapshot?.remainingSheetsToday ?? siteConfig.pricing.freeDailyA4Sheets} planche(s) A4 aujourd'hui sur ${accessSnapshot?.dailyLimit ?? siteConfig.pricing.freeDailyA4Sheets}.`}
           </p>
           {!accessSnapshot?.isPremium && (
             <div className="mt-5">
               <Link
                 href="/tarifs"
-                className="inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white"
+                className="inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
                 onClick={() => trackClientEvent("account_upgrade_clicked", { path: window.location.pathname })}
               >
                 Passer en premium
@@ -153,13 +227,15 @@ export function AccountPortal() {
             ) : (
               <div className="space-y-3 text-sm leading-6 text-slate-600">
                 <p>
-                  {accessSnapshot?.paymentsAvailable
-                    ? "Le portail sera disponible dès qu’un abonnement ou un achat facturable sera rattaché à ce navigateur."
-                    : "Le portail Stripe n’est pas encore disponible sur cet environnement."}
+                  {!accessSnapshot?.paymentsAvailable
+                    ? "Le portail Stripe n'est pas encore disponible sur cet environnement."
+                    : accountsEnabled && !accessSnapshot?.isAuthenticated
+                      ? "Connectez-vous d'abord à votre compte pour retrouver vos achats et votre portail de facturation."
+                      : "Le portail apparaîtra dès qu'un achat Stripe sera rattaché à ce compte."}
                 </p>
                 <Link
                   href="/tarifs"
-                  className="inline-flex items-center rounded-full border border-slate-200/80 bg-white px-5 py-3 text-sm font-semibold text-slate-800"
+                  className="inline-flex items-center rounded-full border border-slate-200/80 bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-slate-300 hover:bg-slate-50"
                   onClick={() => trackClientEvent("account_upgrade_clicked", { path: window.location.pathname })}
                 >
                   Voir les offres
@@ -174,9 +250,9 @@ export function AccountPortal() {
         <section className={cardClass}>
           <h2 className="text-xl font-semibold text-slate-950">Ce que couvre cet espace</h2>
           <div className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
-            <p>1. Vérifier le plan actif sur ce navigateur.</p>
+            <p>1. Vérifier votre plan actif et votre quota restant.</p>
             <p>2. Ouvrir le portail Stripe pour les reçus, la carte bancaire et la résiliation.</p>
-            <p>3. Revenir rapidement vers les CGV, le remboursement et le support.</p>
+            <p>3. Retrouver vos accès premium depuis n'importe quel appareil connecté au même compte.</p>
           </div>
         </section>
 
@@ -184,7 +260,7 @@ export function AccountPortal() {
           <h2 className="text-xl font-semibold text-slate-950">Aide</h2>
           <div className="mt-3 space-y-3 text-sm leading-6 text-slate-600">
             <p>
-              Si votre abonnement n’apparaît pas sur ce navigateur ou si le portail n’est pas accessible, contactez{" "}
+              Si votre achat n'apparaît pas sur votre compte ou si le portail n'est pas accessible, contactez{" "}
               <a href={`mailto:${siteConfig.supportEmail}`} className="font-medium text-sky-800 hover:underline">
                 {siteConfig.supportEmail}
               </a>

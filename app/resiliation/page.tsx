@@ -11,7 +11,7 @@ export default function ResiliationPage() {
   return (
     <PageShell
       title="Résiliation"
-      intro="La résiliation doit rester accessible en ligne si l’abonnement a été souscrit en ligne."
+      intro=""
     >
       <section className="space-y-3">
         <h2 className="text-xl font-semibold text-slate-950">Résilier en ligne</h2>

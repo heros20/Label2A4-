@@ -6,11 +6,19 @@ import { trackClientEvent } from "@/lib/client-analytics"
 import { reportClientError } from "@/lib/client-monitoring"
 import type { PremiumPlanId } from "@/lib/monetization-types"
 import { siteConfig } from "@/lib/site-config"
+import { cn } from "@/lib/utils"
 
 interface CheckoutButtonProps {
   className?: string
   label: string
   planId: PremiumPlanId
+}
+
+type CheckoutResponsePayload = {
+  code?: string
+  error?: string
+  redirectTo?: string
+  url?: string
 }
 
 export function CheckoutButton({ className, label, planId }: CheckoutButtonProps) {
@@ -47,7 +55,17 @@ export function CheckoutButton({ className, label, planId }: CheckoutButtonProps
         }),
       })
 
-      const payload = (await response.json()) as { error?: string; url?: string }
+      const payload = (await response.json()) as CheckoutResponsePayload
+
+      if (response.status === 401 && payload.code === "auth_required") {
+        const redirectTo = payload.redirectTo?.startsWith("/")
+          ? payload.redirectTo
+          : `/compte?checkoutPlan=${encodeURIComponent(planId)}`
+
+        trackClientEvent("checkout_auth_required", { planId })
+        window.location.href = redirectTo
+        return
+      }
 
       if (!response.ok || !payload.url) {
         throw new Error(payload.error ?? "Paiement indisponible pour le moment.")
@@ -81,7 +99,15 @@ export function CheckoutButton({ className, label, planId }: CheckoutButtonProps
           .
         </span>
       </label>
-      <button type="button" className={className} onClick={handleCheckout} disabled={isLoading}>
+      <button
+        type="button"
+        className={cn(
+          "inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_-22px_rgba(15,23,42,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 disabled:translate-y-0 disabled:cursor-not-allowed disabled:shadow-none disabled:opacity-50",
+          className,
+        )}
+        onClick={handleCheckout}
+        disabled={isLoading}
+      >
         {isLoading ? "Redirection..." : label}
       </button>
       {error && <div className="text-sm text-red-600">{error}</div>}

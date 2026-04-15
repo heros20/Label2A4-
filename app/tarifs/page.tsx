@@ -44,7 +44,7 @@ export default function TarifsPage() {
             <CheckoutButton
               planId="day-pass"
               label="Acheter le pass 24h"
-              className="inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50"
+              className="w-full bg-slate-950 text-white hover:bg-slate-800"
             />
           </div>
         </section>
@@ -66,7 +66,7 @@ export default function TarifsPage() {
             <CheckoutButton
               planId="monthly"
               label="Choisir l’offre mensuelle"
-              className="inline-flex items-center justify-center rounded-full bg-[linear-gradient(135deg,#0f172a,#0369a1)] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50"
+              className="w-full bg-[linear-gradient(135deg,#0f172a,#0369a1)] text-white hover:brightness-110"
             />
           </div>
         </section>
@@ -90,7 +90,7 @@ export default function TarifsPage() {
             <CheckoutButton
               planId="annual"
               label="Choisir l’offre annuelle"
-              className="inline-flex items-center justify-center rounded-full border border-slate-200/80 bg-white px-5 py-3 text-sm font-semibold text-slate-800 disabled:opacity-50"
+              className="w-full bg-[linear-gradient(135deg,#064e3b,#10b981)] text-white hover:brightness-110"
             />
           </div>
         </section>

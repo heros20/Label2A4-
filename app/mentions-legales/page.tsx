@@ -10,7 +10,7 @@ export default function MentionsLegalesPage() {
   return (
     <PageShell
       title="Mentions légales"
-      intro="Ces informations sont publiées pour identifier l’exploitant du site, l’hébergeur et les principales mentions réglementaires."
+      intro=""
     >
       <LegalWarning />
 

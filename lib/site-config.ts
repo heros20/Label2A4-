@@ -61,6 +61,9 @@ export const siteConfig = {
   launch: {
     stripeEnabled: process.env.NEXT_PUBLIC_STRIPE_ENABLED === "true",
   },
+  auth: {
+    googleOAuthEnabled: process.env.NEXT_PUBLIC_AUTH_GOOGLE_ENABLED === "true",
+  },
 } as const
 
 export const requiredBusinessFields = [

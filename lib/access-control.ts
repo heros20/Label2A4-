@@ -1,8 +1,12 @@
 import { createHash, createHmac, randomUUID } from "crypto"
 import { NextRequest, NextResponse } from "next/server"
+import { resolveStoredPlanStateForUser } from "@/lib/billing-store"
 import type { AccessSnapshot, ActivePlan, PremiumPlanId } from "@/lib/monetization-types"
+import { consumeStoredDailyQuota, getStoredDailyQuota, isQuotaDatabaseConfigured } from "@/lib/quota-store"
 import { siteConfig } from "@/lib/site-config"
 import { getStripe, isStripeConfigured } from "@/lib/stripe"
+import { getAuthenticatedUser } from "@/lib/supabase/auth"
+import { isSupabaseAuthConfigured } from "@/lib/supabase/config"
 
 const ANONYMOUS_ID_COOKIE = "label2a4_device"
 const QUOTA_COOKIE = "label2a4_quota"
@@ -10,12 +14,15 @@ const PLAN_COOKIE = "label2a4_plan"
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing", "past_due"])
 
-interface QuotaCookiePayload {
+interface QuotaState {
+  dayKey: string
+  fingerprintHash: string
+  usedSheets: number
+}
+
+interface QuotaCookiePayload extends QuotaState {
   v: 1
   anonymousId: string
-  dayKey: string
-  usedSheets: number
-  fingerprintHash: string
 }
 
 interface PlanCookiePayload {
@@ -43,6 +50,12 @@ interface ExportDecision {
   allowed: boolean
   reason?: string
   snapshot: AccessSnapshot
+}
+
+interface AuthState {
+  isAuthenticated: boolean
+  userEmail?: string | null
+  userId?: string | null
 }
 
 function getSigningSecret() {
@@ -93,8 +106,18 @@ function getFingerprintHash(request: NextRequest) {
     request.headers.get("x-real-ip") ??
     "local"
   const userAgent = request.headers.get("user-agent") ?? "unknown"
+  const acceptLanguage = request.headers.get("accept-language") ?? "unknown"
+  const secChUa = request.headers.get("sec-ch-ua") ?? "unknown"
+  const secChUaPlatform = request.headers.get("sec-ch-ua-platform") ?? "unknown"
 
-  return createHash("sha256").update(`${ip}|${userAgent}`).digest("hex").slice(0, 24)
+  return createHash("sha256")
+    .update(`${ip}|${userAgent}|${acceptLanguage}|${secChUa}|${secChUaPlatform}`)
+    .digest("hex")
+    .slice(0, 24)
+}
+
+function getAccountQuotaHash(userId: string) {
+  return `account:${createHash("sha256").update(userId).digest("hex").slice(0, 24)}`
 }
 
 function getDayKey(date = new Date()) {
@@ -123,34 +146,67 @@ function deleteCookie(response: NextResponse, name: string) {
   })
 }
 
-function buildEmptyQuota(request: NextRequest, anonymousId: string): QuotaCookiePayload {
+function buildBaseQuotaState(request: NextRequest, authState?: AuthState): QuotaState {
   return {
-    v: 1,
-    anonymousId,
     dayKey: getDayKey(),
     usedSheets: 0,
-    fingerprintHash: getFingerprintHash(request),
+    fingerprintHash: authState?.userId ? getAccountQuotaHash(authState.userId) : getFingerprintHash(request),
   }
 }
 
-function readQuotaState(request: NextRequest, anonymousId: string) {
+function readLegacyQuotaState(request: NextRequest, anonymousId: string, baseQuota: QuotaState) {
   const decoded = decodeSignedCookie<QuotaCookiePayload>(request.cookies.get(QUOTA_COOKIE)?.value)
-  const emptyQuota = buildEmptyQuota(request, anonymousId)
 
   if (!decoded) {
-    return emptyQuota
+    return baseQuota
   }
 
   if (
     decoded.v !== 1 ||
     decoded.anonymousId !== anonymousId ||
-    decoded.dayKey !== emptyQuota.dayKey ||
-    decoded.fingerprintHash !== emptyQuota.fingerprintHash
+    decoded.dayKey !== baseQuota.dayKey ||
+    decoded.fingerprintHash !== baseQuota.fingerprintHash
   ) {
-    return emptyQuota
+    return baseQuota
   }
 
   return decoded
+}
+
+async function readQuotaState(
+  request: NextRequest,
+  anonymousId: string,
+  authState: AuthState,
+): Promise<QuotaState> {
+  const baseQuota = buildBaseQuotaState(request, authState)
+
+  if (!isQuotaDatabaseConfigured()) {
+    return readLegacyQuotaState(request, anonymousId, baseQuota)
+  }
+
+  const storedQuota = await getStoredDailyQuota({
+    dayKey: baseQuota.dayKey,
+    fingerprintHash: baseQuota.fingerprintHash,
+  })
+
+  return {
+    ...baseQuota,
+    usedSheets: storedQuota.usedSheets,
+  }
+}
+
+function clearLegacyQuotaCookie(request: NextRequest, response: NextResponse) {
+  if (isQuotaDatabaseConfigured() && request.cookies.get(QUOTA_COOKIE)?.value) {
+    deleteCookie(response, QUOTA_COOKIE)
+  }
+}
+
+function buildAuthState(input: { userEmail?: string | null; userId?: string | null }): AuthState {
+  return {
+    isAuthenticated: Boolean(input.userId),
+    userId: input.userId ?? null,
+    userEmail: input.userEmail ?? null,
+  }
 }
 
 function getStoredPlanCookie(request: NextRequest) {
@@ -173,12 +229,20 @@ export function ensureAnonymousId(request: NextRequest, response: NextResponse) 
   return created
 }
 
-function buildSnapshot(anonymousId: string, quota: QuotaCookiePayload, planState: ResolvedPlanState): AccessSnapshot {
+function buildSnapshot(
+  anonymousId: string,
+  quota: QuotaState,
+  planState: ResolvedPlanState,
+  authState: AuthState,
+): AccessSnapshot {
   const limit = siteConfig.pricing.freeDailyA4Sheets
   const remaining = Math.max(limit - quota.usedSheets, 0)
 
   return {
     anonymousId,
+    userId: authState.userId ?? null,
+    userEmail: authState.userEmail ?? null,
+    isAuthenticated: authState.isAuthenticated,
     plan: planState.plan,
     isPremium: planState.isPremium,
     dayKey: quota.dayKey,
@@ -186,7 +250,7 @@ function buildSnapshot(anonymousId: string, quota: QuotaCookiePayload, planState
     usedSheetsToday: quota.usedSheets,
     remainingSheetsToday: remaining,
     paymentsAvailable: isStripeConfigured(),
-    billingPortalAvailable: planState.isPremium && Boolean(planState.customerId) && isStripeConfigured(),
+    billingPortalAvailable: Boolean(planState.customerId) && isStripeConfigured(),
     expiresAt: planState.expiresAt ?? null,
     subscriptionStatus: planState.subscriptionStatus ?? null,
   }
@@ -196,7 +260,12 @@ async function resolvePlanState(
   request: NextRequest,
   response: NextResponse,
   anonymousId: string,
+  authState: AuthState,
 ): Promise<ResolvedPlanState> {
+  if (isSupabaseAuthConfigured() && authState.userId) {
+    return resolveStoredPlanStateForUser(authState.userId)
+  }
+
   const fallback: ResolvedPlanState = {
     plan: "free",
     isPremium: false,
@@ -262,9 +331,15 @@ async function resolvePlanState(
 
 export async function getAccessSnapshot(request: NextRequest, response: NextResponse) {
   const anonymousId = ensureAnonymousId(request, response)
-  const quota = readQuotaState(request, anonymousId)
-  const planState = await resolvePlanState(request, response, anonymousId)
-  return buildSnapshot(anonymousId, quota, planState)
+  clearLegacyQuotaCookie(request, response)
+  const authenticatedUser = await getAuthenticatedUser(request, response)
+  const authState = buildAuthState({
+    userId: authenticatedUser?.id,
+    userEmail: authenticatedUser?.email,
+  })
+  const quota = await readQuotaState(request, anonymousId, authState)
+  const planState = await resolvePlanState(request, response, anonymousId, authState)
+  return buildSnapshot(anonymousId, quota, planState, authState)
 }
 
 export async function consumeExportQuota(
@@ -273,8 +348,14 @@ export async function consumeExportQuota(
   input: { action: "download" | "print"; fileName?: string; sheetCount: number },
 ): Promise<ExportDecision> {
   const anonymousId = ensureAnonymousId(request, response)
-  const quota = readQuotaState(request, anonymousId)
-  const planState = await resolvePlanState(request, response, anonymousId)
+  clearLegacyQuotaCookie(request, response)
+  const authenticatedUser = await getAuthenticatedUser(request, response)
+  const authState = buildAuthState({
+    userId: authenticatedUser?.id,
+    userEmail: authenticatedUser?.email,
+  })
+  const quota = await readQuotaState(request, anonymousId, authState)
+  const planState = await resolvePlanState(request, response, anonymousId, authState)
 
   if (planState.isPremium) {
     logEvent({
@@ -288,7 +369,59 @@ export async function consumeExportQuota(
 
     return {
       allowed: true,
-      snapshot: buildSnapshot(anonymousId, quota, planState),
+      snapshot: buildSnapshot(anonymousId, quota, planState, authState),
+    }
+  }
+
+  if (isQuotaDatabaseConfigured()) {
+    const databaseDecision = await consumeStoredDailyQuota({
+      dailyLimit: siteConfig.pricing.freeDailyA4Sheets,
+      dayKey: quota.dayKey,
+      fingerprintHash: quota.fingerprintHash,
+      sheetCount: input.sheetCount,
+    })
+
+    if (!databaseDecision.allowed) {
+      const currentQuota: QuotaState = {
+        ...quota,
+        usedSheets: databaseDecision.usedSheets,
+      }
+
+      logEvent({
+        anonymousId,
+        plan: "free",
+        action: input.action,
+        sheetCount: input.sheetCount,
+        fileName: input.fileName,
+        result: "quota-exceeded",
+        usedSheets: databaseDecision.usedSheets,
+      })
+
+      return {
+        allowed: false,
+        reason: "quota-exceeded",
+        snapshot: buildSnapshot(anonymousId, currentQuota, planState, authState),
+      }
+    }
+
+    const nextQuota: QuotaState = {
+      ...quota,
+      usedSheets: databaseDecision.nextUsedSheets,
+    }
+
+    logEvent({
+      anonymousId,
+      plan: "free",
+      action: input.action,
+      sheetCount: input.sheetCount,
+      fileName: input.fileName,
+      result: "free-allowed",
+      usedSheets: databaseDecision.nextUsedSheets,
+    })
+
+    return {
+      allowed: true,
+      snapshot: buildSnapshot(anonymousId, nextQuota, planState, authState),
     }
   }
 
@@ -308,11 +441,13 @@ export async function consumeExportQuota(
     return {
       allowed: false,
       reason: "quota-exceeded",
-      snapshot: buildSnapshot(anonymousId, quota, planState),
+      snapshot: buildSnapshot(anonymousId, quota, planState, authState),
     }
   }
 
   const nextQuota: QuotaCookiePayload = {
+    v: 1,
+    anonymousId,
     ...quota,
     usedSheets: nextUsed,
   }
@@ -331,7 +466,7 @@ export async function consumeExportQuota(
 
   return {
     allowed: true,
-    snapshot: buildSnapshot(anonymousId, nextQuota, planState),
+    snapshot: buildSnapshot(anonymousId, nextQuota, planState, authState),
   }
 }
 

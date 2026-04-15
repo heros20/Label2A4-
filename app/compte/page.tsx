@@ -10,7 +10,7 @@ export default function ComptePage() {
   return (
     <PageShell
       title="Mon compte"
-      intro="Espace de gestion de votre accès Label2A4 sur ce navigateur."
+      intro="Espace de gestion de votre compte Label2A4, de vos accès premium et de votre facturation."
     >
       <AnalyticsEventOnMount eventName="account_viewed" />
       <AccountPortal />

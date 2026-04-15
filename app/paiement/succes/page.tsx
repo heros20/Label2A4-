@@ -1,5 +1,5 @@
-import { AnalyticsEventOnMount } from "@/components/analytics-event-on-mount"
 import Link from "next/link"
+import { AnalyticsEventOnMount } from "@/components/analytics-event-on-mount"
 import { PageShell } from "@/components/page-shell"
 
 export const metadata = {
@@ -10,7 +10,7 @@ export default function PaiementSuccesPage() {
   return (
     <PageShell
       title="Paiement confirmé"
-      intro="Votre accès premium a été activé pour ce navigateur. Vous pouvez revenir à l’outil ou ouvrir votre espace client."
+      intro="Votre paiement a bien été confirmé. Votre accès premium sera rattaché à votre compte et visible depuis l'espace client."
     >
       <AnalyticsEventOnMount eventName="payment_success_page_view" />
       <div className="flex flex-wrap gap-3">
@@ -18,7 +18,7 @@ export default function PaiementSuccesPage() {
           href="/"
           className="inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white"
         >
-          Revenir à l’outil
+          Revenir à l'outil
         </Link>
         <Link
           href="/compte"

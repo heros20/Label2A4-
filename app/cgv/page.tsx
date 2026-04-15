@@ -11,7 +11,7 @@ export default function CgvPage() {
   return (
     <PageShell
       title="Conditions générales de vente"
-      intro="Ce document couvre le minimum opérationnel pour une offre gratuite limitée et des accès premium. Une relecture professionnelle reste recommandée avant lancement public."
+      intro=""
     >
       <LegalWarning />
 
