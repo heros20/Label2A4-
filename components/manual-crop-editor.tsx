@@ -15,6 +15,8 @@ interface PointerPoint {
 interface InteractionState {
   mode: "move" | "create" | "resize"
   handle?: ResizeHandle
+  pointerId: number
+  capturedElement: HTMLElement | null
   startPoint: PointerPoint
   startRect: ManualCropRect
 }
@@ -58,6 +60,7 @@ export function ManualCropEditor({
 }: ManualCropEditorProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const interactionRef = useRef<InteractionState | null>(null)
+  const cleanupInteractionRef = useRef<(() => void) | null>(null)
   const onChangeRef = useRef(onChange)
 
   useEffect(() => {
@@ -81,11 +84,25 @@ export function ManualCropEditor({
     }
   }, [])
 
-  const stopInteraction = useCallback(() => {
+  const stopInteraction = useCallback((pointerId?: number) => {
+    const interaction = interactionRef.current
+    if (pointerId !== undefined && interaction?.pointerId !== pointerId) {
+      return
+    }
+
+    if (interaction?.capturedElement) {
+      try {
+        if (interaction.capturedElement.hasPointerCapture?.(interaction.pointerId)) {
+          interaction.capturedElement.releasePointerCapture(interaction.pointerId)
+        }
+      } catch {
+        // Some mobile browsers throw if capture was already released.
+      }
+    }
+
     interactionRef.current = null
-    window.removeEventListener("pointermove", handlePointerMove)
-    window.removeEventListener("pointerup", handlePointerUp)
-    window.removeEventListener("pointercancel", handlePointerUp)
+    cleanupInteractionRef.current?.()
+    cleanupInteractionRef.current = null
   }, [])
 
   const handlePointerMove = useCallback(
@@ -94,6 +111,12 @@ export function ManualCropEditor({
       if (!interaction) {
         return
       }
+
+      if (event.pointerId !== interaction.pointerId) {
+        return
+      }
+
+      event.preventDefault()
 
       const point = getPointerPoint(event.clientX, event.clientY)
       if (!point) {
@@ -159,24 +182,60 @@ export function ManualCropEditor({
     [getPointerPoint],
   )
 
-  const handlePointerUp = useCallback(() => {
-    stopInteraction()
+  const handlePointerUp = useCallback((event: PointerEvent) => {
+    stopInteraction(event.pointerId)
   }, [stopInteraction])
 
   const startInteraction = useCallback(
     (interaction: InteractionState) => {
+      stopInteraction()
+
+      const controller = new AbortController()
       interactionRef.current = interaction
-      window.addEventListener("pointermove", handlePointerMove)
-      window.addEventListener("pointerup", handlePointerUp)
-      window.addEventListener("pointercancel", handlePointerUp)
+      cleanupInteractionRef.current = () => {
+        controller.abort()
+        window.removeEventListener("pointermove", handlePointerMove)
+        window.removeEventListener("pointerup", handlePointerUp)
+        window.removeEventListener("pointercancel", handlePointerUp)
+      }
+
+      window.addEventListener("pointermove", handlePointerMove, {
+        passive: false,
+        signal: controller.signal,
+      })
+      window.addEventListener("pointerup", handlePointerUp, { signal: controller.signal })
+      window.addEventListener("pointercancel", handlePointerUp, { signal: controller.signal })
     },
-    [handlePointerMove, handlePointerUp],
+    [handlePointerMove, handlePointerUp, stopInteraction],
   )
 
-  useEffect(() => stopInteraction, [stopInteraction])
+  useEffect(() => () => stopInteraction(), [stopInteraction])
+
+  const getCapturedElement = (pointerId: number) => {
+    const element = containerRef.current
+    if (!element) {
+      return null
+    }
+
+    try {
+      element.setPointerCapture?.(pointerId)
+    } catch {
+      // Pointer capture is a best-effort guard for touch drags.
+    }
+
+    return element
+  }
+
+  const isPrimaryPointerActivation = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "mouse") {
+      return event.button === 0
+    }
+
+    return event.isPrimary !== false
+  }
 
   const beginCreate = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0) {
+    if (!isPrimaryPointerActivation(event)) {
       return
     }
 
@@ -188,13 +247,15 @@ export function ManualCropEditor({
     event.preventDefault()
     startInteraction({
       mode: "create",
+      pointerId: event.pointerId,
+      capturedElement: getCapturedElement(event.pointerId),
       startPoint: point,
       startRect: value,
     })
   }
 
   const beginMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0) {
+    if (!isPrimaryPointerActivation(event)) {
       return
     }
 
@@ -207,6 +268,8 @@ export function ManualCropEditor({
     event.stopPropagation()
     startInteraction({
       mode: "move",
+      pointerId: event.pointerId,
+      capturedElement: getCapturedElement(event.pointerId),
       startPoint: point,
       startRect: value,
     })
@@ -214,7 +277,7 @@ export function ManualCropEditor({
 
   const beginResize =
     (handle: ResizeHandle) => (event: React.PointerEvent<HTMLDivElement>) => {
-      if (event.button !== 0) {
+      if (!isPrimaryPointerActivation(event)) {
         return
       }
 
@@ -228,6 +291,8 @@ export function ManualCropEditor({
       startInteraction({
         mode: "resize",
         handle,
+        pointerId: event.pointerId,
+        capturedElement: getCapturedElement(event.pointerId),
         startPoint: point,
         startRect: value,
       })
@@ -238,7 +303,8 @@ export function ManualCropEditor({
       <div
         ref={containerRef}
         className="relative overflow-hidden rounded-[24px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(241,245,249,0.94))] shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_22px_48px_-36px_rgba(15,23,42,0.45)] select-none touch-none"
-        style={{ aspectRatio: `${imageWidth} / ${imageHeight}` }}
+        style={{ aspectRatio: `${imageWidth} / ${imageHeight}`, touchAction: "none" }}
+        onContextMenu={(event) => event.preventDefault()}
         onPointerDown={beginCreate}
       >
         <img src={imageUrl} alt="Aperçu du PDF source" className="block h-full w-full object-contain" draggable={false} />

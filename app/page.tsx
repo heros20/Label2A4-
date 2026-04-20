@@ -501,7 +501,7 @@ export default function HomePage() {
       if (action === "download") {
         downloadBlob(result.blob, result.name)
       } else {
-        printBlob(result.blob)
+        await printBlob(result.blob, { preferImagePrint: isMobileViewport })
       }
     } catch (error) {
       reportClientError("protected-export", error, {
@@ -561,18 +561,16 @@ export default function HomePage() {
   const setManualCropForFile = (fileId: string, crop: ManualCropRect) => {
     const normalized = normalizeManualCropRect(crop)
 
-    startTransition(() => {
-      setManualCropsByFileId((current) => {
-        const next = { ...current }
+    setManualCropsByFileId((current) => {
+      const next = { ...current }
 
-        if (isDefaultManualCrop(normalized)) {
-          delete next[fileId]
-        } else {
-          next[fileId] = normalized
-        }
+      if (isDefaultManualCrop(normalized)) {
+        delete next[fileId]
+      } else {
+        next[fileId] = normalized
+      }
 
-        return next
-      })
+      return next
     })
   }
 
