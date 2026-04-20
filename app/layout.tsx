@@ -6,19 +6,44 @@ import { siteConfig } from "@/lib/site-config"
 import "./globals.css"
 
 export const metadata: Metadata = {
+  applicationName: siteConfig.siteName,
   title: {
     default: siteConfig.siteName,
     template: `%s | ${siteConfig.siteName}`,
   },
   description: siteConfig.description,
   metadataBase: new URL(siteConfig.siteUrl),
+  keywords: [
+    "étiquette PDF A4",
+    "imprimer plusieurs étiquettes sur une feuille",
+    "Mondial Relay A4",
+    "Colissimo A4",
+    "Chronopost A4",
+    "étiquette Vinted",
+    "étiquette Leboncoin",
+  ],
+  alternates: {
+    canonical: siteConfig.siteUrl,
+  },
+  openGraph: {
+    type: "website",
+    locale: "fr_FR",
+    url: siteConfig.siteUrl,
+    siteName: siteConfig.siteName,
+    title: siteConfig.siteName,
+    description: siteConfig.description,
+  },
+  twitter: {
+    card: "summary",
+    title: siteConfig.siteName,
+    description: siteConfig.description,
+  },
   robots: {
-    index: false,
-    follow: false,
+    index: true,
+    follow: true,
     googleBot: {
-      index: false,
-      follow: false,
-      noimageindex: true,
+      index: true,
+      follow: true,
     },
   },
 }

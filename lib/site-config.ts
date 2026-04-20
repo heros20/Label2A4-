@@ -11,10 +11,10 @@ function isConfiguredValue(value: string) {
 
 export const siteConfig = {
   siteName: process.env.NEXT_PUBLIC_SITE_NAME ?? "Label2A4",
-  siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+  siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "https://label2a4.vercel.app",
   description:
     process.env.NEXT_PUBLIC_SITE_DESCRIPTION ??
-    "Préparez vos étiquettes PDF transporteurs sur planches A4 prêtes à imprimer.",
+    "Regroupez vos étiquettes PDF Chronopost, Colissimo et Mondial Relay sur des feuilles A4 x4 prêtes à imprimer.",
   supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "support@label2a4.local",
   supportResponseDelay:
     process.env.NEXT_PUBLIC_SUPPORT_RESPONSE_DELAY ?? "Réponse sous 2 jours ouvrés.",

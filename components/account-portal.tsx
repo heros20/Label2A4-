@@ -106,7 +106,7 @@ export function AccountPortal() {
             </h2>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
               {accountsEnabled
-                ? "Votre compte Label2A4 centralise vos achats, votre portail Stripe et vos accès premium sur tous vos appareils."
+                ? "Votre compte Label2A4 se crée avec votre email. Aucun mot de passe n'est nécessaire : vous recevez un lien sécurisé pour accéder à vos achats, au portail Stripe et à vos accès premium."
                 : "Cet espace vous permet de vérifier votre état d'accès, votre quota et vos liens de facturation."}
             </p>
           </div>
@@ -150,13 +150,29 @@ export function AccountPortal() {
       {accountsEnabled && (
         <section id="connexion" className={cardClass}>
           <h2 className="text-xl font-semibold text-slate-950">
-            {checkoutPlanId ? "Connexion et achat premium" : "Connexion"}
+            {checkoutPlanId ? "Créer un compte pour finaliser l’achat" : "Créer ou ouvrir mon compte"}
           </h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">
             {checkoutPlanId && checkoutPlanLabel && !accessSnapshot?.isAuthenticated
-              ? `Vous avez choisi ${checkoutPlanLabel}${checkoutPlanPriceLabel ? ` (${checkoutPlanPriceLabel})` : ""}. Connectez-vous avec votre email pour rattacher l'achat à votre compte avant le paiement.`
-              : "Connectez-vous avec votre email pour rattacher vos achats à un compte et retrouver votre accès premium sur tous vos appareils."}
+              ? `Vous avez choisi ${checkoutPlanLabel}${checkoutPlanPriceLabel ? ` (${checkoutPlanPriceLabel})` : ""}. Entrez votre email pour créer ou ouvrir le compte qui recevra cet achat avant le paiement.`
+              : "Entrez votre email pour recevoir un lien sécurisé. Si vous êtes nouveau, votre compte sera créé automatiquement ; sinon, vous serez connecté à votre compte existant."}
           </p>
+          {!accessSnapshot?.isAuthenticated && (
+            <div className="mt-5 grid gap-3 md:grid-cols-3">
+              {[
+                ["1", "Entrez votre email"],
+                ["2", "Cliquez sur le lien reçu"],
+                ["3", "Retrouvez vos achats ici"],
+              ].map(([step, label]) => (
+                <div key={step} className="rounded-[18px] border border-slate-200/80 bg-slate-50/80 p-4">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-950 text-sm font-semibold text-white">
+                    {step}
+                  </div>
+                  <div className="mt-3 text-sm font-medium text-slate-800">{label}</div>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="mt-5 max-w-md">
             <AccountAuthCard
               email={accessSnapshot?.userEmail}

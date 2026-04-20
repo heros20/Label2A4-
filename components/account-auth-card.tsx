@@ -58,7 +58,7 @@ export function AccountAuthCard({ email, isAuthenticated, onSessionChanged }: Ac
     event.preventDefault()
 
     if (!emailInput.trim()) {
-      setError("Saisissez votre email pour recevoir un lien de connexion.")
+      setError("Saisissez votre email pour créer ou ouvrir votre compte.")
       return
     }
 
@@ -80,7 +80,9 @@ export function AccountAuthCard({ email, isAuthenticated, onSessionChanged }: Ac
         throw authError
       }
 
-      setSuccess("Lien envoyé. Ouvrez votre email pour continuer.")
+      setSuccess(
+        "Email envoyé. Cliquez sur le lien reçu pour terminer la connexion. Si c'est votre première fois, le compte sera créé automatiquement.",
+      )
     } catch (caughtError) {
       reportClientError("account-auth-sign-in", caughtError)
       setError(caughtError instanceof Error ? caughtError.message : "Connexion impossible pour le moment.")
@@ -169,14 +171,20 @@ export function AccountAuthCard({ email, isAuthenticated, onSessionChanged }: Ac
           onClick={handleGoogleSignIn}
         >
           <GoogleIcon />
-          {isSigningInWithGoogle ? "Connexion..." : "Continuer avec Google"}
+          {isSigningInWithGoogle ? "Connexion..." : "Créer ou continuer avec Google"}
         </button>
       )}
 
       <form className="space-y-3" onSubmit={handleSubmit}>
+        <div className="rounded-[20px] border border-sky-100 bg-sky-50/75 p-4 text-sm leading-6 text-sky-950">
+          <div className="font-semibold">Pas de mot de passe à créer</div>
+          <p className="mt-1">
+            Entrez votre email. Si aucun compte n’existe encore, il sera créé automatiquement avec le lien sécurisé.
+          </p>
+        </div>
         <div>
           <label htmlFor="account-email" className="mb-2 block text-sm font-medium text-slate-800">
-            Email de connexion
+            Votre email
           </label>
           <input
             id="account-email"
@@ -193,7 +201,7 @@ export function AccountAuthCard({ email, isAuthenticated, onSessionChanged }: Ac
           className="inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
           disabled={isSubmitting || isSigningInWithGoogle}
         >
-          {isSubmitting ? "Envoi..." : "Recevoir un lien de connexion"}
+          {isSubmitting ? "Envoi du lien..." : "Créer / ouvrir mon compte"}
         </button>
       </form>
       {error && <div className="text-sm text-red-600">{error}</div>}
