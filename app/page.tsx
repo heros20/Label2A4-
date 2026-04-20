@@ -894,7 +894,7 @@ export default function HomePage() {
 
       {files.length > 0 && (
         <section ref={workspaceRef} className="mt-8 grid gap-8 xl:grid-cols-[1.05fr_0.95fr]">
-          <div className="order-2 space-y-6 xl:order-1">
+          <div className="space-y-6">
             <div className={panelClass}>
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
@@ -1265,28 +1265,6 @@ export default function HomePage() {
               </div>
             )}
 
-            <div className={panelClass}>
-              <h2 className="text-xl font-semibold text-slate-950">Traitement appliqué</h2>
-              <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <div className={metricClass}>
-                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">Étape 1</div>
-                  <div className="mt-2 text-sm font-medium text-slate-800">Fusion</div>
-                </div>
-                <div className={metricClass}>
-                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">Étape 2</div>
-                  <div className="mt-2 text-sm font-medium text-slate-800">Rognage {selectedProfile.shortLabel}</div>
-                </div>
-                <div className={metricClass}>
-                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">Étape 3</div>
-                  <div className="mt-2 text-sm font-medium text-slate-800">Mise à l’échelle auto</div>
-                </div>
-                <div className={metricClass}>
-                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">Étape 4</div>
-                  <div className="mt-2 text-sm font-medium text-slate-800">Placement A4 x4</div>
-                </div>
-              </div>
-            </div>
-
             {isSingleSourcePdf && (
               <div className={panelClass}>
                 <h2 className="text-xl font-semibold text-slate-950">Placement de l’étiquette unique</h2>
@@ -1311,9 +1289,31 @@ export default function HomePage() {
                 </div>
               </div>
             )}
+
+            <div className={panelClass}>
+              <h2 className="text-xl font-semibold text-slate-950">Traitement appliqué</h2>
+              <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <div className={metricClass}>
+                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">Étape 1</div>
+                  <div className="mt-2 text-sm font-medium text-slate-800">Fusion</div>
+                </div>
+                <div className={metricClass}>
+                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">Étape 2</div>
+                  <div className="mt-2 text-sm font-medium text-slate-800">Rognage {selectedProfile.shortLabel}</div>
+                </div>
+                <div className={metricClass}>
+                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">Étape 3</div>
+                  <div className="mt-2 text-sm font-medium text-slate-800">Mise à l’échelle auto</div>
+                </div>
+                <div className={metricClass}>
+                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">Étape 4</div>
+                  <div className="mt-2 text-sm font-medium text-slate-800">Placement A4 x4</div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="order-1 space-y-6 xl:order-2 xl:sticky xl:top-8 xl:self-start">
+          <div className="space-y-6 xl:sticky xl:top-8 xl:self-start">
             <div className={panelClass}>
               <h2 className="text-xl font-semibold text-slate-950">Résultat final</h2>
               <p className="mt-2 text-slate-600">
