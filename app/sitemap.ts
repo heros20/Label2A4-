@@ -15,6 +15,8 @@ const staticRoutes = [
   { path: "/resiliation", priority: 0.2 },
 ] as const
 
+const staticRoutePaths = new Set<string>(staticRoutes.map((route) => route.path))
+
 function absoluteUrl(path: string) {
   return new URL(path, siteConfig.siteUrl).toString()
 }
@@ -29,11 +31,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly" as const,
       priority: route.priority,
     })),
-    ...seoPageList.map((page) => ({
-      url: absoluteUrl(page.path),
-      lastModified,
-      changeFrequency: "monthly" as const,
-      priority: page.path === "/landing" ? 0.95 : 0.85,
-    })),
+    ...seoPageList
+      .filter((page) => !staticRoutePaths.has(page.path))
+      .map((page) => ({
+        url: absoluteUrl(page.path),
+        lastModified,
+        changeFrequency: "monthly" as const,
+        priority: 0.85,
+      })),
   ]
 }

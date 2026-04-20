@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 
-const COST_PER_SHEET_EUR = 0.1
+const COST_PER_SHEET_EUR = 0.05
 
 function formatInteger(value: number) {
   return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(value)
@@ -58,7 +58,8 @@ export function SavingsSimulator() {
           </h2>
           <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">
             Indiquez votre volume de colis mensuel. Le calcul compare une impression classique à une feuille par
-            étiquette avec une planche A4 x4. L’estimation financière utilise 0,10 € par feuille imprimée.
+            étiquette avec une planche A4 x4. L’estimation financière utilise 0,05 € par feuille imprimée, en
+            incluant une part papier, encre et usage imprimante.
           </p>
 
           <label htmlFor="monthly-packages" className="mt-6 block text-sm font-semibold text-slate-900">

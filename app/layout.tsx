@@ -22,9 +22,6 @@ export const metadata: Metadata = {
     "étiquette Vinted",
     "étiquette Leboncoin",
   ],
-  alternates: {
-    canonical: siteConfig.siteUrl,
-  },
   openGraph: {
     type: "website",
     locale: "fr_FR",
