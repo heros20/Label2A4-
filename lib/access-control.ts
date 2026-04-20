@@ -100,20 +100,70 @@ function decodeSignedCookie<T>(value: string | undefined) {
   }
 }
 
-function getFingerprintHash(request: NextRequest) {
-  const ip =
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    request.headers.get("x-real-ip") ??
-    "local"
-  const userAgent = request.headers.get("user-agent") ?? "unknown"
-  const acceptLanguage = request.headers.get("accept-language") ?? "unknown"
-  const secChUa = request.headers.get("sec-ch-ua") ?? "unknown"
-  const secChUaPlatform = request.headers.get("sec-ch-ua-platform") ?? "unknown"
+function getClientIp(request: NextRequest) {
+  const vercelForwardedFor = request.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim()
+  const cloudflareIp = request.headers.get("cf-connecting-ip")?.trim()
+  const realIp = request.headers.get("x-real-ip")?.trim()
+  const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
 
-  return createHash("sha256")
-    .update(`${ip}|${userAgent}|${acceptLanguage}|${secChUa}|${secChUaPlatform}`)
-    .digest("hex")
-    .slice(0, 24)
+  return vercelForwardedFor || cloudflareIp || realIp || forwardedFor || "local"
+}
+
+function expandIpv6Address(address: string) {
+  const parts = address.split("::")
+
+  if (parts.length > 2) {
+    return null
+  }
+
+  const head = parts[0] ? parts[0].split(":").filter(Boolean) : []
+  const tail = parts[1] ? parts[1].split(":").filter(Boolean) : []
+  const missingCount = parts.length === 2 ? 8 - head.length - tail.length : 0
+
+  if (missingCount < 0) {
+    return null
+  }
+
+  const hextets = [...head, ...Array.from({ length: missingCount }, () => "0"), ...tail]
+
+  if (hextets.length !== 8 || hextets.some((hextet) => !/^[0-9a-f]{1,4}$/i.test(hextet))) {
+    return null
+  }
+
+  return hextets.map((hextet) => hextet.padStart(4, "0"))
+}
+
+function normalizeIpForQuota(ip: string) {
+  const normalized = ip.trim().toLowerCase().replace(/^\[|\]$/g, "")
+
+  if (!normalized || normalized === "local") {
+    return "local"
+  }
+
+  if (/^\d{1,3}(\.\d{1,3}){3}:\d+$/.test(normalized)) {
+    return normalized.split(":")[0]
+  }
+
+  if (!normalized.includes(":")) {
+    return normalized
+  }
+
+  const [address] = normalized.split("%")
+  const expanded = expandIpv6Address(address)
+
+  if (!expanded) {
+    return address
+  }
+
+  // IPv6 privacy addresses often rotate on the same device/network.
+  // Grouping by the first /64 keeps one daily quota per local network.
+  return `${expanded.slice(0, 4).join(":")}::/64`
+}
+
+function getAnonymousQuotaHash(request: NextRequest) {
+  const networkKey = normalizeIpForQuota(getClientIp(request))
+
+  return `network:${createHash("sha256").update(networkKey).digest("hex").slice(0, 24)}`
 }
 
 function getAccountQuotaHash(userId: string) {
@@ -150,7 +200,7 @@ function buildBaseQuotaState(request: NextRequest, authState?: AuthState): Quota
   return {
     dayKey: getDayKey(),
     usedSheets: 0,
-    fingerprintHash: authState?.userId ? getAccountQuotaHash(authState.userId) : getFingerprintHash(request),
+    fingerprintHash: authState?.userId ? getAccountQuotaHash(authState.userId) : getAnonymousQuotaHash(request),
   }
 }
 

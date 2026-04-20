@@ -1448,7 +1448,7 @@ export default function HomePage() {
                 </button>
                 <button
                   type="button"
-                  className="inline-flex items-center rounded-full border border-slate-200/80 bg-white px-5 py-3 font-medium text-slate-800 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.2)] transition hover:border-sky-300 hover:text-sky-800 disabled:opacity-50"
+                  className="hidden items-center rounded-full border border-slate-200/80 bg-white px-5 py-3 font-medium text-slate-800 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.2)] transition hover:border-sky-300 hover:text-sky-800 disabled:opacity-50 lg:inline-flex"
                   disabled={!result || activeExportAction !== null}
                   onClick={() => handleExportAction("print")}
                 >
@@ -1481,15 +1481,6 @@ export default function HomePage() {
                   {result?.name ?? "Préparation du PDF..."}
                 </div>
               </div>
-              <button
-                type="button"
-                className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
-                disabled={!result || activeExportAction !== null}
-                onClick={() => handleExportAction("print")}
-              >
-                <Printer className="mr-2 h-4 w-4" />
-                {activeExportAction === "print" ? "Validation..." : "Imprimer"}
-              </button>
               <button
                 type="button"
                 className="inline-flex items-center rounded-full bg-sky-500 px-4 py-2.5 text-sm font-semibold text-slate-950 disabled:opacity-50"
