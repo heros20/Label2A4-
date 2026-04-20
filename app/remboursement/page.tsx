@@ -9,7 +9,7 @@ export default function RemboursementPage() {
   return (
     <PageShell
       title="Procédure de remboursement"
-      intro="Cette page explique comment transmettre une demande de remboursement liée à un paiement effectué sur le site."
+      intro=""
     >
       <section className="space-y-3">
         <h2 className="text-xl font-semibold text-slate-950">Comment demander un remboursement ?</h2>
