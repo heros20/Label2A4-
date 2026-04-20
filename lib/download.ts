@@ -5,10 +5,11 @@ import { renderPdfPagesToImages } from "@/lib/pdf-image-tools"
 const PRINT_CLEANUP_DELAY_MS = 1000
 const PRINT_FALLBACK_CLEANUP_MS = 120000
 const MOBILE_PRINT_RENDER_SCALE = 2.2
+const PRINT_ROOT_ID = "label2a4-print-root"
+const PRINT_STYLE_ID = "label2a4-print-style"
 
 export interface PrintBlobOptions {
   preferImagePrint?: boolean
-  printWindow?: Window | null
 }
 
 export function downloadBlob(blob: Blob, fileName: string) {
@@ -20,36 +21,6 @@ export function downloadBlob(blob: Blob, fileName: string) {
   link.click()
   link.remove()
   window.setTimeout(() => URL.revokeObjectURL(url), 1000)
-}
-
-export function openPrintWindow() {
-  const printWindow = window.open("", "_blank")
-
-  if (!printWindow) {
-    return null
-  }
-
-  writePrintWindowDocument(
-    printWindow,
-    `<div class="screen-only preparing">
-      <strong>Preparation de l'impression...</strong>
-      <span>Gardez cet onglet ouvert, l'etiquette va s'afficher ici.</span>
-    </div>`,
-  )
-
-  return printWindow
-}
-
-export function closePrintWindow(printWindow?: Window | null) {
-  if (!printWindow || printWindow.closed) {
-    return
-  }
-
-  try {
-    printWindow.close()
-  } catch {
-    // Mobile browsers may refuse scripted closing in some situations.
-  }
 }
 
 function createPrintFrame() {
@@ -151,7 +122,7 @@ function escapeAttribute(value: string) {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;")
 }
 
-function getPrintStyles() {
+function getImagePrintStyles() {
   return `
     @page {
       size: A4 portrait;
@@ -167,11 +138,7 @@ function getPrintStyles() {
       font-family: Arial, sans-serif;
     }
 
-    .screen-only {
-      display: none;
-    }
-
-    .print-page {
+    .label2a4-print-page {
       display: flex;
       align-items: center;
       justify-content: center;
@@ -184,12 +151,12 @@ function getPrintStyles() {
       background: #ffffff;
     }
 
-    .print-page:last-child {
+    .label2a4-print-page:last-child {
       break-after: auto;
       page-break-after: auto;
     }
 
-    .print-page img {
+    .label2a4-print-page img {
       display: block;
       width: 210mm;
       height: 297mm;
@@ -197,65 +164,8 @@ function getPrintStyles() {
     }
 
     @media screen {
-      html,
-      body {
-        min-height: 100%;
-        background: #e8f0f6;
-      }
-
-      .screen-only {
-        display: flex;
-      }
-
-      .print-toolbar,
-      .preparing {
-        position: sticky;
-        top: 0;
-        z-index: 2;
-        flex-direction: column;
-        gap: 10px;
-        margin: 0;
-        padding: 16px;
-        background: #0f172a;
-        color: #ffffff;
-        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.25);
-      }
-
-      .print-toolbar p,
-      .preparing span {
-        margin: 0;
-        color: rgba(255, 255, 255, 0.78);
-        font-size: 14px;
-        line-height: 1.45;
-      }
-
-      .print-toolbar-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-      }
-
-      .print-toolbar button {
-        border: 0;
-        border-radius: 999px;
-        padding: 11px 16px;
-        font: inherit;
-        font-weight: 700;
-      }
-
-      .print-toolbar button:first-child {
-        background: #38bdf8;
-        color: #082f49;
-      }
-
-      .print-toolbar button:last-child {
-        background: rgba(255, 255, 255, 0.12);
-        color: #ffffff;
-      }
-
-      .print-page {
-        margin: 16px auto;
-        box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24);
+      #${PRINT_ROOT_ID} {
+        display: none !important;
       }
     }
 
@@ -266,37 +176,35 @@ function getPrintStyles() {
         background: #ffffff;
       }
 
-      .screen-only {
+      body::before,
+      body::after {
         display: none !important;
+      }
+
+      body > *:not(#${PRINT_ROOT_ID}) {
+        display: none !important;
+      }
+
+      #${PRINT_ROOT_ID} {
+        display: block !important;
+        position: static !important;
+        inset: auto !important;
+        width: 210mm !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        box-shadow: none !important;
       }
     }
   `
-}
-
-function writePrintWindowDocument(targetWindow: Window, bodyHtml: string) {
-  const targetDocument = targetWindow.document
-
-  targetDocument.open()
-  targetDocument.write(`<!doctype html>
-    <html>
-      <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Impression etiquette A4</title>
-        <style>${getPrintStyles()}</style>
-      </head>
-      <body>${bodyHtml}</body>
-    </html>`)
-  targetDocument.close()
-
-  return targetDocument
 }
 
 function getPrintPagesHtml(imageUrls: string[]) {
   return imageUrls
     .map(
       (url, index) => `
-        <section class="print-page">
+        <section class="label2a4-print-page">
           <img src="${escapeAttribute(url)}" alt="Page A4 ${index + 1}" />
         </section>
       `,
@@ -304,21 +212,8 @@ function getPrintPagesHtml(imageUrls: string[]) {
     .join("")
 }
 
-function getPrintToolbarHtml() {
-  return `
-    <div class="screen-only print-toolbar">
-      <strong>Etiquette prete a imprimer</strong>
-      <p>Si la fenetre d'impression ne s'ouvre pas automatiquement, utilisez le bouton ci-dessous. Seules les pages A4 ci-dessous seront imprimees.</p>
-      <div class="print-toolbar-actions">
-        <button type="button" onclick="window.print()">Imprimer l'etiquette</button>
-        <button type="button" onclick="window.close()">Fermer</button>
-      </div>
-    </div>
-  `
-}
-
-async function waitForImages(document: Document) {
-  const images = Array.from(document.images)
+async function waitForImages(root: ParentNode) {
+  const images = Array.from(root.querySelectorAll("img"))
 
   await Promise.all(
     images.map(
@@ -363,16 +258,31 @@ function waitForNextPaint(window: Window) {
   })
 }
 
-function attachTopLevelPrintCleanup(targetWindow: Window, urls: string[]) {
-  const cleanup = () => {
-    urls.forEach((url) => URL.revokeObjectURL(url))
-    closePrintWindow(targetWindow)
-  }
-
-  targetWindow.addEventListener("afterprint", cleanup, { once: true })
+function removeCurrentPagePrintDom(urls: string[]) {
+  document.getElementById(PRINT_ROOT_ID)?.remove()
+  document.getElementById(PRINT_STYLE_ID)?.remove()
+  urls.forEach((url) => URL.revokeObjectURL(url))
 }
 
-async function printPdfBlobAsImages(blob: Blob, targetPrintWindow?: Window | null) {
+function prepareCurrentPagePrintDom(imageUrls: string[]) {
+  document.getElementById(PRINT_ROOT_ID)?.remove()
+  document.getElementById(PRINT_STYLE_ID)?.remove()
+
+  const style = document.createElement("style")
+  style.id = PRINT_STYLE_ID
+  style.textContent = getImagePrintStyles()
+  document.head.appendChild(style)
+
+  const printRoot = document.createElement("div")
+  printRoot.id = PRINT_ROOT_ID
+  printRoot.setAttribute("aria-hidden", "true")
+  printRoot.innerHTML = getPrintPagesHtml(imageUrls)
+  document.body.appendChild(printRoot)
+
+  return printRoot
+}
+
+async function printPdfBlobAsImagesInCurrentPage(blob: Blob) {
   const renderedPages = await renderPdfPagesToImages(blob, undefined, MOBILE_PRINT_RENDER_SCALE)
 
   if (renderedPages.length === 0) {
@@ -380,49 +290,34 @@ async function printPdfBlobAsImages(blob: Blob, targetPrintWindow?: Window | nul
   }
 
   const imageUrls = renderedPages.map((page) => URL.createObjectURL(page.blob))
-  const frame = targetPrintWindow ? null : createPrintFrame()
+  const printRoot = prepareCurrentPagePrintDom(imageUrls)
+  let cleaned = false
 
-  if (frame) {
-    document.body.appendChild(frame)
+  const cleanup = () => {
+    if (cleaned) {
+      return
+    }
+
+    cleaned = true
+    removeCurrentPagePrintDom(imageUrls)
   }
 
   try {
-    const targetWindow = targetPrintWindow ?? frame?.contentWindow ?? null
+    await waitForImages(printRoot)
+    await waitForNextPaint(window)
 
-    if (!targetWindow) {
-      throw new Error("Impossible de preparer l'impression.")
-    }
-
-    const frameDocument = writePrintWindowDocument(
-      targetWindow,
-      `${targetPrintWindow ? getPrintToolbarHtml() : ""}${getPrintPagesHtml(imageUrls)}`,
-    )
-
-    await waitForImages(frameDocument)
-    await waitForNextPaint(targetWindow)
-
-    if (frame) {
-      attachPrintCleanup(frame, imageUrls)
-    } else {
-      attachTopLevelPrintCleanup(targetWindow, imageUrls)
-    }
-
-    targetWindow.focus()
-    targetWindow.print()
+    window.addEventListener("afterprint", cleanup, { once: true })
+    window.setTimeout(cleanup, PRINT_FALLBACK_CLEANUP_MS)
+    window.print()
   } catch (error) {
-    if (frame) {
-      cleanupPrintFrame(frame, imageUrls)
-    } else {
-      imageUrls.forEach((url) => URL.revokeObjectURL(url))
-    }
-
+    cleanup()
     throw error
   }
 }
 
 export async function printBlob(blob: Blob, options: PrintBlobOptions = {}) {
   if (options.preferImagePrint) {
-    await printPdfBlobAsImages(blob, options.printWindow)
+    await printPdfBlobAsImagesInCurrentPage(blob)
     return
   }
 

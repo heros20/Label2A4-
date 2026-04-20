@@ -5,7 +5,7 @@ import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState
 import { Download, FileText, MoveDown, MoveUp, Printer, RotateCcw, RotateCw, Trash2, Upload } from "lucide-react"
 import { ManualCropEditor } from "@/components/manual-crop-editor"
 import { trackClientEvent } from "@/lib/client-analytics"
-import { closePrintWindow, downloadBlob, openPrintWindow, printBlob } from "@/lib/download"
+import { downloadBlob, printBlob } from "@/lib/download"
 import {
   DEFAULT_MANUAL_CROP_RECT,
   DEFAULT_MONDIAL_RELAY_VARIANT_ID,
@@ -471,17 +471,8 @@ export default function HomePage() {
 
     setActiveExportAction(action)
     setExportError("")
-    let preparedPrintWindow: Window | null = null
 
     try {
-      if (action === "print" && isMobileViewport) {
-        preparedPrintWindow = openPrintWindow()
-
-        if (!preparedPrintWindow) {
-          throw new Error("Impossible d'ouvrir l'onglet d'impression. Autorisez les pop-ups puis reessayez.")
-        }
-      }
-
       const response = await fetch("/api/exports", {
         method: "POST",
         headers: {
@@ -512,11 +503,9 @@ export default function HomePage() {
       } else {
         await printBlob(result.blob, {
           preferImagePrint: isMobileViewport,
-          printWindow: preparedPrintWindow,
         })
       }
     } catch (error) {
-      closePrintWindow(preparedPrintWindow)
       reportClientError("protected-export", error, {
         action,
         fileName: result.name,
