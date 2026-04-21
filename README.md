@@ -63,6 +63,8 @@ Stripe Checkout est utilise avec les moyens de paiement dynamiques : carte banca
 
 Les codes promo sont valides cote serveur dans `promo_codes`, puis reserves dans `promo_code_redemptions` avant la creation de la session Checkout. Les remises de prix sont appliquees par coupon Stripe serveur, les essais gratuits par `trial_period_days`, et les webhooks marquent la redemption comme terminee.
 
+L'admin `/admin` permet maintenant de creer, activer et desactiver les codes promo sans SQL manuel, une fois `supabase/promo_codes.sql` applique. Il affiche aussi un tableau impact/quota/promo pour suivre les compteurs ecologiques, le quota du jour, les redemptions promo et les buckets de rate limit.
+
 Le quota gratuit est pilote cote serveur :
 - invite : identifiant temporaire signe + quota plus limite
 - compte gratuit : quota lie a `auth.users.id`
@@ -74,6 +76,10 @@ La logique "meme reseau = meme utilisateur" est volontairement evitee : une IP p
 Le compteur ecologique utilise une formule explicable : sans optimisation, une etiquette = une feuille A4 ; avec Label2A4, quatre etiquettes peuvent tenir sur une feuille. Les arbres sauves restent une estimation indicative basee sur 8 000 feuilles A4 par arbre.
 
 Note technique detaillee : `docs/payment-promo-quota-architecture.md`.
+
+## Cron de purge
+
+`vercel.json` declare une purge quotidienne sur `/api/cron/cleanup`. Configurez `CRON_SECRET` dans Vercel : la route refuse les appels sans `Authorization: Bearer $CRON_SECRET`. Les variables optionnelles `RATE_LIMIT_RETENTION_DAYS`, `QUOTA_USAGE_RETENTION_DAYS` et `PROMO_REDEMPTION_RETENTION_DAYS` ajustent la retention.
 
 ## Fallback actuel
 

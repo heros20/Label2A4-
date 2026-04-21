@@ -1,5 +1,6 @@
 import { AdminLoginForm } from "@/components/admin-login-form"
 import { AdminLogoutButton } from "@/components/admin-logout-button"
+import { AdminPromoManager } from "@/components/admin-promo-manager"
 import { PageShell } from "@/components/page-shell"
 import { isAdminAuthenticated, isAdminDashboardConfigured } from "@/lib/admin-auth"
 import { getAdminDashboardData } from "@/lib/admin-dashboard"
@@ -20,7 +21,9 @@ const lastUpdateDoneItems = [
   "Codes promo serveur ajoutés : validation backend, réservation anti-double usage, réductions fixes/pourcentage et essai gratuit 7 jours.",
   "Quota gratuit renforcé : invité signé, compte gratuit, premium, garde anti-abus serveur et rate limiting.",
   "Compteur écologique ajouté : feuilles économisées, étiquettes optimisées, compteur individuel et global plateforme.",
-  "Footer crédibilisé avec le lien créateur Heros20 et le logo demandé.",
+  "Footer crédibilisé avec le lien créateur KB et le logo demandé.",
+  "Admin enrichi : création/désactivation des promos, tableau impact/quota/promo et purge cron quotidienne.",
+  "ESLint installé pour contrôler le code avant push.",
   "Documentation technique ajoutée dans docs/payment-promo-quota-architecture.md.",
 ] as const
 
@@ -28,9 +31,9 @@ const ownerTodoItems = [
   "Appliquer dans Supabase les fichiers SQL : supabase/quota.sql, supabase/billing.sql, supabase/promo_codes.sql et supabase/impact.sql.",
   "Activer dans Stripe Dashboard les moyens de paiement souhaités : carte, PayPal, Apple Pay et Google Pay.",
   "Enregistrer les domaines de paiement Stripe pour Apple Pay / Google Pay en test et en production.",
-  "Vérifier les variables d'environnement Stripe, Supabase, quota et prix dans Vercel.",
+  "Vérifier les variables d'environnement Stripe, Supabase, quota, prix et CRON_SECRET dans Vercel.",
   "Tester un achat pass 24h, un abonnement mensuel, un abonnement annuel, un code WELCOME20, un code TRIAL7 et un quota atteint.",
-  "Créer ou ajuster les codes influenceurs dans la table promo_codes avant campagne.",
+  "Créer ou ajuster les codes influenceurs depuis l'onglet admin, sans SQL manuel.",
 ] as const
 
 export default async function AdminPage() {
@@ -103,6 +106,18 @@ export default async function AdminPage() {
         >
           Dernière mise à jour
         </a>
+        <a
+          href="#gestion-promos"
+          className="rounded-full border border-slate-200/80 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-sky-300 hover:text-sky-800"
+        >
+          Promos
+        </a>
+        <a
+          href="#operations-admin"
+          className="rounded-full border border-slate-200/80 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-sky-300 hover:text-sky-800"
+        >
+          Impact / quota
+        </a>
       </nav>
 
       <section id="derniere-mise-a-jour" className={cardClass}>
@@ -138,7 +153,7 @@ export default async function AdminPage() {
           </div>
         </div>
 
-        <div className="mt-5 rounded-[20px] border border-slate-200/80 bg-slate-50/80 p-4">
+        <div id="gestion-promos" className="mt-5 rounded-[20px] border border-slate-200/80 bg-slate-50/80 p-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="font-semibold text-slate-950">Codes promo et utilité</h3>
             <div className="text-xs font-medium text-slate-500">
@@ -148,47 +163,64 @@ export default async function AdminPage() {
             </div>
           </div>
 
-          <div className="mt-4 grid gap-3">
-            {dashboard.promoCodes.map((promo) => (
-              <div
-                key={promo.code}
-                className="rounded-[18px] border border-slate-200/80 bg-white p-4 text-sm text-slate-700"
-              >
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <div className="font-mono text-sm font-semibold text-slate-950">{promo.code}</div>
-                    <div className="mt-1 font-medium text-slate-900">{promo.label}</div>
-                  </div>
-                  <div
-                    className={
-                      promo.active
-                        ? "w-fit rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800"
-                        : "w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-500"
-                    }
-                  >
-                    {promo.active ? "actif" : "à configurer"}
-                  </div>
-                </div>
-                <div className="mt-3 grid gap-2 md:grid-cols-2">
-                  <p>
-                    <strong>Avantage :</strong> {promo.discountLabel}
-                  </p>
-                  <p>
-                    <strong>Plans :</strong> {promo.plansLabel}
-                  </p>
-                  <p>
-                    <strong>Limites :</strong> {promo.limitsLabel}
-                  </p>
-                  <p>
-                    <strong>Expiration :</strong> {promo.expiresAt ?? "aucune"}
-                  </p>
-                </div>
-                <p className="mt-3 text-slate-600">
-                  <strong>Utilité :</strong> {promo.utility}
-                </p>
-              </div>
-            ))}
+          <div className="mt-4">
+            <AdminPromoManager configured={dashboard.promoCodesConfigured} promoCodes={dashboard.promoCodes} />
           </div>
+        </div>
+      </section>
+
+      <section id="operations-admin" className={cardClass}>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-700">
+              Impact / quota / promo
+            </div>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Tableau opérationnel</h2>
+          </div>
+          <div
+            className={
+              dashboard.operationalRowsConfigured
+                ? "w-fit rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800"
+                : "w-fit rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800"
+            }
+          >
+            {dashboard.operationalRowsConfigured ? "Données Supabase" : "Configuration incomplète"}
+          </div>
+        </div>
+
+        <div className="mt-5 overflow-x-auto">
+          <table className="w-full min-w-[720px] border-separate border-spacing-0 text-left text-sm">
+            <thead>
+              <tr className="text-xs uppercase tracking-[0.14em] text-slate-500">
+                <th className="border-b border-slate-200 px-3 py-3 font-semibold">Catégorie</th>
+                <th className="border-b border-slate-200 px-3 py-3 font-semibold">Indicateur</th>
+                <th className="border-b border-slate-200 px-3 py-3 font-semibold">Valeur</th>
+                <th className="border-b border-slate-200 px-3 py-3 font-semibold">Détail</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dashboard.operationalRows.map((row) => (
+                <tr key={`${row.category}-${row.metric}`} className="align-top">
+                  <td className="border-b border-slate-100 px-3 py-3 font-medium text-slate-900">{row.category}</td>
+                  <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{row.metric}</td>
+                  <td className="border-b border-slate-100 px-3 py-3">
+                    <span
+                      className={
+                        row.status === "ok"
+                          ? "rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800"
+                          : row.status === "warning"
+                            ? "rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800"
+                            : "rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600"
+                      }
+                    >
+                      {row.value}
+                    </span>
+                  </td>
+                  <td className="border-b border-slate-100 px-3 py-3 text-slate-600">{row.detail}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
 

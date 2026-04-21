@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from "crypto"
 import { cookies } from "next/headers"
+import type { NextRequest } from "next/server"
 import { NextResponse } from "next/server"
 
 const ADMIN_SESSION_COOKIE = "label2a4_admin_session"
@@ -51,6 +52,19 @@ export function clearAdminSessionCookie(response: NextResponse) {
 export async function isAdminAuthenticated() {
   const cookieStore = await cookies()
   const current = cookieStore.get(ADMIN_SESSION_COOKIE)?.value
+  const expected = getExpectedSessionValue()
+
+  if (!current || !expected) {
+    return false
+  }
+
+  const left = Buffer.from(current)
+  const right = Buffer.from(expected)
+  return left.length === right.length && timingSafeEqual(left, right)
+}
+
+export function isAdminRequestAuthenticated(request: NextRequest) {
+  const current = request.cookies.get(ADMIN_SESSION_COOKIE)?.value
   const expected = getExpectedSessionValue()
 
   if (!current || !expected) {

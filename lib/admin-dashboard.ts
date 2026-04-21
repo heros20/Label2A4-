@@ -24,6 +24,14 @@ interface AdminRecentSubscription {
   status: string
 }
 
+export interface AdminOperationalRow {
+  category: string
+  detail: string
+  metric: string
+  status: "ok" | "warning" | "muted"
+  value: string
+}
+
 export interface AdminPromoCode {
   active: boolean
   code: string
@@ -41,6 +49,8 @@ export interface AdminDashboardData {
   checkoutConversionRate30d: number
   customEvents: string[]
   grossRevenue30dLabel: string
+  operationalRows: AdminOperationalRow[]
+  operationalRowsConfigured: boolean
   monthlySubscriptions: number
   annualSubscriptions: number
   mrrEquivalentLabel: string
@@ -71,12 +81,30 @@ interface PromoCodeRow {
   trial_days: number | null
 }
 
+interface ImpactCounterRow {
+  labels_optimized: number
+  optimized_sheets: number
+  sheets_saved: number
+}
+
+interface DailyQuotaUsageRow {
+  used_sheets: number
+}
+
+interface PromoRedemptionRow {
+  status: "pending" | "completed" | "expired" | "void"
+}
+
 function formatDate(value: number) {
   return new Date(value * 1000).toLocaleString("fr-FR")
 }
 
 function formatIsoDate(value: string | null) {
   return value ? new Date(value).toLocaleString("fr-FR") : null
+}
+
+function formatInteger(value: number) {
+  return new Intl.NumberFormat("fr-FR").format(value)
 }
 
 function getFallbackPromoCodes(): AdminPromoCode[] {
@@ -179,6 +207,133 @@ async function getAdminPromoCodes() {
   }
 }
 
+function isMissingOperationalStorageError(error: { code?: string; message?: string } | null) {
+  return (
+    error?.code === "PGRST205" ||
+    Boolean(error?.message?.includes("Could not find the table 'public.label_impact_counters'")) ||
+    Boolean(error?.message?.includes("Could not find the table 'public.daily_quota_usage'")) ||
+    Boolean(error?.message?.includes("Could not find the table 'public.rate_limit_usage'")) ||
+    Boolean(error?.message?.includes("Could not find the table 'public.promo_code_redemptions'"))
+  )
+}
+
+function getFallbackOperationalRows(detail: string): AdminOperationalRow[] {
+  return [
+    {
+      category: "Configuration",
+      detail,
+      metric: "Supabase",
+      status: "warning",
+      value: "Non disponible",
+    },
+  ]
+}
+
+async function getAdminOperationalRows() {
+  if (!isSupabaseAdminConfigured()) {
+    return {
+      configured: false,
+      rows: getFallbackOperationalRows("Ajoutez SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY pour lire ces indicateurs."),
+    }
+  }
+
+  const supabase = getSupabaseAdminClient()
+  const todayKey = new Date().toISOString().slice(0, 10)
+
+  const [impactResult, quotaResult, promoRedemptionsResult, rateLimitResult] = await Promise.all([
+    supabase
+      .from("label_impact_counters")
+      .select("labels_optimized, optimized_sheets, sheets_saved")
+      .eq("scope_type", "platform")
+      .eq("scope_hash", "global")
+      .maybeSingle<ImpactCounterRow>(),
+    supabase
+      .from("daily_quota_usage")
+      .select("used_sheets")
+      .eq("day_key", todayKey)
+      .returns<DailyQuotaUsageRow[]>(),
+    supabase.from("promo_code_redemptions").select("status").returns<PromoRedemptionRow[]>(),
+    supabase.from("rate_limit_usage").select("bucket_hash", { count: "exact", head: true }),
+  ])
+
+  const possibleErrors = [
+    impactResult.error,
+    quotaResult.error,
+    promoRedemptionsResult.error,
+    rateLimitResult.error,
+  ]
+  const missingStorage = possibleErrors.some(isMissingOperationalStorageError)
+
+  if (missingStorage) {
+    return {
+      configured: false,
+      rows: getFallbackOperationalRows(
+        "Appliquez les fichiers SQL Supabase du projet pour activer impact, quota, promos et rate limiting.",
+      ),
+    }
+  }
+
+  const blockingError = possibleErrors.find(Boolean)
+  if (blockingError) {
+    throw new Error(`Unable to load operational admin rows: ${blockingError.message}`)
+  }
+
+  const impact = impactResult.data
+  const quotaRows = quotaResult.data ?? []
+  const promoRedemptionRows = promoRedemptionsResult.data ?? []
+  const promoCounts = promoRedemptionRows.reduce(
+    (counts, redemption) => {
+      counts[redemption.status] += 1
+      return counts
+    },
+    {
+      completed: 0,
+      expired: 0,
+      pending: 0,
+      void: 0,
+    },
+  )
+  const quotaSheetsToday = quotaRows.reduce((sum, row) => sum + row.used_sheets, 0)
+
+  return {
+    configured: true,
+    rows: [
+      {
+        category: "Impact",
+        detail: `${formatInteger(impact?.labels_optimized ?? 0)} etiquettes optimisees, ${formatInteger(
+          impact?.optimized_sheets ?? 0,
+        )} feuilles A4 generees.`,
+        metric: "Feuilles economisees",
+        status: "ok",
+        value: formatInteger(impact?.sheets_saved ?? 0),
+      },
+      {
+        category: "Quota",
+        detail: `${formatInteger(quotaRows.length)} identites suivies aujourd'hui en UTC.`,
+        metric: "Feuilles consommees aujourd'hui",
+        status: quotaSheetsToday > 0 ? "ok" : "muted",
+        value: formatInteger(quotaSheetsToday),
+      },
+      {
+        category: "Promos",
+        detail: `${formatInteger(promoCounts.pending)} en attente, ${formatInteger(
+          promoCounts.expired,
+        )} expirees, ${formatInteger(promoCounts.void)} annulees.`,
+        metric: "Redemptions completes",
+        status: promoCounts.completed > 0 ? "ok" : "muted",
+        value: formatInteger(promoCounts.completed),
+      },
+      {
+        category: "Anti-abus",
+        detail: "Buckets rate limit encore conserves avant purge planifiee.",
+        metric: "Buckets rate limit",
+        status: (rateLimitResult.count ?? 0) > 0 ? "ok" : "muted",
+        value: formatInteger(rateLimitResult.count ?? 0),
+      },
+    ] satisfies AdminOperationalRow[],
+  }
+}
+
 function getSubscriptionPlan(
   subscription: Awaited<ReturnType<ReturnType<typeof getStripe>["subscriptions"]["list"]>>["data"][number],
 ) {
@@ -207,6 +362,7 @@ function getSubscriptionPeriodEnd(
 
 export async function getAdminDashboardData(): Promise<AdminDashboardData> {
   const promoSummary = await getAdminPromoCodes()
+  const operationalSummary = await getAdminOperationalRows()
   const defaultData: AdminDashboardData = {
     checkoutCompleted30d: 0,
     checkoutStarted30d: 0,
@@ -229,6 +385,8 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
       "quota_exceeded",
     ],
     grossRevenue30dLabel: formatEuroFromCents(0),
+    operationalRows: operationalSummary.rows,
+    operationalRowsConfigured: operationalSummary.configured,
     monthlySubscriptions: 0,
     annualSubscriptions: 0,
     mrrEquivalentLabel: formatEuroFromCents(0),
@@ -311,6 +469,8 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
         : 0,
     customEvents: defaultData.customEvents,
     grossRevenue30dLabel: formatEuroFromCents(grossRevenue30dCents),
+    operationalRows: operationalSummary.rows,
+    operationalRowsConfigured: operationalSummary.configured,
     monthlySubscriptions: monthlySubscriptions.length,
     annualSubscriptions: annualSubscriptions.length,
     mrrEquivalentLabel: formatEuroFromCents(mrrEquivalentCents),

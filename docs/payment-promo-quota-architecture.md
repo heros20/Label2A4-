@@ -26,6 +26,8 @@ Flux :
 
 Une reservation expire apres 30 minutes pour eviter qu'un checkout abandonne bloque definitivement un code limite.
 
+L'admin peut creer, activer et desactiver les promos via `/admin`. La route `/api/admin/promos` exige la session admin, utilise Supabase service role, normalise le code, valide les limites et stocke seulement des champs serveur. Elle ne permet pas de modifier le prix final du checkout : `/api/checkout` revalide toujours le code et recalcule la remise.
+
 ## Quota gratuit
 
 Le quota est d'abord serveur :
@@ -50,3 +52,13 @@ arbres_estimes = feuilles_economisees / 8000
 ```
 
 Le chiffre arbre est volontairement indicatif. L'UI affiche d'abord les feuilles economisees et les etiquettes optimisees, plus fiables pour l'utilisateur.
+
+## Admin et purge planifiee
+
+Le dashboard admin affiche un tableau operationnel impact/quota/promo :
+- impact plateforme depuis `label_impact_counters` ;
+- quota du jour depuis `daily_quota_usage` ;
+- redemptions promo depuis `promo_code_redemptions` ;
+- buckets anti-abus depuis `rate_limit_usage`.
+
+La purge planifiee est exposee par `/api/cron/cleanup` et declaree dans `vercel.json`. Elle exige `Authorization: Bearer $CRON_SECRET`, expire les redemptions pending arrivees a echeance, supprime les vieux buckets de rate limit, supprime les redemptions expirees/annulees anciennes, et conserve les donnees business completes. Les retentions par defaut sont configurables avec `RATE_LIMIT_RETENTION_DAYS`, `QUOTA_USAGE_RETENTION_DAYS` et `PROMO_REDEMPTION_RETENTION_DAYS`.

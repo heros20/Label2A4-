@@ -106,7 +106,7 @@ export function SiteFooter() {
                 height={24}
                 className="h-6 w-6 rounded-md"
               />
-              <span>Site créé par Heros20</span>
+              <span>Site créé par KB</span>
             </a>
           </div>
         </div>

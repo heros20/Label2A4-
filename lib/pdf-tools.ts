@@ -17,10 +17,9 @@ const MIN_CROP_SIZE = 0.01
 
 // The user wants labels to fill the A4 in this exact order.
 const SLOT_ORDER = [1, 0, 3, 2] as const
-const SINGLE_LABEL_SLOT_ORDER = ["top-right", "top-left", "bottom-right", "bottom-left"] as const
 const PDF_ROTATIONS = [0, 90, 180, 270] as const
 
-export type SingleLabelSlot = (typeof SINGLE_LABEL_SLOT_ORDER)[number]
+export type SingleLabelSlot = "top-right" | "top-left" | "bottom-right" | "bottom-left"
 export type PdfRotation = (typeof PDF_ROTATIONS)[number]
 
 type PdfInputFile = File & { id?: string }
