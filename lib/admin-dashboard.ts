@@ -108,28 +108,7 @@ function formatInteger(value: number) {
 }
 
 function getFallbackPromoCodes(): AdminPromoCode[] {
-  return [
-    {
-      active: false,
-      code: "WELCOME20",
-      discountLabel: "-20%",
-      expiresAt: null,
-      label: "Bienvenue -20%",
-      limitsLabel: "1 utilisation par compte ou invite",
-      plansLabel: "Mensuel, annuel, pass 24h",
-      utility: "Code d'accueil ou influenceur pour déclencher un premier achat.",
-    },
-    {
-      active: false,
-      code: "TRIAL7",
-      discountLabel: "7 jours gratuits",
-      expiresAt: null,
-      label: "Essai gratuit 7 jours",
-      limitsLabel: "1 utilisation par compte ou invite",
-      plansLabel: "Mensuel, annuel",
-      utility: "Essai gratuit sécurisé pour convertir les utilisateurs réguliers vers un abonnement.",
-    },
-  ]
+  return []
 }
 
 function getPromoDiscountLabel(promo: PromoCodeRow) {

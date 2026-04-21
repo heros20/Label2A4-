@@ -202,7 +202,6 @@ export function CheckoutButton({ className, label, planId }: CheckoutButtonProps
               setPromoQuote(null)
               setPromoError("")
             }}
-            placeholder="INFLUENCEUR20"
             className="min-h-11 flex-1 rounded-full border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
             disabled={isLoading || isValidatingPromo}
             suppressHydrationWarning

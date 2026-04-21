@@ -174,7 +174,6 @@ export function AdminPromoManager({ configured, promoCodes }: AdminPromoManagerP
               value={code}
               onChange={(event) => setCode(event.currentTarget.value.toUpperCase())}
               className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
-              placeholder="INFLUENCEUR20"
               required
             />
           </label>
@@ -185,7 +184,6 @@ export function AdminPromoManager({ configured, promoCodes }: AdminPromoManagerP
               value={label}
               onChange={(event) => setLabel(event.currentTarget.value)}
               className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
-              placeholder="Campagne influenceur"
             />
           </label>
 
@@ -252,7 +250,6 @@ export function AdminPromoManager({ configured, promoCodes }: AdminPromoManagerP
               value={maxRedemptions}
               onChange={(event) => setMaxRedemptions(event.currentTarget.value)}
               className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
-              placeholder="Illimite"
             />
           </label>
 
@@ -264,7 +261,6 @@ export function AdminPromoManager({ configured, promoCodes }: AdminPromoManagerP
               value={maxRedemptionsPerIdentity}
               onChange={(event) => setMaxRedemptionsPerIdentity(event.currentTarget.value)}
               className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
-              placeholder="1"
             />
           </label>
 
@@ -308,7 +304,6 @@ export function AdminPromoManager({ configured, promoCodes }: AdminPromoManagerP
               value={notes}
               onChange={(event) => setNotes(event.currentTarget.value)}
               className="min-h-24 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
-              placeholder="Influenceur, campagne, raison support..."
             />
           </label>
         </fieldset>
@@ -330,7 +325,13 @@ export function AdminPromoManager({ configured, promoCodes }: AdminPromoManagerP
       </form>
 
       <div className="grid gap-3">
-        {promoCodes.map((promo) => (
+        {promoCodes.length === 0 ? (
+          <div className="rounded-[18px] border border-slate-200/80 bg-white p-4 text-sm leading-6 text-slate-600">
+            {configured
+              ? "Aucun code promo n'est configuré pour le moment."
+              : "Connectez Supabase et appliquez le schéma promo pour gérer les codes depuis cette interface."}
+          </div>
+        ) : promoCodes.map((promo) => (
           <div key={promo.code} className="rounded-[18px] border border-slate-200/80 bg-white p-4 text-sm text-slate-700">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
@@ -345,7 +346,7 @@ export function AdminPromoManager({ configured, promoCodes }: AdminPromoManagerP
                       : "w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-500"
                   }
                 >
-                  {promo.active ? "actif" : configured ? "inactif" : "a creer"}
+                  {promo.active ? "actif" : "inactif"}
                 </div>
                 {configured && (
                   <button

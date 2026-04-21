@@ -32,8 +32,8 @@ const ownerTodoItems = [
   "Activer dans Stripe Dashboard les moyens de paiement souhaités : carte, PayPal, Apple Pay et Google Pay.",
   "Enregistrer les domaines de paiement Stripe pour Apple Pay / Google Pay en test et en production.",
   "Vérifier les variables d'environnement Stripe, Supabase, quota, prix et CRON_SECRET dans Vercel.",
-  "Tester un achat pass 24h, un abonnement mensuel, un abonnement annuel, un code WELCOME20, un code TRIAL7 et un quota atteint.",
-  "Créer ou ajuster les codes influenceurs depuis l'onglet admin, sans SQL manuel.",
+  "Tester un achat pass 24h, un abonnement mensuel, un abonnement annuel, un code promo actif et un quota atteint.",
+  "Créer ou ajuster les codes commerciaux depuis l'onglet admin, sans SQL manuel.",
 ] as const
 
 export default async function AdminPage() {
@@ -159,7 +159,7 @@ export default async function AdminPage() {
             <div className="text-xs font-medium text-slate-500">
               {dashboard.promoCodesConfigured
                 ? "Codes lus depuis Supabase"
-                : "Aperçu des codes seed à créer via supabase/promo_codes.sql"}
+                : "Schéma promo à appliquer dans Supabase"}
             </div>
           </div>
 

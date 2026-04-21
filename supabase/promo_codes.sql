@@ -168,20 +168,3 @@ end;
 $$;
 
 grant execute on function public.reserve_promo_code(text, text, text, uuid, text, integer, integer) to service_role;
-
-insert into public.promo_codes (
-  code,
-  label,
-  kind,
-  discount_value,
-  trial_days,
-  max_redemptions,
-  max_redemptions_per_identity,
-  applies_to_plans,
-  notes
-)
-values
-  ('WELCOME20', 'Bienvenue -20%', 'percent', 20, null, null, 1, array['monthly', 'annual', 'day-pass'], 'Exemple de réduction en pourcentage.'),
-  ('TRIAL7', 'Essai gratuit 7 jours', 'trial', null, 7, null, 1, array['monthly', 'annual'], 'Exemple d''essai gratuit pour abonnement.')
-on conflict (code) do nothing;
-
