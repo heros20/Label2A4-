@@ -117,6 +117,19 @@ export const LABEL_PROFILES = [
     crop: MONDIAL_RELAY_VARIANTS[0].crop,
   },
   {
+    id: "happy-post",
+    slug: "happy-post",
+    title: "Happy Post",
+    shortLabel: "Happy Post",
+    mode: "preset",
+    cropRect: {
+      x: 0.08,
+      y: 0.05,
+      width: 0.84,
+      height: 0.41,
+    },
+  },
+  {
     id: "manual",
     slug: "manuel",
     title: "Rognage manuel",

@@ -28,7 +28,7 @@ export const siteConfig = {
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "https://label2a4.vercel.app",
   description:
     process.env.NEXT_PUBLIC_SITE_DESCRIPTION ??
-    "Regroupez vos étiquettes PDF Chronopost, Colissimo et Mondial Relay sur des feuilles A4 x4 prêtes à imprimer.",
+    "Regroupez vos étiquettes PDF Chronopost, Colissimo, Mondial Relay et Happy Post sur des feuilles A4 x4 prêtes à imprimer.",
   supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "support@label2a4.local",
   supportResponseDelay:
     process.env.NEXT_PUBLIC_SUPPORT_RESPONSE_DELAY ?? "Réponse sous 2 jours ouvrés.",

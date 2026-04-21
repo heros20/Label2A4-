@@ -3,9 +3,9 @@ import { HomeTool } from "@/components/home-tool"
 import { siteConfig } from "@/lib/site-config"
 
 export const metadata: Metadata = {
-  title: "Étiquettes PDF en A4 x4 pour Chronopost, Colissimo et Mondial Relay",
+  title: "Étiquettes PDF en A4 x4 pour vos transporteurs",
   description:
-    "Regroupez vos étiquettes PDF Chronopost, Colissimo et Mondial Relay sur des feuilles A4 x4 prêtes à imprimer.",
+    "Regroupez vos étiquettes PDF Chronopost, Colissimo, Mondial Relay et Happy Post sur des feuilles A4 x4 prêtes à imprimer.",
   alternates: {
     canonical: siteConfig.siteUrl,
   },

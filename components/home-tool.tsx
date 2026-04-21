@@ -784,7 +784,7 @@ export function HomeTool() {
 
             <div className="mt-6 flex flex-wrap gap-3 text-sm text-slate-700">
               <span className="rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 shadow-sm">
-                Chronopost, Colissimo, Mondial Relay
+                Chronopost, Colissimo, Mondial Relay, Happy Post
               </span>
               <span className="rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 shadow-sm">
                 Rognage manuel sur aperçu
@@ -1590,7 +1590,7 @@ export function HomeTool() {
               Imprimer plusieurs étiquettes colis sur une feuille A4
             </h2>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">
-              Label2A4 transforme vos étiquettes PDF Chronopost, Colissimo et Mondial Relay en planches A4 x4.
+              Label2A4 transforme vos étiquettes PDF Chronopost, Colissimo, Mondial Relay et Happy Post en planches A4 x4.
               Pratique pour les ventes Vinted, Leboncoin et les expéditions régulières, sans modifier votre workflow
               d&apos;upload, de rognage et d&apos;impression.
             </p>
