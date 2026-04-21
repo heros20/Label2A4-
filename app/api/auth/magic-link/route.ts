@@ -61,14 +61,38 @@ function resolveRedirectTo(request: NextRequest, value: unknown) {
   }
 }
 
-function buildMagicLinkTextContent(actionLink: string) {
+function getSafeNextPathFromRedirectTo(redirectTo: string) {
+  try {
+    const redirectUrl = new URL(redirectTo)
+    const nextPath = redirectUrl.searchParams.get("next")
+
+    return nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/compte"
+  } catch {
+    return "/compte"
+  }
+}
+
+function buildServerVerifiedConfirmationUrl(input: {
+  request: NextRequest
+  redirectTo: string
+  tokenHash: string
+  type: string
+}) {
+  const confirmationUrl = new URL("/auth/callback", getRequestOrigin(input.request))
+  confirmationUrl.searchParams.set("token_hash", input.tokenHash)
+  confirmationUrl.searchParams.set("type", input.type)
+  confirmationUrl.searchParams.set("next", getSafeNextPathFromRedirectTo(input.redirectTo))
+  return confirmationUrl.toString()
+}
+
+function buildMagicLinkTextContent(confirmationUrl: string) {
   return [
     "Bonjour,",
     "",
     "Ton lien d'accès Label2A4 est prêt.",
     "",
     "Clique sur ce lien pour vérifier ton adresse email et ouvrir ton espace :",
-    actionLink,
+    confirmationUrl,
     "",
     "Avec Label2A4, tu regroupes tes étiquettes sur une feuille A4 pour imprimer plus proprement, plus vite, et avec moins de gaspillage.",
     "",
@@ -78,8 +102,8 @@ function buildMagicLinkTextContent(actionLink: string) {
   ].join("\n")
 }
 
-function buildMagicLinkHtmlContent(actionLink: string) {
-  const escapedActionLink = escapeHtml(actionLink)
+function buildMagicLinkHtmlContent(confirmationUrl: string) {
+  const escapedConfirmationUrl = escapeHtml(confirmationUrl)
 
   return `
 <div style="margin:0;padding:0;background:#edf3f8;font-family:Segoe UI,Arial,Helvetica,sans-serif;color:#0f172a;">
@@ -120,7 +144,7 @@ function buildMagicLinkHtmlContent(actionLink: string) {
               <table role="presentation" cellspacing="0" cellpadding="0" style="margin:26px 0 28px 0;">
                 <tr>
                   <td align="center" style="border-radius:14px;background:#0369a1;box-shadow:0 10px 24px rgba(3,105,161,0.28);">
-                    <a href="${escapedActionLink}" style="display:inline-block;padding:15px 24px;font-size:15px;font-weight:800;color:#ffffff;text-decoration:none;border-radius:14px;">
+                    <a href="${escapedConfirmationUrl}" style="display:inline-block;padding:15px 24px;font-size:15px;font-weight:800;color:#ffffff;text-decoration:none;border-radius:14px;">
                       Ouvrir mon espace
                     </a>
                   </td>
@@ -138,7 +162,7 @@ function buildMagicLinkHtmlContent(actionLink: string) {
               </p>
 
               <p style="margin:0 0 22px 0;font-size:12px;line-height:1.6;word-break:break-all;color:#64748b;">
-                <a href="${escapedActionLink}" style="color:#0369a1;text-decoration:underline;">${escapedActionLink}</a>
+                <a href="${escapedConfirmationUrl}" style="color:#0369a1;text-decoration:underline;">${escapedConfirmationUrl}</a>
               </p>
             </td>
           </tr>
@@ -203,14 +227,21 @@ export async function POST(request: NextRequest) {
       throw new Error(error.message)
     }
 
-    const actionLink = data.properties?.action_link
-    if (!actionLink) {
-      throw new Error("Supabase did not return an auth action link.")
+    const tokenHash = data.properties?.hashed_token
+    const verificationType = data.properties?.verification_type
+    if (!tokenHash || !verificationType) {
+      throw new Error("Supabase did not return an auth token hash.")
     }
 
+    const confirmationUrl = buildServerVerifiedConfirmationUrl({
+      redirectTo,
+      request,
+      tokenHash,
+      type: verificationType,
+    })
     const subject = `Ton accès ${siteConfig.siteName}`
-    const textContent = buildMagicLinkTextContent(actionLink)
-    const htmlContent = buildMagicLinkHtmlContent(actionLink)
+    const textContent = buildMagicLinkTextContent(confirmationUrl)
+    const htmlContent = buildMagicLinkHtmlContent(confirmationUrl)
 
     const brevoResponse = await sendBrevoTransactionalEmail({
       htmlContent,

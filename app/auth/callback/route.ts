@@ -20,12 +20,18 @@ export async function GET(request: NextRequest) {
     const type = request.nextUrl.searchParams.get("type") as EmailOtpType | null
 
     if (code) {
-      await supabase.auth.exchangeCodeForSession(code)
+      const { error } = await supabase.auth.exchangeCodeForSession(code)
+      if (error) {
+        throw error
+      }
     } else if (tokenHash && type) {
-      await supabase.auth.verifyOtp({
+      const { error } = await supabase.auth.verifyOtp({
         token_hash: tokenHash,
         type,
       })
+      if (error) {
+        throw error
+      }
     } else {
       redirectUrl.searchParams.set("auth_error", "missing_token")
     }
