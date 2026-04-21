@@ -1,14 +1,20 @@
 import { createHash, createHmac, randomUUID } from "crypto"
 import { NextRequest, NextResponse } from "next/server"
 import { resolveStoredPlanStateForUser } from "@/lib/billing-store"
-import type { AccessSnapshot, ActivePlan, PremiumPlanId } from "@/lib/monetization-types"
-import { consumeStoredDailyQuota, getStoredDailyQuota, isQuotaDatabaseConfigured } from "@/lib/quota-store"
+import type { AccessSnapshot, ActivePlan, PremiumPlanId, QuotaKind } from "@/lib/monetization-types"
+import {
+  consumeStoredDailyQuota,
+  consumeStoredQuotaWithGuard,
+  getStoredDailyQuota,
+  isQuotaDatabaseConfigured,
+} from "@/lib/quota-store"
 import { siteConfig } from "@/lib/site-config"
 import { getStripe, isStripeConfigured } from "@/lib/stripe"
 import { getAuthenticatedUser } from "@/lib/supabase/auth"
 import { isSupabaseAuthConfigured } from "@/lib/supabase/config"
 
-const ANONYMOUS_ID_COOKIE = "label2a4_device"
+const ANONYMOUS_ID_COOKIE = "label2a4_guest"
+const LEGACY_ANONYMOUS_ID_COOKIE = "label2a4_device"
 const QUOTA_COOKIE = "label2a4_quota"
 const PLAN_COOKIE = "label2a4_plan"
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365
@@ -23,6 +29,12 @@ interface QuotaState {
 interface QuotaCookiePayload extends QuotaState {
   v: 1
   anonymousId: string
+}
+
+interface AnonymousIdCookiePayload {
+  v: 1
+  anonymousId: string
+  createdAt: string
 }
 
 interface PlanCookiePayload {
@@ -155,19 +167,37 @@ function normalizeIpForQuota(ip: string) {
     return address
   }
 
-  // IPv6 privacy addresses often rotate on the same device/network.
-  // Grouping by the first /64 keeps one daily quota per local network.
+  // IPv6 privacy addresses often rotate. This network prefix is only used as a coarse anti-abuse guard,
+  // never as the primary user identity.
   return `${expanded.slice(0, 4).join(":")}::/64`
 }
 
-function getAnonymousQuotaHash(request: NextRequest) {
+function getGuestQuotaHash(anonymousId: string) {
+  return `guest:${createHash("sha256").update(anonymousId).digest("hex").slice(0, 24)}`
+}
+
+function getAnonymousAbuseQuotaHash(request: NextRequest) {
   const networkKey = normalizeIpForQuota(getClientIp(request))
 
-  return `network:${createHash("sha256").update(networkKey).digest("hex").slice(0, 24)}`
+  return `guest-abuse:${createHash("sha256").update(networkKey).digest("hex").slice(0, 24)}`
 }
 
 function getAccountQuotaHash(userId: string) {
   return `account:${createHash("sha256").update(userId).digest("hex").slice(0, 24)}`
+}
+
+function getQuotaKind(planState: ResolvedPlanState, authState: AuthState): QuotaKind {
+  if (planState.isPremium) {
+    return "premium"
+  }
+
+  return authState.isAuthenticated ? "free-account" : "guest"
+}
+
+function getDailyLimitForAuthState(authState: AuthState) {
+  return authState.isAuthenticated
+    ? siteConfig.pricing.freeAccountDailyA4Sheets
+    : siteConfig.pricing.guestDailyA4Sheets
 }
 
 function getDayKey(date = new Date()) {
@@ -196,11 +226,11 @@ function deleteCookie(response: NextResponse, name: string) {
   })
 }
 
-function buildBaseQuotaState(request: NextRequest, authState?: AuthState): QuotaState {
+function buildBaseQuotaState(anonymousId: string, authState: AuthState): QuotaState {
   return {
     dayKey: getDayKey(),
     usedSheets: 0,
-    fingerprintHash: authState?.userId ? getAccountQuotaHash(authState.userId) : getAnonymousQuotaHash(request),
+    fingerprintHash: authState.userId ? getAccountQuotaHash(authState.userId) : getGuestQuotaHash(anonymousId),
   }
 }
 
@@ -228,7 +258,7 @@ async function readQuotaState(
   anonymousId: string,
   authState: AuthState,
 ): Promise<QuotaState> {
-  const baseQuota = buildBaseQuotaState(request, authState)
+  const baseQuota = buildBaseQuotaState(anonymousId, authState)
 
   if (!isQuotaDatabaseConfigured()) {
     return readLegacyQuotaState(request, anonymousId, baseQuota)
@@ -268,14 +298,43 @@ function logEvent(event: Record<string, unknown>) {
 }
 
 export function ensureAnonymousId(request: NextRequest, response: NextResponse) {
-  const current = request.cookies.get(ANONYMOUS_ID_COOKIE)?.value
+  const current = decodeSignedCookie<AnonymousIdCookiePayload>(request.cookies.get(ANONYMOUS_ID_COOKIE)?.value)
 
-  if (current) {
-    return current
+  if (current?.v === 1 && current.anonymousId) {
+    return current.anonymousId
+  }
+
+  const legacySigned = decodeSignedCookie<AnonymousIdCookiePayload>(
+    request.cookies.get(LEGACY_ANONYMOUS_ID_COOKIE)?.value,
+  )
+
+  if (legacySigned?.v === 1 && legacySigned.anonymousId) {
+    setCookie(response, ANONYMOUS_ID_COOKIE, encodeSignedCookie(legacySigned))
+    return legacySigned.anonymousId
+  }
+
+  const legacyRaw = request.cookies.get(LEGACY_ANONYMOUS_ID_COOKIE)?.value
+
+  if (legacyRaw && /^[0-9a-f-]{24,64}$/i.test(legacyRaw)) {
+    const payload: AnonymousIdCookiePayload = {
+      v: 1,
+      anonymousId: legacyRaw,
+      createdAt: new Date().toISOString(),
+    }
+    setCookie(response, ANONYMOUS_ID_COOKIE, encodeSignedCookie(payload))
+    return legacyRaw
   }
 
   const created = randomUUID()
-  setCookie(response, ANONYMOUS_ID_COOKIE, created)
+  setCookie(
+    response,
+    ANONYMOUS_ID_COOKIE,
+    encodeSignedCookie<AnonymousIdCookiePayload>({
+      v: 1,
+      anonymousId: created,
+      createdAt: new Date().toISOString(),
+    }),
+  )
   return created
 }
 
@@ -285,7 +344,8 @@ function buildSnapshot(
   planState: ResolvedPlanState,
   authState: AuthState,
 ): AccessSnapshot {
-  const limit = siteConfig.pricing.freeDailyA4Sheets
+  const quotaKind = getQuotaKind(planState, authState)
+  const limit = getDailyLimitForAuthState(authState)
   const remaining = Math.max(limit - quota.usedSheets, 0)
 
   return {
@@ -295,6 +355,7 @@ function buildSnapshot(
     isAuthenticated: authState.isAuthenticated,
     plan: planState.plan,
     isPremium: planState.isPremium,
+    quotaKind,
     dayKey: quota.dayKey,
     dailyLimit: limit,
     usedSheetsToday: quota.usedSheets,
@@ -406,6 +467,8 @@ export async function consumeExportQuota(
   })
   const quota = await readQuotaState(request, anonymousId, authState)
   const planState = await resolvePlanState(request, response, anonymousId, authState)
+  const quotaKind = getQuotaKind(planState, authState)
+  const dailyLimit = getDailyLimitForAuthState(authState)
 
   if (planState.isPremium) {
     logEvent({
@@ -414,6 +477,7 @@ export async function consumeExportQuota(
       action: input.action,
       sheetCount: input.sheetCount,
       fileName: input.fileName,
+      quotaKind,
       result: "premium-allowed",
     })
 
@@ -424,11 +488,28 @@ export async function consumeExportQuota(
   }
 
   if (isQuotaDatabaseConfigured()) {
-    const databaseDecision = await consumeStoredDailyQuota({
-      dailyLimit: siteConfig.pricing.freeDailyA4Sheets,
+    const databaseDecision = await consumeStoredQuotaWithGuard({
       dayKey: quota.dayKey,
-      fingerprintHash: quota.fingerprintHash,
+      guardHash: authState.isAuthenticated ? null : getAnonymousAbuseQuotaHash(request),
+      guardLimit: authState.isAuthenticated ? null : siteConfig.pricing.anonymousAbuseDailyA4Sheets,
+      primaryHash: quota.fingerprintHash,
+      primaryLimit: dailyLimit,
       sheetCount: input.sheetCount,
+    }).catch(async (error) => {
+      console.error("[label2a4-quota-guard-fallback]", error)
+      const legacyDecision = await consumeStoredDailyQuota({
+        dailyLimit,
+        dayKey: quota.dayKey,
+        fingerprintHash: quota.fingerprintHash,
+        sheetCount: input.sheetCount,
+      })
+
+      return {
+        ...legacyDecision,
+        guardNextUsedSheets: 0,
+        guardUsedSheets: 0,
+        reason: legacyDecision.allowed ? null : "quota-exceeded",
+      }
     })
 
     if (!databaseDecision.allowed) {
@@ -443,13 +524,14 @@ export async function consumeExportQuota(
         action: input.action,
         sheetCount: input.sheetCount,
         fileName: input.fileName,
-        result: "quota-exceeded",
+        quotaKind,
+        result: databaseDecision.reason === "abuse-limit" ? "abuse-limit" : "quota-exceeded",
         usedSheets: databaseDecision.usedSheets,
       })
 
       return {
         allowed: false,
-        reason: "quota-exceeded",
+        reason: databaseDecision.reason === "abuse-limit" ? "abuse-limit" : "quota-exceeded",
         snapshot: buildSnapshot(anonymousId, currentQuota, planState, authState),
       }
     }
@@ -465,6 +547,7 @@ export async function consumeExportQuota(
       action: input.action,
       sheetCount: input.sheetCount,
       fileName: input.fileName,
+      quotaKind,
       result: "free-allowed",
       usedSheets: databaseDecision.nextUsedSheets,
     })
@@ -477,13 +560,14 @@ export async function consumeExportQuota(
 
   const nextUsed = quota.usedSheets + input.sheetCount
 
-  if (nextUsed > siteConfig.pricing.freeDailyA4Sheets) {
+  if (nextUsed > dailyLimit) {
     logEvent({
       anonymousId,
       plan: "free",
       action: input.action,
       sheetCount: input.sheetCount,
       fileName: input.fileName,
+      quotaKind,
       result: "quota-exceeded",
       usedSheets: quota.usedSheets,
     })
@@ -510,6 +594,7 @@ export async function consumeExportQuota(
     action: input.action,
     sheetCount: input.sheetCount,
     fileName: input.fileName,
+    quotaKind,
     result: "free-allowed",
     usedSheets: nextUsed,
   })

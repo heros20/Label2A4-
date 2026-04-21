@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { siteConfig } from "@/lib/site-config"
 
 const footerLinkGroups = [
@@ -84,12 +85,29 @@ export function SiteFooter() {
           </nav>
         </div>
 
-        <div className="flex flex-col gap-2 border-t border-slate-200/80 pt-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 border-t border-slate-200/80 pt-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
           <div>
             © {new Date().getFullYear()} {siteConfig.siteName}. Tous droits réservés.
           </div>
-          <div>
-            {siteConfig.business.businessName} · {siteConfig.business.siret}
+          <div className="flex flex-col gap-3 sm:items-end">
+            <div>
+              {siteConfig.business.businessName} · {siteConfig.business.siret}
+            </div>
+            <a
+              href="https://heros20.github.io/Portfolio-2.0/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex w-fit items-center gap-2 rounded-full border border-slate-200/80 bg-white/70 px-3 py-2 text-slate-600 transition hover:border-sky-200 hover:text-sky-800"
+            >
+              <Image
+                src="/images/android-chrome-512x512.png"
+                alt=""
+                width={24}
+                height={24}
+                className="h-6 w-6 rounded-md"
+              />
+              <span>Site créé par Heros20</span>
+            </a>
           </div>
         </div>
       </div>

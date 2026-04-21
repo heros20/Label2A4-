@@ -5,6 +5,7 @@ import {
   setSubscriptionPlanCookie,
 } from "@/lib/access-control"
 import { upsertBillingCustomer, upsertDayPassEntitlement } from "@/lib/billing-store"
+import { markPromoRedemptionCompleted } from "@/lib/promo-codes"
 import { trackServerEvent } from "@/lib/server-analytics"
 import { getStripe, isStripeConfigured } from "@/lib/stripe"
 import { isSupabaseAuthConfigured } from "@/lib/supabase/config"
@@ -56,6 +57,10 @@ export async function GET(request: NextRequest) {
     }
 
     const planId = session.metadata?.planId
+    await markPromoRedemptionCompleted({
+      redemptionId: session.metadata?.promoRedemptionId,
+      stripeCheckoutSessionId: session.id,
+    })
 
     if (isSupabaseAuthConfigured()) {
       const userId = getMetadataUserId(session.metadata)
@@ -114,6 +119,8 @@ export async function GET(request: NextRequest) {
     await trackServerEvent(request, "checkout_completed", {
       mode: planId === "day-pass" ? "payment" : "subscription",
       planId: planId ?? "unknown",
+      promoCode: session.metadata?.promoCode ?? null,
+      promoRedemptionId: session.metadata?.promoRedemptionId ?? null,
     })
     return response
   } catch (error) {

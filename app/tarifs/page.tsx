@@ -22,13 +22,14 @@ export default function TarifsPage() {
       intro="Gratuit pour tester, pass 24h pour les besoins ponctuels, abonnement pour les vendeurs réguliers."
     >
       <AnalyticsEventOnMount eventName="pricing_viewed" />
-      <div className="grid gap-4 xl:grid-cols-4">
+      <div className="grid gap-5 lg:grid-cols-2 2xl:grid-cols-4">
         <section className={cardClass}>
           <div className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Gratuit</div>
           <div className="mt-4 text-3xl font-semibold text-slate-950">0 €</div>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Jusqu&apos;à {siteConfig.pricing.freeDailyA4Sheets} planche(s) A4 exportée(s) par jour. Idéal pour tester
-            le service ou gérer un volume occasionnel.
+            Jusqu&apos;à {siteConfig.pricing.guestDailyA4Sheets} planche(s) A4 en invité, puis{" "}
+            {siteConfig.pricing.freeAccountDailyA4Sheets} avec un compte gratuit. Idéal pour tester le service ou gérer
+            un volume occasionnel.
           </p>
         </section>
 

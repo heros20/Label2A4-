@@ -8,6 +8,8 @@ import {
   upsertBillingSubscription,
   upsertDayPassEntitlement,
 } from "@/lib/billing-store"
+import { markPromoRedemptionCompleted } from "@/lib/promo-codes"
+import { trackServerEvent } from "@/lib/server-analytics"
 import { getPlanIdFromStripePriceId, getStripe, getStripeWebhookSecret, isStripeConfigured } from "@/lib/stripe"
 
 export const runtime = "nodejs"
@@ -159,6 +161,16 @@ export async function POST(request: NextRequest) {
           await handleDayPassSession(session, event.created)
         }
 
+        await markPromoRedemptionCompleted({
+          redemptionId: session.metadata?.promoRedemptionId,
+          stripeCheckoutSessionId: session.id,
+        })
+        await trackServerEvent(request, "checkout_completed_webhook", {
+          planId: session.metadata?.planId ?? "unknown",
+          promoCode: session.metadata?.promoCode ?? null,
+          promoRedemptionId: session.metadata?.promoRedemptionId ?? null,
+        })
+
         break
       }
 
@@ -166,6 +178,10 @@ export async function POST(request: NextRequest) {
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
         await handleSubscriptionEvent(event.data.object)
+        await trackServerEvent(request, "subscription_status_synced", {
+          status: event.data.object.status,
+          subscriptionId: event.data.object.id,
+        })
         break
       }
 

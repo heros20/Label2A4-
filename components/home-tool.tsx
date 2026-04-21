@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react"
-import { Download, FileText, MoveDown, MoveUp, Printer, RotateCcw, RotateCw, Trash2, Upload } from "lucide-react"
+import { Download, FileText, Leaf, MoveDown, MoveUp, Printer, RotateCcw, RotateCw, Trash2, Upload } from "lucide-react"
 import { ManualCropEditor } from "@/components/manual-crop-editor"
 import { trackClientEvent } from "@/lib/client-analytics"
 import { downloadBlob, printBlob } from "@/lib/download"
@@ -27,16 +27,19 @@ import {
   type SingleLabelSlot,
 } from "@/lib/pdf-tools"
 import { reportClientError } from "@/lib/client-monitoring"
-import type { AccessSnapshot } from "@/lib/monetization-types"
+import { calculateLabelImpact } from "@/lib/impact"
+import type { AccessSnapshot, ImpactSnapshot } from "@/lib/monetization-types"
 import { formatEuroFromCents, getPlanLabel, siteConfig } from "@/lib/site-config"
 import { cn, formatFileSize } from "@/lib/utils"
 
 type FileWithId = File & { id: string }
 type PreviewImage = { url: string; width: number; height: number }
 type AccessResponsePayload = { access?: AccessSnapshot; error?: string }
+type ImpactResponsePayload = { error?: string; impact?: ImpactSnapshot }
 type ExportResponsePayload = {
   allowed?: boolean
   error?: string
+  impact?: ImpactSnapshot
   reason?: string
   snapshot?: AccessSnapshot
 }
@@ -88,6 +91,10 @@ function formatManualCropSummary(crop?: ManualCropRect | null) {
   return `X ${formatCropPercent(normalized.x)} · Y ${formatCropPercent(normalized.y)} · L ${formatCropPercent(normalized.width)} · H ${formatCropPercent(normalized.height)}`
 }
 
+function formatInteger(value: number) {
+  return new Intl.NumberFormat("fr-FR").format(value)
+}
+
 export function HomeTool() {
   const [files, setFiles] = useState<FileWithId[]>([])
   const [focusedFileId, setFocusedFileId] = useState<string | null>(null)
@@ -115,6 +122,8 @@ export function HomeTool() {
   const [accessSnapshot, setAccessSnapshot] = useState<AccessSnapshot | null>(null)
   const [isLoadingAccess, setIsLoadingAccess] = useState(true)
   const [accessError, setAccessError] = useState("")
+  const [impactSnapshot, setImpactSnapshot] = useState<ImpactSnapshot | null>(null)
+  const [impactError, setImpactError] = useState("")
   const [exportError, setExportError] = useState("")
   const [activeExportAction, setActiveExportAction] = useState<"download" | "print" | null>(null)
   const workspaceRef = useRef<HTMLElement | null>(null)
@@ -139,6 +148,14 @@ export function HomeTool() {
     [files, pageCounts],
   )
   const totalSheets = Math.ceil(totalLabels / 4)
+  const currentImpact = useMemo(
+    () =>
+      calculateLabelImpact({
+        labelCount: totalLabels,
+        optimizedSheetCount: totalSheets,
+      }),
+    [totalLabels, totalSheets],
+  )
   const estimatedSheetCountForExport = useMemo(() => {
     if (files.length === 0) {
       return 0
@@ -168,6 +185,44 @@ export function HomeTool() {
 
     return () => URL.revokeObjectURL(url)
   }, [result])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    let active = true
+
+    fetch("/api/impact", {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const payload = (await response.json()) as ImpactResponsePayload
+
+        if (!response.ok || !payload.impact) {
+          throw new Error(payload.error ?? "Impossible de charger le compteur écologique.")
+        }
+
+        if (active) {
+          setImpactSnapshot(payload.impact)
+          setImpactError("")
+        }
+      })
+      .catch((error) => {
+        if (!active || (error instanceof DOMException && error.name === "AbortError")) {
+          return
+        }
+
+        reportClientError("impact-fetch", error)
+
+        if (active) {
+          setImpactError("Le compteur écologique sera mis à jour après votre prochain export.")
+        }
+      })
+
+    return () => {
+      active = false
+      controller.abort()
+    }
+  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -481,17 +536,28 @@ export function HomeTool() {
         body: JSON.stringify({
           action,
           fileName: result.name,
+          labelCount: Math.max(totalLabels, 1),
           sheetCount: estimatedSheetCountForExport || 1,
         }),
       })
 
       const payload = (await response.json()) as ExportResponsePayload
       applyAccessSnapshot(payload.snapshot)
+      if (payload.impact) {
+        setImpactSnapshot(payload.impact)
+        setImpactError("")
+      }
 
       if (!response.ok || !payload.allowed) {
         if (payload.reason === "quota-exceeded") {
           throw new Error(
             `Votre quota gratuit du jour est atteint. Passez en illimité pour exporter ${estimatedSheetCountForExport || 1} planche(s) A4 supplémentaire(s).`,
+          )
+        }
+
+        if (payload.reason === "abuse-limit") {
+          throw new Error(
+            "Le quota invité de sécurité est atteint sur cette connexion. Connectez-vous pour retrouver un quota lié à votre compte.",
           )
         }
 
@@ -509,6 +575,7 @@ export function HomeTool() {
       reportClientError("protected-export", error, {
         action,
         fileName: result.name,
+        labelCount: Math.max(totalLabels, 1),
         sheetCount: estimatedSheetCountForExport || 1,
       })
 
@@ -738,7 +805,7 @@ export function HomeTool() {
                       ? "Chargement de votre quota..."
                       : accessSnapshot?.isPremium
                         ? `${premiumPlanLabel ?? "Accès premium"} actif`
-                        : `${accessSnapshot?.remainingSheetsToday ?? siteConfig.pricing.freeDailyA4Sheets} planche(s) A4 restante(s) aujourd'hui sur ${accessSnapshot?.dailyLimit ?? siteConfig.pricing.freeDailyA4Sheets}`}
+                        : `${accessSnapshot?.remainingSheetsToday ?? siteConfig.pricing.guestDailyA4Sheets} planche(s) A4 restante(s) aujourd'hui sur ${accessSnapshot?.dailyLimit ?? siteConfig.pricing.guestDailyA4Sheets}`}
                   </div>
                   <p className="max-w-2xl text-sm leading-6 text-slate-600">
                     {accessSnapshot?.isPremium
@@ -770,6 +837,38 @@ export function HomeTool() {
                 </div>
               </div>
             </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-[22px] border border-emerald-200/80 bg-emerald-50/80 p-4 text-emerald-950">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                  <Leaf className="h-4 w-4" />
+                  Plateforme
+                </div>
+                <div className="mt-2 text-2xl font-semibold">
+                  {formatInteger(impactSnapshot?.platform.sheetsSaved ?? 0)}
+                </div>
+                <p className="mt-1 text-sm leading-5 text-emerald-900">feuilles A4 déjà économisées</p>
+              </div>
+              <div className="rounded-[22px] border border-slate-200/80 bg-white/86 p-4 text-slate-900">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Votre compteur</div>
+                <div className="mt-2 text-2xl font-semibold">
+                  {formatInteger(impactSnapshot?.individual.labelsOptimized ?? 0)}
+                </div>
+                <p className="mt-1 text-sm leading-5 text-slate-600">étiquettes optimisées et comptabilisées</p>
+              </div>
+              <div className="rounded-[22px] border border-slate-200/80 bg-white/86 p-4 text-slate-900">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Lot actuel</div>
+                <div className="mt-2 text-2xl font-semibold">{formatInteger(currentImpact.sheetsSaved)}</div>
+                <p className="mt-1 text-sm leading-5 text-slate-600">
+                  feuilles économisées si vous exportez ce lot
+                </p>
+              </div>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              Moins de papier gaspillé, plus d'efficacité. Le calcul compare une étiquette seule par feuille avec une
+              planche A4 x4.
+            </p>
+            {impactError && <p className="mt-2 text-sm text-amber-700">{impactError}</p>}
           </div>
 
           <label
@@ -1435,6 +1534,18 @@ export function HomeTool() {
                       {siteConfig.supportEmail}
                     </a>
                     .
+                  </p>
+                </div>
+              )}
+
+              {result && currentImpact.labelsOptimized > 0 && (
+                <div className="mt-4 rounded-[24px] border border-emerald-200 bg-emerald-50/90 p-4 text-sm leading-6 text-emerald-950">
+                  <div className="font-semibold">Impact du PDF prêt à exporter</div>
+                  <p className="mt-1">
+                    {formatInteger(currentImpact.labelsOptimized)} étiquette(s) sur{" "}
+                    {formatInteger(currentImpact.optimizedSheets)} feuille(s) A4, soit{" "}
+                    {formatInteger(currentImpact.sheetsSaved)} feuille(s) économisée(s) par rapport à une impression
+                    une étiquette par feuille.
                   </p>
                 </div>
               )}

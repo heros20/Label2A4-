@@ -9,6 +9,20 @@ function isConfiguredValue(value: string) {
   return Boolean(value.trim()) && !value.includes("À compléter") && !value.includes("a-completer")
 }
 
+const configuredFreeDailySheets = readNumber(process.env.NEXT_PUBLIC_FREE_DAILY_A4_SHEETS, 5)
+const configuredGuestDailySheets = readNumber(
+  process.env.NEXT_PUBLIC_GUEST_DAILY_A4_SHEETS,
+  Math.min(configuredFreeDailySheets, 3),
+)
+const configuredFreeAccountDailySheets = readNumber(
+  process.env.NEXT_PUBLIC_FREE_ACCOUNT_DAILY_A4_SHEETS,
+  configuredFreeDailySheets,
+)
+const configuredAnonymousAbuseDailySheets = readNumber(
+  process.env.ANONYMOUS_ABUSE_DAILY_A4_SHEETS,
+  Math.max(configuredGuestDailySheets * 4, configuredFreeAccountDailySheets * 2),
+)
+
 export const siteConfig = {
   siteName: process.env.NEXT_PUBLIC_SITE_NAME ?? "Label2A4",
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "https://label2a4.vercel.app",
@@ -45,7 +59,10 @@ export const siteConfig = {
   },
   pricing: {
     currency: "EUR",
-    freeDailyA4Sheets: readNumber(process.env.NEXT_PUBLIC_FREE_DAILY_A4_SHEETS, 5),
+    anonymousAbuseDailyA4Sheets: configuredAnonymousAbuseDailySheets,
+    freeAccountDailyA4Sheets: configuredFreeAccountDailySheets,
+    freeDailyA4Sheets: configuredFreeAccountDailySheets,
+    guestDailyA4Sheets: configuredGuestDailySheets,
     monthlyPriceCents: readNumber(process.env.NEXT_PUBLIC_MONTHLY_PRICE_CENTS, 399),
     annualPriceCents: readNumber(process.env.NEXT_PUBLIC_ANNUAL_PRICE_CENTS, 2900),
     dayPassPriceCents: readNumber(process.env.NEXT_PUBLIC_DAY_PASS_PRICE_CENTS, 199),

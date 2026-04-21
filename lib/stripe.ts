@@ -24,7 +24,11 @@ export function getStripe() {
   }
 
   if (!stripeInstance) {
-    stripeInstance = new Stripe(secretKey)
+    stripeInstance = new Stripe(secretKey, {
+      apiVersion: "2026-03-25.dahlia",
+      maxNetworkRetries: 2,
+      typescript: true,
+    })
   }
 
   return stripeInstance

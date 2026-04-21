@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from "next/server"
 import { ensureAnonymousId, getRequestOrigin } from "@/lib/access-control"
 import { getOrCreateStripeCustomerForUser } from "@/lib/billing-service"
 import type { PremiumPlanId } from "@/lib/monetization-types"
+import {
+  attachPromoRedemptionToCheckout,
+  getOrCreateStripeCouponForPromo,
+  reservePromoCodeForCheckout,
+  type PromoReservation,
+  voidPromoRedemption,
+} from "@/lib/promo-codes"
+import { consumeRateLimit } from "@/lib/rate-limit"
 import { trackServerEvent } from "@/lib/server-analytics"
 import { getStripe, getStripePriceId, isStripeConfigured } from "@/lib/stripe"
 import { getAuthenticatedUser } from "@/lib/supabase/auth"
@@ -31,6 +39,7 @@ function buildStripeMetadata(input: {
 
 export async function POST(request: NextRequest) {
   const cookieDraft = new NextResponse()
+  let pendingPromoRedemptionId: string | null = null
 
   try {
     if (!isStripeConfigured()) {
@@ -40,9 +49,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const rateLimit = await consumeRateLimit(request, {
+      bucket: "checkout",
+      limit: 15,
+      windowSeconds: 10 * 60,
+    })
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Trop de tentatives de paiement. Réessayez dans quelques minutes." },
+        { status: 429 },
+      )
+    }
+
     const payload = (await request.json()) as {
       immediateAccessConsent?: boolean
       planId?: PremiumPlanId
+      promoCode?: string
       withdrawalWaiver?: boolean
     }
 
@@ -82,12 +105,53 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Prix Stripe manquant pour cette offre." }, { status: 503 })
     }
 
+    let promoReservation: PromoReservation | null = null
+    let stripeCouponId: string | null = null
+
+    if (payload.promoCode?.trim()) {
+      const reservedPromo = await reservePromoCodeForCheckout({
+        anonymousId,
+        code: payload.promoCode,
+        planId: payload.planId,
+        userId: authenticatedUser?.id,
+      })
+
+      if ("valid" in reservedPromo) {
+        return NextResponse.json(
+          {
+            code: "promo_invalid",
+            error: reservedPromo.message,
+            promo: reservedPromo,
+          },
+          { status: 400 },
+        )
+      }
+
+      promoReservation = reservedPromo
+      pendingPromoRedemptionId = promoReservation.redemptionId
+
+      if (promoReservation.promo.kind !== "trial") {
+        stripeCouponId = await getOrCreateStripeCouponForPromo(stripe, promoReservation.promo)
+      }
+    }
+
     const stripeMetadata = buildStripeMetadata({
       anonymousId,
       planId: payload.planId,
       userEmail: authenticatedUser?.email,
       userId: authenticatedUser?.id,
     })
+    const sessionMetadata = {
+      ...stripeMetadata,
+      ...(promoReservation
+        ? {
+            promoCode: promoReservation.quote.code,
+            promoKind: promoReservation.quote.kind,
+            promoRedemptionId: promoReservation.redemptionId,
+            ...(promoReservation.quote.trialDays ? { promoTrialDays: String(promoReservation.quote.trialDays) } : {}),
+          }
+        : {}),
+    }
     const stripeCustomerId = authenticatedUser
       ? await getOrCreateStripeCustomerForUser({
           userId: authenticatedUser.id,
@@ -96,7 +160,7 @@ export async function POST(request: NextRequest) {
       : null
 
     const session = await stripe.checkout.sessions.create({
-      allow_promotion_codes: true,
+      allow_promotion_codes: false,
       billing_address_collection: "auto",
       cancel_url: `${origin}/paiement/annule`,
       client_reference_id: authenticatedUser?.id ?? anonymousId,
@@ -107,9 +171,10 @@ export async function POST(request: NextRequest) {
             "En payant, vous demandez l'activation immédiate du service premium et renoncez à votre droit de rétractation une fois l'accès activé.",
         },
       },
+      ...(stripeCouponId ? { discounts: [{ coupon: stripeCouponId }] } : {}),
       line_items: [{ price: priceId, quantity: 1 }],
       locale: "fr",
-      metadata: stripeMetadata,
+      metadata: sessionMetadata,
       mode: payload.planId === "day-pass" ? "payment" : "subscription",
       success_url: `${origin}/api/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       ...(payload.planId === "day-pass"
@@ -123,24 +188,48 @@ export async function POST(request: NextRequest) {
               enabled: true,
             },
             payment_intent_data: {
-              metadata: stripeMetadata,
+              metadata: sessionMetadata,
             },
           }
         : {
+            payment_method_collection: "always" as const,
             subscription_data: {
-              metadata: stripeMetadata,
+              metadata: sessionMetadata,
+              ...(promoReservation?.quote.trialDays
+                ? {
+                    trial_period_days: promoReservation.quote.trialDays,
+                    trial_settings: {
+                      end_behavior: {
+                        missing_payment_method: "cancel" as const,
+                      },
+                    },
+                  }
+                : {}),
             },
           }),
     })
+
+    if (promoReservation) {
+      await attachPromoRedemptionToCheckout({
+        redemptionId: promoReservation.redemptionId,
+        stripeCheckoutSessionId: session.id,
+        stripeCustomerId: typeof session.customer === "string" ? session.customer : stripeCustomerId,
+      })
+    }
 
     const response = NextResponse.json({ url: session.url })
     cookieDraft.cookies.getAll().forEach((cookie) => response.cookies.set(cookie))
     await trackServerEvent(request, "checkout_session_created", {
       mode: payload.planId === "day-pass" ? "payment" : "subscription",
       planId: payload.planId,
+      promoCode: promoReservation?.quote.code ?? null,
+      promoKind: promoReservation?.quote.kind ?? null,
     })
     return response
   } catch (error) {
+    await voidPromoRedemption(pendingPromoRedemptionId).catch((voidError) => {
+      console.error("[label2a4-promo-void]", voidError)
+    })
     console.error("[label2a4-checkout]", error)
     return NextResponse.json({ error: "Impossible de démarrer le paiement." }, { status: 500 })
   }
