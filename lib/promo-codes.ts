@@ -108,6 +108,10 @@ function isMissingPromoStorageError(error: { code?: string; message?: string } |
   )
 }
 
+function isAmbiguousPromoStatusRpcError(error: { message?: string } | null) {
+  return Boolean(error?.message?.includes('column reference "status" is ambiguous'))
+}
+
 function buildPromoQuote(promo: PromoCodeRecord, planId: PremiumPlanId): PromoQuote {
   const baseAmountCents = getPlanAmountCents(planId)
   const label = promo.label?.trim() || `Code ${promo.code}`
@@ -238,6 +242,52 @@ function validatePromoRecord(input: {
   return buildPayload("valid", buildPromoQuote(promo, planId))
 }
 
+async function reservePromoCodeWithoutRpc(input: {
+  anonymousId: string
+  planId: PremiumPlanId
+  promo: PromoCodeRecord
+  redeemerHash: string
+  userId?: string | null
+}): Promise<PromoReservation | PromoValidationPayload> {
+  const counts = await getPromoRedemptionCounts(input.promo.id, input.redeemerHash)
+  const payload = validatePromoRecord({
+    counts,
+    planId: input.planId,
+    promo: input.promo,
+  })
+
+  if (!payload.valid || !payload.quote) {
+    return payload
+  }
+
+  const supabase = getSupabaseAdminClient()
+  const expiresAt = new Date(Date.now() + PENDING_REDEMPTION_TTL_MINUTES * 60 * 1000).toISOString()
+  const { data, error } = await supabase
+    .from("promo_code_redemptions")
+    .insert({
+      amount_discount_cents: payload.quote.discountAmountCents,
+      anonymous_id: input.anonymousId,
+      expires_at: expiresAt,
+      plan_id: input.planId,
+      promo_code_id: input.promo.id,
+      redeemer_hash: input.redeemerHash,
+      trial_days: payload.quote.trialDays ?? null,
+      user_id: input.userId ?? null,
+    })
+    .select("id")
+    .single<{ id: string }>()
+
+  if (error) {
+    throw new Error(`Unable to reserve promo code without RPC: ${error.message}`)
+  }
+
+  return {
+    promo: input.promo,
+    quote: payload.quote,
+    redemptionId: data.id,
+  }
+}
+
 export async function validatePromoCodeForPlan(input: {
   anonymousId: string
   code: string
@@ -328,20 +378,36 @@ export async function reservePromoCodeForCheckout(input: {
   }
 
   const supabase = getSupabaseAdminClient()
+  const redeemerHash = buildPromoRedeemerHash({
+    anonymousId: input.anonymousId,
+    userId: input.userId,
+  })
   const { data, error } = await supabase.rpc("reserve_promo_code", {
     p_amount_discount_cents: validation.payload.quote.discountAmountCents,
     p_anonymous_id: input.anonymousId,
     p_code: normalizePromoCode(input.code),
     p_plan_id: input.planId,
-    p_redeemer_hash: buildPromoRedeemerHash({
-      anonymousId: input.anonymousId,
-      userId: input.userId,
-    }),
+    p_redeemer_hash: redeemerHash,
     p_trial_days: validation.payload.quote.trialDays ?? null,
     p_user_id: input.userId ?? null,
   })
 
   if (error) {
+    if (isAmbiguousPromoStatusRpcError(error)) {
+      // Compatibility path for databases that have not received the qualified SQL RPC yet.
+      console.warn("[label2a4-promo-rpc-fallback]", {
+        code: validation.promo.code,
+        reason: "status_ambiguous",
+      })
+      return reservePromoCodeWithoutRpc({
+        anonymousId: input.anonymousId,
+        planId: input.planId,
+        promo: validation.promo,
+        redeemerHash,
+        userId: input.userId,
+      })
+    }
+
     throw new Error(`Unable to reserve promo code: ${error.message}`)
   }
 
