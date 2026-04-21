@@ -1,6 +1,8 @@
 import "server-only"
 import { formatEuroFromCents } from "@/lib/site-config"
 import { getStripe, isStripeConfigured } from "@/lib/stripe"
+import { getSupabaseAdminClient } from "@/lib/supabase/admin"
+import { isSupabaseAdminConfigured } from "@/lib/supabase/config"
 
 type AdminSubscriptionPlan = "monthly" | "annual" | "other"
 
@@ -22,6 +24,17 @@ interface AdminRecentSubscription {
   status: string
 }
 
+export interface AdminPromoCode {
+  active: boolean
+  code: string
+  discountLabel: string
+  expiresAt: string | null
+  label: string
+  limitsLabel: string
+  plansLabel: string
+  utility: string
+}
+
 export interface AdminDashboardData {
   checkoutCompleted30d: number
   checkoutStarted30d: number
@@ -32,6 +45,8 @@ export interface AdminDashboardData {
   annualSubscriptions: number
   mrrEquivalentLabel: string
   payments30d: number
+  promoCodes: AdminPromoCode[]
+  promoCodesConfigured: boolean
   recentPayments: AdminRecentPayment[]
   recentSubscriptions: AdminRecentSubscription[]
   refundedAmount30dLabel: string
@@ -43,8 +58,125 @@ export interface AdminDashboardData {
   subscriptionsTrialing: number
 }
 
+interface PromoCodeRow {
+  active: boolean
+  applies_to_plans: string[] | null
+  code: string
+  discount_value: number | null
+  expires_at: string | null
+  kind: "fixed" | "percent" | "trial"
+  label: string | null
+  max_redemptions: number | null
+  max_redemptions_per_identity: number | null
+  trial_days: number | null
+}
+
 function formatDate(value: number) {
   return new Date(value * 1000).toLocaleString("fr-FR")
+}
+
+function formatIsoDate(value: string | null) {
+  return value ? new Date(value).toLocaleString("fr-FR") : null
+}
+
+function getFallbackPromoCodes(): AdminPromoCode[] {
+  return [
+    {
+      active: false,
+      code: "WELCOME20",
+      discountLabel: "-20%",
+      expiresAt: null,
+      label: "Bienvenue -20%",
+      limitsLabel: "1 utilisation par compte ou invite",
+      plansLabel: "Mensuel, annuel, pass 24h",
+      utility: "Code d'accueil ou influenceur pour déclencher un premier achat.",
+    },
+    {
+      active: false,
+      code: "TRIAL7",
+      discountLabel: "7 jours gratuits",
+      expiresAt: null,
+      label: "Essai gratuit 7 jours",
+      limitsLabel: "1 utilisation par compte ou invite",
+      plansLabel: "Mensuel, annuel",
+      utility: "Essai gratuit sécurisé pour convertir les utilisateurs réguliers vers un abonnement.",
+    },
+  ]
+}
+
+function getPromoDiscountLabel(promo: PromoCodeRow) {
+  if (promo.kind === "trial") {
+    return `${promo.trial_days ?? 7} jours gratuits`
+  }
+
+  if (promo.kind === "percent") {
+    return `-${promo.discount_value ?? 0}%`
+  }
+
+  return `-${formatEuroFromCents(promo.discount_value ?? 0)}`
+}
+
+function getPromoUtility(promo: PromoCodeRow) {
+  if (promo.kind === "trial") {
+    return "Essai gratuit pour lever la friction avant abonnement."
+  }
+
+  if (promo.kind === "percent") {
+    return "Réduction en pourcentage adaptée aux influenceurs et campagnes larges."
+  }
+
+  return "Réduction fixe utile pour offres ponctuelles ou compensations support."
+}
+
+async function getAdminPromoCodes() {
+  if (!isSupabaseAdminConfigured()) {
+    return {
+      configured: false,
+      promoCodes: getFallbackPromoCodes(),
+    }
+  }
+
+  const supabase = getSupabaseAdminClient()
+  const { data, error } = await supabase
+    .from("promo_codes")
+    .select(
+      "code, label, kind, discount_value, trial_days, active, expires_at, max_redemptions, max_redemptions_per_identity, applies_to_plans",
+    )
+    .order("created_at", { ascending: false })
+    .returns<PromoCodeRow[]>()
+
+  if (error) {
+    const tableMissing =
+      error.code === "PGRST205" || error.message.includes("Could not find the table 'public.promo_codes'")
+
+    if (tableMissing) {
+      return {
+        configured: false,
+        promoCodes: getFallbackPromoCodes(),
+      }
+    }
+
+    throw new Error(`Unable to load promo codes for admin dashboard: ${error.message}`)
+  }
+
+  return {
+    configured: true,
+    promoCodes: (data ?? []).map((promo) => ({
+      active: promo.active,
+      code: promo.code,
+      discountLabel: getPromoDiscountLabel(promo),
+      expiresAt: formatIsoDate(promo.expires_at),
+      label: promo.label ?? promo.code,
+      limitsLabel: [
+        promo.max_redemptions ? `${promo.max_redemptions} utilisations max` : "Sans limite globale",
+        promo.max_redemptions_per_identity
+          ? `${promo.max_redemptions_per_identity} par compte/invite`
+          : "Sans limite par identité",
+      ].join(" · "),
+      plansLabel: promo.applies_to_plans?.length ? promo.applies_to_plans.join(", ") : "Tous les plans",
+      utility: getPromoUtility(promo),
+    })),
+  }
 }
 
 function getSubscriptionPlan(
@@ -74,6 +206,7 @@ function getSubscriptionPeriodEnd(
 }
 
 export async function getAdminDashboardData(): Promise<AdminDashboardData> {
+  const promoSummary = await getAdminPromoCodes()
   const defaultData: AdminDashboardData = {
     checkoutCompleted30d: 0,
     checkoutStarted30d: 0,
@@ -100,6 +233,8 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
     annualSubscriptions: 0,
     mrrEquivalentLabel: formatEuroFromCents(0),
     payments30d: 0,
+    promoCodes: promoSummary.promoCodes,
+    promoCodesConfigured: promoSummary.configured,
     recentPayments: [],
     recentSubscriptions: [],
     refundedAmount30dLabel: formatEuroFromCents(0),
@@ -180,6 +315,8 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
     annualSubscriptions: annualSubscriptions.length,
     mrrEquivalentLabel: formatEuroFromCents(mrrEquivalentCents),
     payments30d: paidCharges.length,
+    promoCodes: promoSummary.promoCodes,
+    promoCodesConfigured: promoSummary.configured,
     recentPayments: paidCharges.slice(0, 10).map((charge) => ({
       amountLabel: formatEuroFromCents(charge.amount),
       createdAt: formatDate(charge.created),

@@ -15,6 +15,24 @@ const cardClass =
 
 const vercelProjectDashboardUrl = "https://vercel.com/herosqwerty-1719s-projects/label2a4"
 
+const lastUpdateDoneItems = [
+  "Paiement Stripe modernisé avec Checkout, SDK Stripe à jour, cartes, PayPal, Apple Pay et Google Pay via moyens dynamiques.",
+  "Codes promo serveur ajoutés : validation backend, réservation anti-double usage, réductions fixes/pourcentage et essai gratuit 7 jours.",
+  "Quota gratuit renforcé : invité signé, compte gratuit, premium, garde anti-abus serveur et rate limiting.",
+  "Compteur écologique ajouté : feuilles économisées, étiquettes optimisées, compteur individuel et global plateforme.",
+  "Footer crédibilisé avec le lien créateur Heros20 et le logo demandé.",
+  "Documentation technique ajoutée dans docs/payment-promo-quota-architecture.md.",
+] as const
+
+const ownerTodoItems = [
+  "Appliquer dans Supabase les fichiers SQL : supabase/quota.sql, supabase/billing.sql, supabase/promo_codes.sql et supabase/impact.sql.",
+  "Activer dans Stripe Dashboard les moyens de paiement souhaités : carte, PayPal, Apple Pay et Google Pay.",
+  "Enregistrer les domaines de paiement Stripe pour Apple Pay / Google Pay en test et en production.",
+  "Vérifier les variables d'environnement Stripe, Supabase, quota et prix dans Vercel.",
+  "Tester un achat pass 24h, un abonnement mensuel, un abonnement annuel, un code WELCOME20, un code TRIAL7 et un quota atteint.",
+  "Créer ou ajuster les codes influenceurs dans la table promo_codes avant campagne.",
+] as const
+
 export default async function AdminPage() {
   const isConfigured = isAdminDashboardConfigured()
   const isAuthenticated = isConfigured ? await isAdminAuthenticated() : false
@@ -69,7 +87,112 @@ export default async function AdminPage() {
         <AdminLogoutButton />
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-4">
+      <nav
+        aria-label="Onglets admin"
+        className="flex flex-wrap gap-2 rounded-[24px] border border-slate-200/80 bg-slate-50/80 p-2"
+      >
+        <a
+          href="#vue-generale"
+          className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-[0_14px_30px_-24px_rgba(15,23,42,0.6)]"
+        >
+          Vue générale
+        </a>
+        <a
+          href="#derniere-mise-a-jour"
+          className="rounded-full border border-slate-200/80 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-sky-300 hover:text-sky-800"
+        >
+          Dernière mise à jour
+        </a>
+      </nav>
+
+      <section id="derniere-mise-a-jour" className={cardClass}>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="text-sm font-semibold uppercase tracking-[0.16em] text-sky-800">Dernière mise à jour</div>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
+              Paiement, promos, écologie, crédibilité et quota
+            </h2>
+          </div>
+          <div className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
+            Patch poussé sur master
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-4 lg:grid-cols-2">
+          <div className="rounded-[20px] border border-slate-200/80 bg-white/80 p-4">
+            <h3 className="font-semibold text-slate-950">Ce qui a été ajouté</h3>
+            <div className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
+              {lastUpdateDoneItems.map((item) => (
+                <p key={item}>{item}</p>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-[20px] border border-amber-200/80 bg-amber-50/70 p-4">
+            <h3 className="font-semibold text-amber-950">Ce que vous devez faire</h3>
+            <div className="mt-3 space-y-2 text-sm leading-6 text-amber-900">
+              {ownerTodoItems.map((item) => (
+                <p key={item}>{item}</p>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-[20px] border border-slate-200/80 bg-slate-50/80 p-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h3 className="font-semibold text-slate-950">Codes promo et utilité</h3>
+            <div className="text-xs font-medium text-slate-500">
+              {dashboard.promoCodesConfigured
+                ? "Codes lus depuis Supabase"
+                : "Aperçu des codes seed à créer via supabase/promo_codes.sql"}
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3">
+            {dashboard.promoCodes.map((promo) => (
+              <div
+                key={promo.code}
+                className="rounded-[18px] border border-slate-200/80 bg-white p-4 text-sm text-slate-700"
+              >
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <div className="font-mono text-sm font-semibold text-slate-950">{promo.code}</div>
+                    <div className="mt-1 font-medium text-slate-900">{promo.label}</div>
+                  </div>
+                  <div
+                    className={
+                      promo.active
+                        ? "w-fit rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800"
+                        : "w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-500"
+                    }
+                  >
+                    {promo.active ? "actif" : "à configurer"}
+                  </div>
+                </div>
+                <div className="mt-3 grid gap-2 md:grid-cols-2">
+                  <p>
+                    <strong>Avantage :</strong> {promo.discountLabel}
+                  </p>
+                  <p>
+                    <strong>Plans :</strong> {promo.plansLabel}
+                  </p>
+                  <p>
+                    <strong>Limites :</strong> {promo.limitsLabel}
+                  </p>
+                  <p>
+                    <strong>Expiration :</strong> {promo.expiresAt ?? "aucune"}
+                  </p>
+                </div>
+                <p className="mt-3 text-slate-600">
+                  <strong>Utilité :</strong> {promo.utility}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <div id="vue-generale" className="grid gap-4 xl:grid-cols-4">
         <section className={cardClass}>
           <div className="text-sm font-semibold uppercase tracking-[0.16em] text-sky-800">Abonnements actifs</div>
           <div className="mt-3 text-3xl font-semibold text-slate-950">{dashboard.subscriptionsActive}</div>
