@@ -872,6 +872,33 @@ export function HomeTool() {
   const metricClass = "rounded-[22px] border border-slate-200/80 bg-slate-50/90 p-4"
   const pillButtonClass =
     "rounded-full border border-slate-200/80 bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-sky-300 hover:text-sky-800 disabled:opacity-40"
+  const renderSingleLabelPlacementPanel = (className?: string) =>
+    isSingleLabelBatch ? (
+      <div className={cn(panelClass, className)}>
+        <h2 className="text-xl font-semibold text-slate-950">Placement de l’étiquette unique</h2>
+        <p className="mt-2 text-slate-600">
+          Avec une seule page incluse, choisissez le quart de feuille A4 à utiliser.
+        </p>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {SINGLE_LABEL_PLACEMENTS.map((placement) => (
+            <button
+              key={placement.id}
+              type="button"
+              className={cn(
+                "rounded-[22px] border px-4 py-4 text-left text-sm font-medium transition duration-200",
+                singleLabelSlot === placement.id
+                  ? "border-sky-400 bg-[linear-gradient(135deg,rgba(240,249,255,0.95),rgba(255,255,255,0.95))] text-sky-900 shadow-[0_18px_40px_-34px_rgba(2,132,199,0.42)]"
+                  : "border-slate-200/80 bg-slate-50/80 text-slate-700 hover:border-slate-300 hover:bg-white",
+              )}
+              onClick={() => setSingleLabelSlot(placement.id)}
+            >
+              {placement.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    ) : null
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-[1440px] flex-col px-4 py-6 pb-28 sm:px-6 lg:px-8 lg:py-10 lg:pb-10">
@@ -1529,32 +1556,7 @@ export function HomeTool() {
               </div>
             )}
 
-            {isSingleLabelBatch && (
-              <div className={panelClass}>
-                <h2 className="text-xl font-semibold text-slate-950">Placement de l’étiquette unique</h2>
-                <p className="mt-2 text-slate-600">
-                  Avec une seule page incluse, choisissez le quart de feuille A4 à utiliser.
-                </p>
-
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  {SINGLE_LABEL_PLACEMENTS.map((placement) => (
-                    <button
-                      key={placement.id}
-                      type="button"
-                      className={cn(
-                        "rounded-[22px] border px-4 py-4 text-left text-sm font-medium transition duration-200",
-                        singleLabelSlot === placement.id
-                          ? "border-sky-400 bg-[linear-gradient(135deg,rgba(240,249,255,0.95),rgba(255,255,255,0.95))] text-sky-900 shadow-[0_18px_40px_-34px_rgba(2,132,199,0.42)]"
-                          : "border-slate-200/80 bg-slate-50/80 text-slate-700 hover:border-slate-300 hover:bg-white",
-                      )}
-                      onClick={() => setSingleLabelSlot(placement.id)}
-                    >
-                      {placement.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            {renderSingleLabelPlacementPanel("hidden xl:block")}
 
             <div className={panelClass}>
               <h2 className="text-xl font-semibold text-slate-950">Traitement appliqué</h2>
@@ -1754,6 +1756,8 @@ export function HomeTool() {
                 </div>
               </div>
             </div>
+
+            {renderSingleLabelPlacementPanel("xl:hidden")}
           </div>
         </section>
       )}
