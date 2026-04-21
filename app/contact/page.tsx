@@ -1,3 +1,4 @@
+import { ContactForm } from "@/components/contact-form"
 import { PageShell } from "@/components/page-shell"
 import { siteConfig } from "@/lib/site-config"
 
@@ -11,6 +12,8 @@ export default function ContactPage() {
       title="Support"
       intro="Contactez le support pour toute question sur le service, un problème de génération PDF ou une demande liée à votre abonnement."
     >
+      <ContactForm supportEmail={siteConfig.supportEmail} />
+
       <section className="space-y-3">
         <h2 className="text-xl font-semibold text-slate-950">Email de support</h2>
         <p>

@@ -81,6 +81,17 @@ Note technique detaillee : `docs/payment-promo-quota-architecture.md`.
 
 `vercel.json` declare une purge quotidienne sur `/api/cron/cleanup`. Configurez `CRON_SECRET` dans Vercel : la route refuse les appels sans `Authorization: Bearer $CRON_SECRET`. Les variables optionnelles `RATE_LIMIT_RETENTION_DAYS`, `QUOTA_USAGE_RETENTION_DAYS` et `PROMO_REDEMPTION_RETENTION_DAYS` ajustent la retention.
 
+## Brevo
+
+Le formulaire `/contact` envoie les demandes support avec l'API transactionnelle Brevo. Variables serveur :
+- `BREVO_API_KEY`
+- `BREVO_SENDER_EMAIL` : expediteur valide dans Brevo
+- `BREVO_SENDER_NAME`
+- `BREVO_SUPPORT_TO_EMAIL` : destinataire support, fallback sur `NEXT_PUBLIC_SUPPORT_EMAIL`
+- `BREVO_SUPPORT_TO_NAME`
+
+Ne jamais exposer `BREVO_API_KEY` cote client et ne jamais la commit. Ajoutez-la dans `.env.local` en local et dans les variables d'environnement Vercel en production.
+
 ## Fallback actuel
 
 Si Supabase Auth/Admin n'est pas configure, l'application conserve un fallback de developpement base sur cookies signes. En production, Supabase Admin et les RPC SQL sont necessaires pour eviter les contournements evidents par navigateur prive ou changement de navigateur.
