@@ -95,6 +95,24 @@ function formatInteger(value: number) {
   return new Intl.NumberFormat("fr-FR").format(value)
 }
 
+function getAllPageIndices(pageCount: number) {
+  return Array.from({ length: Math.max(0, pageCount) }, (_, index) => index)
+}
+
+function normalizePageSelection(pageCount: number, selectedPageIndices?: number[]) {
+  if (!selectedPageIndices) {
+    return getAllPageIndices(pageCount)
+  }
+
+  return Array.from(
+    new Set(
+      selectedPageIndices.filter(
+        (pageIndex) => Number.isInteger(pageIndex) && pageIndex >= 0 && pageIndex < pageCount,
+      ),
+    ),
+  ).sort((first, second) => first - second)
+}
+
 export function HomeTool() {
   const [files, setFiles] = useState<FileWithId[]>([])
   const [focusedFileId, setFocusedFileId] = useState<string | null>(null)
@@ -105,6 +123,7 @@ export function HomeTool() {
   const [singleLabelSlot, setSingleLabelSlot] = useState<SingleLabelSlot>("top-right")
   const [manualCropsByFileId, setManualCropsByFileId] = useState<Record<string, ManualCropRect>>({})
   const [rotationsByFileId, setRotationsByFileId] = useState<Record<string, PdfRotation>>({})
+  const [selectedPageIndicesByFileId, setSelectedPageIndicesByFileId] = useState<Record<string, number[]>>({})
   const [pageCounts, setPageCounts] = useState<Record<string, number>>({})
   const [manualPreview, setManualPreview] = useState<PreviewImage | null>(null)
   const [isLoadingManualPreview, setIsLoadingManualPreview] = useState(false)
@@ -135,19 +154,30 @@ export function HomeTool() {
   const focusedFileIndex = focusedFile ? files.findIndex((file) => file.id === focusedFile.id) : -1
   const focusedManualCrop = focusedFile ? manualCropsByFileId[focusedFile.id] ?? DEFAULT_MANUAL_CROP_RECT : DEFAULT_MANUAL_CROP_RECT
   const focusedRotation = focusedFile ? rotationsByFileId[focusedFile.id] ?? 0 : 0
-  const isSingleSourcePdf = files.length === 1
   const isMondialRelayProfile = baseSelectedProfile.id === "mondial-relay"
   const isManualProfile = selectedProfile.mode === "manual"
   const deferredManualCropsByFileId = useDeferredValue(manualCropsByFileId)
   const deferredRotationsByFileId = useDeferredValue(rotationsByFileId)
+  const deferredSelectedPageIndicesByFileId = useDeferredValue(selectedPageIndicesByFileId)
   const activeManualCropsByFileId = isManualProfile ? deferredManualCropsByFileId : undefined
   const usesImageResultPreview = isMobileViewport
+  const hasResolvedPageCounts = files.length > 0 && files.every((file) => typeof pageCounts[file.id] === "number")
 
   const totalLabels = useMemo(
-    () => files.reduce((sum, file) => sum + (pageCounts[file.id] ?? 0), 0),
-    [files, pageCounts],
+    () =>
+      files.reduce((sum, file) => {
+        const pageCount = pageCounts[file.id]
+
+        if (!pageCount) {
+          return sum
+        }
+
+        return sum + normalizePageSelection(pageCount, selectedPageIndicesByFileId[file.id]).length
+      }, 0),
+    [files, pageCounts, selectedPageIndicesByFileId],
   )
   const totalSheets = Math.ceil(totalLabels / 4)
+  const isSingleLabelBatch = hasResolvedPageCounts && totalLabels === 1
   const currentImpact = useMemo(
     () =>
       calculateLabelImpact({
@@ -161,9 +191,14 @@ export function HomeTool() {
       return 0
     }
 
-    const labels = files.reduce((sum, file) => sum + Math.max(pageCounts[file.id] ?? 1, 1), 0)
+    const labels =
+      totalLabels ||
+      files.reduce((sum, file) => {
+        const pageCount = pageCounts[file.id]
+        return sum + Math.max(pageCount ?? 1, 1)
+      }, 0)
     return Math.max(Math.ceil(labels / 4), 1)
-  }, [files, pageCounts])
+  }, [files, pageCounts, totalLabels])
   const customManualCropCount = useMemo(
     () => files.reduce((sum, file) => sum + (manualCropsByFileId[file.id] ? 1 : 0), 0),
     [files, manualCropsByFileId],
@@ -402,6 +437,29 @@ export function HomeTool() {
 
   useEffect(() => {
     if (files.length === 0) {
+      setSelectedPageIndicesByFileId({})
+      return
+    }
+
+    setSelectedPageIndicesByFileId((current) =>
+      Object.fromEntries(
+        files.flatMap((file) => {
+          const pageCount = pageCounts[file.id]
+
+          if (!pageCount) {
+            const currentSelection = current[file.id]
+            return currentSelection ? [[file.id, currentSelection] as const] : []
+          }
+
+          const normalizedSelection = normalizePageSelection(pageCount, current[file.id])
+          return [[file.id, normalizedSelection.length > 0 ? normalizedSelection : getAllPageIndices(pageCount)] as const]
+        }),
+      ),
+    )
+  }, [files, pageCounts])
+
+  useEffect(() => {
+    if (files.length === 0) {
       return
     }
 
@@ -479,6 +537,7 @@ export function HomeTool() {
       manualCropsByFileId: activeManualCropsByFileId,
       mondialRelayVariantId,
       rotationsByFileId: deferredRotationsByFileId,
+      selectedPageIndicesByFileId: deferredSelectedPageIndicesByFileId,
       singleLabelSlot,
     })
       .then((blob) => {
@@ -508,7 +567,15 @@ export function HomeTool() {
     return () => {
       active = false
     }
-  }, [activeManualCropsByFileId, deferredRotationsByFileId, files, mondialRelayVariantId, profileId, singleLabelSlot])
+  }, [
+    activeManualCropsByFileId,
+    deferredRotationsByFileId,
+    deferredSelectedPageIndicesByFileId,
+    files,
+    mondialRelayVariantId,
+    profileId,
+    singleLabelSlot,
+  ])
 
   const applyAccessSnapshot = (snapshot?: AccessSnapshot) => {
     if (!snapshot) {
@@ -603,6 +670,14 @@ export function HomeTool() {
         nextFiles.flatMap((file) => {
           const rotation = current[file.id]
           return rotation ? [[file.id, rotation] as const] : []
+        }),
+      ),
+    )
+    setSelectedPageIndicesByFileId((current) =>
+      Object.fromEntries(
+        nextFiles.flatMap((file) => {
+          const selectedPages = current[file.id]
+          return selectedPages ? [[file.id, selectedPages] as const] : []
         }),
       ),
     )
@@ -708,6 +783,44 @@ export function HomeTool() {
 
   const rotateFile = (fileId: string, delta: -90 | 90) => {
     setRotationForFile(fileId, (rotationsByFileId[fileId] ?? 0) + delta)
+  }
+
+  const selectAllPagesForFile = (fileId: string) => {
+    const pageCount = pageCounts[fileId]
+
+    if (!pageCount) {
+      return
+    }
+
+    setSelectedPageIndicesByFileId((current) => ({
+      ...current,
+      [fileId]: getAllPageIndices(pageCount),
+    }))
+  }
+
+  const togglePageForFile = (fileId: string, pageIndex: number) => {
+    const pageCount = pageCounts[fileId]
+
+    if (!pageCount) {
+      return
+    }
+
+    setSelectedPageIndicesByFileId((current) => {
+      const currentSelection = normalizePageSelection(pageCount, current[fileId])
+      const isSelected = currentSelection.includes(pageIndex)
+      const nextSelection = isSelected
+        ? currentSelection.filter((currentPageIndex) => currentPageIndex !== pageIndex)
+        : [...currentSelection, pageIndex].sort((first, second) => first - second)
+
+      if (nextSelection.length === 0) {
+        return current
+      }
+
+      return {
+        ...current,
+        [fileId]: nextSelection,
+      }
+    })
   }
 
   const applyRotationToAllFiles = (rotation: PdfRotation) => {
@@ -1066,6 +1179,11 @@ export function HomeTool() {
                 {files.map((file, index) => {
                   const hasCustomManualCrop = Boolean(manualCropsByFileId[file.id])
                   const fileRotation = rotationsByFileId[file.id] ?? 0
+                  const filePageCount = pageCounts[file.id]
+                  const selectedPageIndices = filePageCount
+                    ? normalizePageSelection(filePageCount, selectedPageIndicesByFileId[file.id])
+                    : []
+                  const selectedPageCount = selectedPageIndices.length
 
                   return (
                     <div
@@ -1077,19 +1195,26 @@ export function HomeTool() {
                           : "border-slate-200/80 bg-white/70 hover:border-slate-300 hover:bg-white",
                       )}
                     >
-                      <button
-                        type="button"
-                        className="flex min-w-0 flex-1 items-center gap-3 text-left"
-                        onClick={() => setFocusedFileId(file.id)}
-                      >
-                        <div className="flex h-11 w-11 items-center justify-center rounded-[18px] bg-sky-100 text-sky-800">
+                      <div className="flex min-w-0 flex-1 items-start gap-3 text-left">
+                        <button
+                          type="button"
+                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] bg-sky-100 text-sky-800 transition hover:bg-sky-200"
+                          onClick={() => setFocusedFileId(file.id)}
+                          aria-label={`Sélectionner ${file.name}`}
+                        >
                           <FileText className="h-5 w-5" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="truncate font-medium text-slate-950">{file.name}</div>
-                          <div className="text-sm text-slate-500">
-                            {formatFileSize(file.size)} · {pageCounts[file.id] ?? "?"} page(s)
-                          </div>
+                        </button>
+                        <div className="min-w-0 flex-1">
+                          <button
+                            type="button"
+                            className="block max-w-full text-left"
+                            onClick={() => setFocusedFileId(file.id)}
+                          >
+                            <div className="truncate font-medium text-slate-950">{file.name}</div>
+                            <div className="text-sm text-slate-500">
+                              {formatFileSize(file.size)} · {pageCounts[file.id] ?? "?"} page(s)
+                            </div>
+                          </button>
                           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                             <span
                               className={cn(
@@ -1118,8 +1243,56 @@ export function HomeTool() {
                               )}
                             </div>
                           )}
+                          {filePageCount > 1 && (
+                            <div className="mt-3 rounded-2xl border border-slate-200/80 bg-slate-50/80 p-3">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                                  Pages incluses
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-600">
+                                    {selectedPageCount}/{filePageCount}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:border-sky-300 hover:text-sky-800"
+                                    onClick={(event) => {
+                                      event.stopPropagation()
+                                      selectAllPagesForFile(file.id)
+                                    }}
+                                  >
+                                    Tout garder
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="mt-3 flex max-h-28 flex-wrap gap-2 overflow-y-auto pr-1">
+                                {getAllPageIndices(filePageCount).map((pageIndex) => {
+                                  const isSelected = selectedPageIndices.includes(pageIndex)
+
+                                  return (
+                                    <button
+                                      key={pageIndex}
+                                      type="button"
+                                      className={cn(
+                                        "h-8 min-w-8 rounded-full border px-2 text-xs font-semibold transition",
+                                        isSelected
+                                          ? "border-sky-400 bg-sky-50 text-sky-900"
+                                          : "border-slate-200 bg-white text-slate-400 hover:border-slate-300 hover:text-slate-700",
+                                      )}
+                                      onClick={(event) => {
+                                        event.stopPropagation()
+                                        togglePageForFile(file.id, pageIndex)
+                                      }}
+                                    >
+                                      {pageIndex + 1}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </button>
+                      </div>
                       <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-nowrap">
                         <button
                           type="button"
@@ -1356,10 +1529,12 @@ export function HomeTool() {
               </div>
             )}
 
-            {isSingleSourcePdf && (
+            {isSingleLabelBatch && (
               <div className={panelClass}>
                 <h2 className="text-xl font-semibold text-slate-950">Placement de l’étiquette unique</h2>
-                <p className="mt-2 text-slate-600">Avec un seul PDF, choisissez le quart de feuille A4 à utiliser.</p>
+                <p className="mt-2 text-slate-600">
+                  Avec une seule page incluse, choisissez le quart de feuille A4 à utiliser.
+                </p>
 
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   {SINGLE_LABEL_PLACEMENTS.map((placement) => (
@@ -1408,7 +1583,7 @@ export function HomeTool() {
             <div className={panelClass}>
               <h2 className="text-xl font-semibold text-slate-950">Résultat final</h2>
               <p className="mt-2 text-slate-600">
-                {isSingleSourcePdf
+                {isSingleLabelBatch
                   ? "Sortie sur le quart de feuille A4 choisi."
                   : "Sortie composée par 4 sur feuille A4."}
               </p>
@@ -1451,7 +1626,7 @@ export function HomeTool() {
                 </div>
               )}
 
-              {isSingleSourcePdf && (
+              {isSingleLabelBatch && (
                 <div className={cn("mt-3", metricClass)}>
                   <div className="text-sm text-slate-500">Position</div>
                   <div className="mt-1 font-medium text-slate-900">

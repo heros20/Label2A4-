@@ -30,6 +30,7 @@ export interface BuildLabelOptions {
   manualCropsByFileId?: Record<string, ManualCropRect>
   mondialRelayVariantId?: MondialRelayVariantId
   rotationsByFileId?: Record<string, PdfRotation>
+  selectedPageIndicesByFileId?: Record<string, number[]>
 }
 
 const SINGLE_LABEL_SLOT_MAP: Record<SingleLabelSlot, number> = {
@@ -45,6 +46,20 @@ function sanitizePdfName(name: string) {
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
+}
+
+function getSelectedPageIndices(pageCount: number, selectedPageIndices?: number[]) {
+  if (!selectedPageIndices) {
+    return Array.from({ length: pageCount }, (_, index) => index)
+  }
+
+  return Array.from(
+    new Set(
+      selectedPageIndices.filter(
+        (pageIndex) => Number.isInteger(pageIndex) && pageIndex >= 0 && pageIndex < pageCount,
+      ),
+    ),
+  ).sort((first, second) => first - second)
 }
 
 export function normalizePdfRotation(rotation: number): PdfRotation {
@@ -233,13 +248,39 @@ export async function buildLabelA4Pdf(
   const manualCropsByFileId = options.manualCropsByFileId ?? {}
   const fallbackManualCrop = options.manualCrop ?? DEFAULT_MANUAL_CROP_RECT
   const rotationsByFileId = options.rotationsByFileId ?? {}
+  const selectedPageIndicesByFileId = options.selectedPageIndicesByFileId ?? {}
+  const preparedSources = await Promise.all(
+    files.map(async (file) => {
+      const source = await PDFDocument.load(await file.arrayBuffer())
+      const pageIndices = getSelectedPageIndices(
+        source.getPageCount(),
+        file.id ? selectedPageIndicesByFileId[file.id] : undefined,
+      )
+
+      return {
+        file,
+        pageIndices,
+        source,
+      }
+    }),
+  )
+  const totalSelectedPageCount = preparedSources.reduce((sum, item) => sum + item.pageIndices.length, 0)
+
+  if (totalSelectedPageCount === 0) {
+    throw new Error("Sélectionnez au moins une page d'étiquette.")
+  }
+
+  const shouldUseSingleLabelSlot = totalSelectedPageCount === 1 && Boolean(options.singleLabelSlot)
   const output = await PDFDocument.create()
   let currentSheet = output.addPage([A4_PORTRAIT.width, A4_PORTRAIT.height])
   let itemIndex = 0
 
-  for (const file of files) {
-    const source = await PDFDocument.load(await file.arrayBuffer())
-    const copiedPages = await output.copyPages(source, source.getPageIndices())
+  for (const { file, pageIndices, source } of preparedSources) {
+    if (pageIndices.length === 0) {
+      continue
+    }
+
+    const copiedPages = await output.copyPages(source, pageIndices)
 
     for (const copiedPage of copiedPages) {
       const rotation = normalizePdfRotation((file.id ? rotationsByFileId[file.id] : undefined) ?? 0)
@@ -257,9 +298,8 @@ export async function buildLabelA4Pdf(
       }
 
       const embeddedPage = await output.embedPage(copiedPage)
-      const isSingleSourcePdf = files.length === 1
       const slotIndex =
-        isSingleSourcePdf && options.singleLabelSlot
+        shouldUseSingleLabelSlot && options.singleLabelSlot
           ? SINGLE_LABEL_SLOT_MAP[options.singleLabelSlot]
           : SLOT_ORDER[itemIndex % 4]
       const slot = getSlotRect(slotIndex)

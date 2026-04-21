@@ -6,6 +6,7 @@ Fonctionnement actuel :
 - import d'un ou plusieurs PDF
 - profil `Chronopost`, `Colissimo`, `Mondial Relay`, `Happy Post` ou `Rognage manuel`
 - fusion dans l'ordre
+- selection des pages utiles pour les PDF multipages
 - rognage metier
 - placement automatique par 4 sur feuille A4
 
@@ -15,6 +16,11 @@ Regles actuelles :
 - `Mondial Relay` : `54% gauche` + `40% haut`
 - `Happy Post` : `X 8%` + `Y 5%` + `L 84%` + `H 41%`
 - `Rognage manuel` : zone definie directement sur l'apercu du PDF, fichier par fichier
+
+PDF multipages :
+- chaque page incluse est traitee comme une etiquette distincte
+- les pages incluses sont placees dans les emplacements A4 suivants, sans superposition
+- les pages non utiles peuvent etre decochees dans la liste des fichiers
 
 Ordre de placement sur la feuille :
 - haut droite
