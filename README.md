@@ -85,12 +85,14 @@ Note technique detaillee : `docs/payment-promo-quota-architecture.md`.
 
 Le formulaire `/contact` envoie les demandes support avec l'API transactionnelle Brevo. Variables serveur :
 - `BREVO_API_KEY`
-- `BREVO_SENDER_EMAIL` : expediteur valide dans Brevo
+- `BREVO_SENDER_EMAIL` : expediteur valide dans Brevo, recommande `support@label2a4.com`
 - `BREVO_SENDER_NAME`
 - `BREVO_SUPPORT_TO_EMAIL` : destinataire support, fallback sur `NEXT_PUBLIC_SUPPORT_EMAIL`
 - `BREVO_SUPPORT_TO_NAME`
 
-Ne jamais exposer `BREVO_API_KEY` cote client et ne jamais la commit. Ajoutez-la dans `.env.local` en local et dans les variables d'environnement Vercel en production.
+Les emails de creation/connexion de compte passent aussi par `/api/auth/magic-link`, qui genere le lien Supabase cote serveur puis l'envoie via Brevo. Cela force le sender Brevo configure dans `BREVO_SENDER_EMAIL` au lieu de dependre de l'expediteur SMTP par defaut Supabase.
+
+Ne jamais exposer `BREVO_API_KEY` cote client et ne jamais la commit. Ajoutez-la dans `.env.local` en local et dans les variables d'environnement Vercel en production. Si Supabase SMTP est aussi configure, alignez son sender sur `support@label2a4.com` pour eviter les emails systeme incoherents.
 
 ## Fallback actuel
 

@@ -67,17 +67,20 @@ export function AccountAuthCard({ email, isAuthenticated, onSessionChanged }: Ac
     setSuccess("")
 
     try {
-      const supabase = getSupabaseBrowserClient()
-
-      const { error: authError } = await supabase.auth.signInWithOtp({
-        email: emailInput.trim(),
-        options: {
-          emailRedirectTo: getCurrentAuthRedirectUrl(),
+      const response = await fetch("/api/auth/magic-link", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          email: emailInput.trim(),
+          redirectTo: getCurrentAuthRedirectUrl(),
+        }),
       })
+      const payload = (await response.json()) as { error?: string; ok?: boolean }
 
-      if (authError) {
-        throw authError
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.error ?? "Impossible d'envoyer le lien de connexion.")
       }
 
       setSuccess(

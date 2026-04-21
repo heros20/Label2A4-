@@ -19,6 +19,7 @@ interface BrevoSendResponse {
 }
 
 const BREVO_TRANSACTIONAL_EMAIL_URL = "https://api.brevo.com/v3/smtp/email"
+const DEFAULT_BREVO_SENDER_EMAIL = "support@label2a4.com"
 
 function readRequiredEmail(value: string | undefined, fallback: string) {
   return value?.trim() || fallback
@@ -30,7 +31,7 @@ function getBrevoApiKey() {
 
 function getBrevoSender(): BrevoEmailAddress {
   return {
-    email: readRequiredEmail(process.env.BREVO_SENDER_EMAIL, siteConfig.supportEmail),
+    email: readRequiredEmail(process.env.BREVO_SENDER_EMAIL, DEFAULT_BREVO_SENDER_EMAIL),
     name: process.env.BREVO_SENDER_NAME?.trim() || siteConfig.siteName,
   }
 }
