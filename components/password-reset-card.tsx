@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useState, type FormEvent } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import { reportClientError } from "@/lib/client-monitoring"
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
 
@@ -24,12 +24,28 @@ function getFriendlyResetError(error: unknown) {
   return "Impossible de mettre à jour le mot de passe."
 }
 
-export function PasswordResetCard() {
+interface PasswordResetCardProps {
+  initialIsFirstLogin?: boolean
+  nextPath?: string
+}
+
+function withPathStatus(path: string, status: string) {
+  const url = new URL(path.startsWith("/") && !path.startsWith("//") ? path : "/compte", window.location.origin)
+  url.searchParams.set("status", status)
+  return `${url.pathname}${url.search}`
+}
+
+export function PasswordResetCard({ initialIsFirstLogin = false, nextPath = "/compte" }: PasswordResetCardProps) {
   const [password, setPassword] = useState("")
   const [passwordConfirmation, setPasswordConfirmation] = useState("")
+  const [isFirstLogin, setIsFirstLogin] = useState(initialIsFirstLogin)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    setIsFirstLogin(new URLSearchParams(window.location.search).get("status") === "first-login")
+  }, [])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -58,9 +74,9 @@ export function PasswordResetCard() {
         throw authError
       }
 
-      setSuccess("Mot de passe mis à jour.")
+      setSuccess(isFirstLogin ? "Mot de passe créé." : "Mot de passe mis à jour.")
       window.setTimeout(() => {
-        window.location.assign("/compte")
+        window.location.assign(withPathStatus(nextPath, "password-created"))
       }, 900)
     } catch (caughtError) {
       reportClientError("account-auth-password-reset", caughtError)
@@ -72,6 +88,12 @@ export function PasswordResetCard() {
 
   return (
     <div className="space-y-4">
+      {isFirstLogin && (
+        <div className="rounded-[18px] border border-sky-100 bg-sky-50/80 p-4 text-sm leading-6 text-sky-950">
+          Votre email est valide. Créez maintenant votre mot de passe pour finaliser votre compte.
+        </div>
+      )}
+
       <form className="space-y-3" onSubmit={handleSubmit}>
         <div>
           <label htmlFor="new-password" className="mb-2 block text-sm font-medium text-slate-800">
@@ -107,7 +129,13 @@ export function PasswordResetCard() {
           className="inline-flex w-full items-center justify-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
           disabled={isSubmitting}
         >
-          {isSubmitting ? "Mise à jour..." : "Mettre à jour le mot de passe"}
+          {isSubmitting
+            ? isFirstLogin
+              ? "Création..."
+              : "Mise à jour..."
+            : isFirstLogin
+              ? "Créer mon mot de passe"
+              : "Mettre à jour le mot de passe"}
         </button>
       </form>
 

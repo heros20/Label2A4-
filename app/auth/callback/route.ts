@@ -9,6 +9,12 @@ function getSafeRedirectPath(request: NextRequest) {
   return nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/compte"
 }
 
+function setStatusIfMissing(url: URL, status: string) {
+  if (!url.searchParams.get("status")) {
+    url.searchParams.set("status", status)
+  }
+}
+
 export async function GET(request: NextRequest) {
   const responseDraft = new NextResponse()
   const redirectUrl = new URL(getSafeRedirectPath(request), request.url)
@@ -24,6 +30,10 @@ export async function GET(request: NextRequest) {
       if (error) {
         throw error
       }
+
+      if (type === "signup") {
+        setStatusIfMissing(redirectUrl, "account-confirmed")
+      }
     } else if (tokenHash && type) {
       const { error } = await supabase.auth.verifyOtp({
         token_hash: tokenHash,
@@ -31,6 +41,10 @@ export async function GET(request: NextRequest) {
       })
       if (error) {
         throw error
+      }
+
+      if (type === "signup") {
+        setStatusIfMissing(redirectUrl, "account-confirmed")
       }
     } else {
       redirectUrl.searchParams.set("auth_error", "missing_token")

@@ -1,4 +1,5 @@
 import { createHash } from "crypto"
+import type { User } from "@supabase/supabase-js"
 import { NextRequest, NextResponse } from "next/server"
 import { getRequestOrigin } from "@/lib/access-control"
 import { sendBrevoTransactionalEmail } from "@/lib/brevo"
@@ -11,8 +12,11 @@ export const runtime = "nodejs"
 
 interface MagicLinkPayload {
   email?: unknown
+  mode?: unknown
   redirectTo?: unknown
 }
+
+type MagicLinkMode = "sign-in" | "sign-up"
 
 function cleanEmail(value: unknown) {
   return typeof value === "string" ? value.trim().toLowerCase().slice(0, 180) : ""
@@ -20,6 +24,10 @@ function cleanEmail(value: unknown) {
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
+function getMagicLinkMode(value: unknown): MagicLinkMode {
+  return value === "sign-up" ? "sign-up" : "sign-in"
 }
 
 function escapeHtml(value: string) {
@@ -72,6 +80,19 @@ function getSafeNextPathFromRedirectTo(redirectTo: string) {
   }
 }
 
+function withRedirectNextPath(redirectTo: string, nextPath: string) {
+  const redirectUrl = new URL(redirectTo)
+  redirectUrl.searchParams.set("next", nextPath)
+  return redirectUrl.toString()
+}
+
+function buildPasswordSetupPath(returnTo: string) {
+  const passwordSetupUrl = new URL("/auth/reset-password", "https://label2a4.local")
+  passwordSetupUrl.searchParams.set("status", "first-login")
+  passwordSetupUrl.searchParams.set("next", returnTo)
+  return `${passwordSetupUrl.pathname}${passwordSetupUrl.search}`
+}
+
 function buildServerVerifiedConfirmationUrl(input: {
   request: NextRequest
   redirectTo: string
@@ -85,25 +106,73 @@ function buildServerVerifiedConfirmationUrl(input: {
   return confirmationUrl.toString()
 }
 
-function buildMagicLinkTextContent(confirmationUrl: string) {
+async function findExistingAuthUserByEmail(
+  supabase: ReturnType<typeof getSupabaseAdminClient>,
+  email: string,
+) {
+  const normalizedEmail = email.toLowerCase()
+  const perPage = 1000
+  const maxPages = 20
+
+  for (let page = 1; page <= maxPages; page += 1) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage })
+
+    if (error) {
+      throw new Error(`Unable to inspect auth users: ${error.message}`)
+    }
+
+    if (data.users.some((user) => user.email?.toLowerCase() === normalizedEmail)) {
+      return true
+    }
+
+    if (!data.nextPage || data.users.length === 0) {
+      return false
+    }
+  }
+
+  console.warn("[label2a4-auth-magic-link-user-lookup-truncated]", {
+    emailHash: hashEmail(email),
+    maxPages,
+    perPage,
+  })
+  return null
+}
+
+function wasUserLikelyCreatedByThisLink(user: Pick<User, "created_at" | "last_sign_in_at">) {
+  const createdAt = Date.parse(user.created_at ?? "")
+
+  if (!Number.isFinite(createdAt) || user.last_sign_in_at) {
+    return false
+  }
+
+  return Math.abs(Date.now() - createdAt) < 60_000
+}
+
+function buildMagicLinkTextContent(input: { confirmationUrl: string; requiresPasswordSetup: boolean }) {
   return [
     "Bonjour,",
     "",
     "Ton lien d'accès Label2A4 est prêt.",
     "",
-    "Clique sur ce lien pour vérifier ton adresse email et ouvrir ton espace :",
-    confirmationUrl,
+    input.requiresPasswordSetup
+      ? "Clique sur ce lien pour vérifier ton adresse email et créer ton mot de passe :"
+      : "Clique sur ce lien pour vérifier ton adresse email et ouvrir ton espace :",
+    input.confirmationUrl,
     "",
     "Avec Label2A4, tu regroupes tes étiquettes sur une feuille A4 pour imprimer plus proprement, plus vite, et avec moins de gaspillage.",
     "",
     "Tu n'as pas demandé ce lien ? Ignore cet email, aucune action ne sera effectuée.",
     "",
-    "Label2A4 — Des étiquettes propres, des feuilles optimisées.",
+    "Label2A4 - Des étiquettes propres, des feuilles optimisées.",
   ].join("\n")
 }
 
-function buildMagicLinkHtmlContent(confirmationUrl: string) {
-  const escapedConfirmationUrl = escapeHtml(confirmationUrl)
+function buildMagicLinkHtmlContent(input: { confirmationUrl: string; requiresPasswordSetup: boolean }) {
+  const escapedConfirmationUrl = escapeHtml(input.confirmationUrl)
+  const intro = input.requiresPasswordSetup
+    ? "Clique sur le bouton ci-dessous pour vérifier ton adresse email, puis définir ton mot de passe Label2A4."
+    : "Clique sur le bouton ci-dessous pour continuer vers ton espace et utiliser ton outil d'optimisation d'étiquettes."
+  const buttonLabel = input.requiresPasswordSetup ? "Créer mon mot de passe" : "Ouvrir mon espace"
 
   return `
 <div style="margin:0;padding:0;background:#edf3f8;font-family:Segoe UI,Arial,Helvetica,sans-serif;color:#0f172a;">
@@ -125,7 +194,7 @@ function buildMagicLinkHtmlContent(confirmationUrl: string) {
               </h1>
 
               <p style="margin:12px 0 0 0;font-size:15px;line-height:1.7;color:#526072;">
-                Clique sur le bouton ci-dessous pour continuer vers ton espace et utiliser ton outil d'optimisation d'étiquettes.
+                ${escapeHtml(intro)}
               </p>
             </td>
           </tr>
@@ -145,7 +214,7 @@ function buildMagicLinkHtmlContent(confirmationUrl: string) {
                 <tr>
                   <td align="center" style="border-radius:14px;background:#0369a1;box-shadow:0 10px 24px rgba(3,105,161,0.28);">
                     <a href="${escapedConfirmationUrl}" style="display:inline-block;padding:15px 24px;font-size:15px;font-weight:800;color:#ffffff;text-decoration:none;border-radius:14px;">
-                      Ouvrir mon espace
+                      ${escapeHtml(buttonLabel)}
                     </a>
                   </td>
                 </tr>
@@ -176,7 +245,7 @@ function buildMagicLinkHtmlContent(confirmationUrl: string) {
               </p>
 
               <p style="margin:0;font-size:12px;line-height:1.6;color:#94a3b8;">
-                © Label2A4 — Des étiquettes propres, des feuilles optimisées.
+                Label2A4 - Des étiquettes propres, des feuilles optimisées.
               </p>
             </td>
           </tr>
@@ -208,6 +277,7 @@ export async function POST(request: NextRequest) {
 
     const payload = (await request.json()) as MagicLinkPayload
     const email = cleanEmail(payload.email)
+    const mode = getMagicLinkMode(payload.mode)
 
     if (!email || !isValidEmail(email)) {
       return NextResponse.json({ error: "Email invalide." }, { status: 400 })
@@ -215,6 +285,7 @@ export async function POST(request: NextRequest) {
 
     const redirectTo = resolveRedirectTo(request, payload.redirectTo)
     const supabase = getSupabaseAdminClient()
+    const userExistedBeforeLink = await findExistingAuthUserByEmail(supabase, email)
     const { data, error } = await supabase.auth.admin.generateLink({
       email,
       options: {
@@ -233,15 +304,23 @@ export async function POST(request: NextRequest) {
       throw new Error("Supabase did not return an auth token hash.")
     }
 
+    const requiresPasswordSetup =
+      mode === "sign-up" ||
+      userExistedBeforeLink === false ||
+      (userExistedBeforeLink === null && wasUserLikelyCreatedByThisLink(data.user))
+    const returnTo = getSafeNextPathFromRedirectTo(redirectTo)
+    const verifiedRedirectTo = requiresPasswordSetup
+      ? withRedirectNextPath(redirectTo, buildPasswordSetupPath(returnTo))
+      : redirectTo
     const confirmationUrl = buildServerVerifiedConfirmationUrl({
-      redirectTo,
+      redirectTo: verifiedRedirectTo,
       request,
       tokenHash,
       type: verificationType,
     })
     const subject = `Ton accès ${siteConfig.siteName}`
-    const textContent = buildMagicLinkTextContent(confirmationUrl)
-    const htmlContent = buildMagicLinkHtmlContent(confirmationUrl)
+    const textContent = buildMagicLinkTextContent({ confirmationUrl, requiresPasswordSetup })
+    const htmlContent = buildMagicLinkHtmlContent({ confirmationUrl, requiresPasswordSetup })
 
     const brevoResponse = await sendBrevoTransactionalEmail({
       htmlContent,
@@ -253,6 +332,9 @@ export async function POST(request: NextRequest) {
     console.info("[label2a4-auth-magic-link-sent]", {
       emailHash: hashEmail(email),
       messageId: brevoResponse.messageId ?? null,
+      mode,
+      requiresPasswordSetup,
+      userExistedBeforeLink,
     })
 
     return NextResponse.json({ ok: true })

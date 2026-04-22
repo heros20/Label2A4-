@@ -42,6 +42,12 @@ function getCurrentAuthRedirectUrl(nextPath = getNextPathFromLocation()) {
   return redirectUrl.toString()
 }
 
+function withPathStatus(path: string, status: string) {
+  const url = new URL(getSafePath(path, "/compte"), window.location.origin)
+  url.searchParams.set("status", status)
+  return `${url.pathname}${url.search}`
+}
+
 function getResetPasswordRedirectUrl() {
   return getCurrentAuthRedirectUrl("/auth/reset-password")
 }
@@ -186,7 +192,7 @@ export function AccountAuthCard({
           email: cleanEmail,
           password: passwordInput,
           options: {
-            emailRedirectTo: getCurrentAuthRedirectUrl(),
+            emailRedirectTo: getCurrentAuthRedirectUrl(withPathStatus(getNextPathFromLocation(), "account-confirmed")),
           },
         })
 
@@ -252,6 +258,7 @@ export function AccountAuthCard({
         },
         body: JSON.stringify({
           email: cleanMagicLinkEmail,
+          mode,
           redirectTo: getCurrentAuthRedirectUrl(isSignUpMode ? "/auth/reset-password" : getNextPathFromLocation()),
         }),
       })

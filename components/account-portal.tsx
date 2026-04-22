@@ -66,7 +66,8 @@ export function AccountPortal() {
   }, [])
 
   useEffect(() => {
-    const planId = new URLSearchParams(window.location.search).get("checkoutPlan")
+    const searchParams = new URLSearchParams(window.location.search)
+    const planId = searchParams.get("checkoutPlan")
 
     if (isCheckoutPlanId(planId)) {
       setCheckoutPlanId(planId)
