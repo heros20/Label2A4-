@@ -6,14 +6,15 @@ import {
   COOKIE_CONSENT_UPDATED_EVENT,
   isCookieConsentAccepted,
 } from "@/lib/cookie-consent"
+import { ADSENSE_SCRIPT_BASE_URL, ADSENSE_SCRIPT_ID, getAdsenseScriptUrl } from "@/lib/adsense"
 import type { AccessSnapshot } from "@/lib/monetization-types"
 import { siteConfig } from "@/lib/site-config"
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
 import { isSupabaseAuthConfigured } from "@/lib/supabase/config"
 
-const ADSENSE_SCRIPT_ID = "label2a4-adsense-script"
 const ADSENSE_AUTO_AD_SELECTORS = [
   "ins.adsbygoogle",
+  `script[src^="${ADSENSE_SCRIPT_BASE_URL}"]`,
   'iframe[id^="google_ads_iframe_"]',
   'iframe[src*="googlesyndication.com"]',
   'iframe[src*="doubleclick.net"]',
@@ -44,7 +45,7 @@ function injectAdsenseScript() {
     return
   }
 
-  if (document.getElementById(ADSENSE_SCRIPT_ID)) {
+  if (document.getElementById(ADSENSE_SCRIPT_ID) || document.querySelector(`script[src^="${ADSENSE_SCRIPT_BASE_URL}"]`)) {
     return
   }
 
@@ -52,7 +53,7 @@ function injectAdsenseScript() {
   script.id = ADSENSE_SCRIPT_ID
   script.async = true
   script.crossOrigin = "anonymous"
-  script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(adsenseClientId)}`
+  script.src = getAdsenseScriptUrl(adsenseClientId)
 
   document.head.appendChild(script)
 }
