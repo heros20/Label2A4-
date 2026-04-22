@@ -1,26 +1,75 @@
 "use client"
 
-import { useState, type FormEvent } from "react"
+import Link from "next/link"
+import { useEffect, useState, type FormEvent } from "react"
 import { reportClientError } from "@/lib/client-monitoring"
 import { siteConfig } from "@/lib/site-config"
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
 import { cn } from "@/lib/utils"
 
+export type AccountAuthMode = "sign-in" | "sign-up" | "forgot-password"
+
 interface AccountAuthCardProps {
   email?: string | null
+  initialMode?: AccountAuthMode
   isAuthenticated: boolean
   onSessionChanged?: () => Promise<void> | void
+  redirectAfterSignOut?: string | null
 }
+
+const MIN_PASSWORD_LENGTH = 8
 
 const inputClass =
   "w-full rounded-[18px] border border-slate-200/80 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
 
-function getCurrentAuthRedirectUrl() {
+function getSafePath(value: string | null | undefined, fallback = "/compte") {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return fallback
+  }
+
+  return value
+}
+
+function getNextPathFromLocation() {
+  const nextPath = new URLSearchParams(window.location.search).get("next")
+  return getSafePath(nextPath, "/compte")
+}
+
+function getCurrentAuthRedirectUrl(nextPath = getNextPathFromLocation()) {
   const redirectUrl = new URL("/auth/callback", window.location.origin)
-  const nextPath = `${window.location.pathname}${window.location.search}${window.location.hash}`
-  redirectUrl.searchParams.set("next", nextPath.startsWith("/") ? nextPath : "/compte")
+  redirectUrl.searchParams.set("next", getSafePath(nextPath, "/compte"))
 
   return redirectUrl.toString()
+}
+
+function getResetPasswordRedirectUrl() {
+  return getCurrentAuthRedirectUrl("/auth/reset-password")
+}
+
+function getFriendlyAuthError(error: unknown, fallback: string) {
+  const message = error instanceof Error ? error.message.toLowerCase() : ""
+
+  if (message.includes("invalid login") || message.includes("invalid credentials")) {
+    return "Email ou mot de passe incorrect."
+  }
+
+  if (message.includes("email not confirmed")) {
+    return "Vérifiez votre email avant de vous connecter."
+  }
+
+  if (message.includes("already registered") || message.includes("already exists")) {
+    return "Un compte existe déjà pour cet email. Connectez-vous."
+  }
+
+  if (message.includes("password")) {
+    return "Le mot de passe ne respecte pas les règles de sécurité."
+  }
+
+  return fallback
+}
+
+function isValidPassword(password: string) {
+  return password.length >= MIN_PASSWORD_LENGTH
 }
 
 function GoogleIcon() {
@@ -46,23 +95,152 @@ function GoogleIcon() {
   )
 }
 
-export function AccountAuthCard({ email, isAuthenticated, onSessionChanged }: AccountAuthCardProps) {
+export function AccountAuthCard({
+  email,
+  initialMode = "sign-in",
+  isAuthenticated,
+  onSessionChanged,
+  redirectAfterSignOut = "/connexion?status=signed-out",
+}: AccountAuthCardProps) {
+  const [mode] = useState<AccountAuthMode>(initialMode)
   const [emailInput, setEmailInput] = useState(email ?? "")
+  const [passwordInput, setPasswordInput] = useState("")
+  const [passwordConfirmation, setPasswordConfirmation] = useState("")
+  const [magicLinkEmailInput, setMagicLinkEmailInput] = useState(email ?? "")
+  const [nextPath, setNextPath] = useState("/compte")
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSendingMagicLink, setIsSendingMagicLink] = useState(false)
   const [isSigningInWithGoogle, setIsSigningInWithGoogle] = useState(false)
   const [isSigningOut, setIsSigningOut] = useState(false)
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+  const cleanEmail = emailInput.trim().toLowerCase()
+  const cleanMagicLinkEmail = magicLinkEmailInput.trim().toLowerCase()
+  const isSignInMode = mode === "sign-in"
+  const isSignUpMode = mode === "sign-up"
+  const isForgotPasswordMode = mode === "forgot-password"
 
-    if (!emailInput.trim()) {
-      setError("Saisissez votre email pour créer ou ouvrir votre compte.")
+  useEffect(() => {
+    const status = new URLSearchParams(window.location.search).get("status")
+    setNextPath(getNextPathFromLocation())
+
+    if (status === "signed-out") {
+      setSuccess("Vous êtes déconnecté.")
+    }
+  }, [])
+
+  const getAuthHref = (path: "/connexion" | "/inscription" | "/mot-de-passe-oublie") => {
+    if (nextPath === "/compte") {
+      return path
+    }
+
+    return `${path}?next=${encodeURIComponent(nextPath)}`
+  }
+
+  const handlePasswordSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setError("")
+    setSuccess("")
+
+    if (!cleanEmail) {
+      setError("Saisissez votre email.")
+      return
+    }
+
+    if (!isForgotPasswordMode && !passwordInput) {
+      setError("Saisissez votre mot de passe.")
+      return
+    }
+
+    if (isSignUpMode && !isValidPassword(passwordInput)) {
+      setError(`Le mot de passe doit contenir au moins ${MIN_PASSWORD_LENGTH} caractères.`)
+      return
+    }
+
+    if (isSignUpMode && passwordInput !== passwordConfirmation) {
+      setError("Les deux mots de passe ne correspondent pas.")
       return
     }
 
     setIsSubmitting(true)
+
+    try {
+      const supabase = getSupabaseBrowserClient()
+
+      if (isForgotPasswordMode) {
+        const { error: authError } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+          redirectTo: getResetPasswordRedirectUrl(),
+        })
+
+        if (authError) {
+          throw authError
+        }
+
+        setSuccess("Email de réinitialisation envoyé.")
+        return
+      }
+
+      if (isSignUpMode) {
+        const { data, error: authError } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password: passwordInput,
+          options: {
+            emailRedirectTo: getCurrentAuthRedirectUrl(),
+          },
+        })
+
+        if (authError) {
+          throw authError
+        }
+
+        if (data.session) {
+          setSuccess("Compte créé. Vous êtes connecté.")
+          window.location.assign(getNextPathFromLocation())
+          return
+        }
+
+        setSuccess("Compte créé. Vérifiez votre email si une confirmation est nécessaire.")
+        return
+      }
+
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: passwordInput,
+      })
+
+      if (authError) {
+        throw authError
+      }
+
+      setSuccess("Vous êtes connecté.")
+      window.location.assign(getNextPathFromLocation())
+    } catch (caughtError) {
+      reportClientError("account-auth-password", caughtError)
+      setError(
+        getFriendlyAuthError(
+          caughtError,
+          isForgotPasswordMode
+            ? "Impossible d'envoyer l'email de réinitialisation."
+            : isSignUpMode
+              ? "Impossible de créer ce compte."
+              : "Email ou mot de passe incorrect.",
+        ),
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleMagicLinkSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    if (!cleanMagicLinkEmail) {
+      setError("Saisissez votre email pour recevoir un lien de connexion.")
+      return
+    }
+
+    setIsSendingMagicLink(true)
     setError("")
     setSuccess("")
 
@@ -73,8 +251,8 @@ export function AccountAuthCard({ email, isAuthenticated, onSessionChanged }: Ac
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email: emailInput.trim(),
-          redirectTo: getCurrentAuthRedirectUrl(),
+          email: cleanMagicLinkEmail,
+          redirectTo: getCurrentAuthRedirectUrl(isSignUpMode ? "/auth/reset-password" : getNextPathFromLocation()),
         }),
       })
       const payload = (await response.json()) as { error?: string; ok?: boolean }
@@ -84,13 +262,15 @@ export function AccountAuthCard({ email, isAuthenticated, onSessionChanged }: Ac
       }
 
       setSuccess(
-        "Email envoyé. Cliquez sur le lien reçu pour terminer la connexion. Si c'est votre première fois, le compte sera créé automatiquement.",
+        isSignUpMode
+          ? "Email envoyé. Cliquez sur le lien reçu pour définir votre mot de passe."
+          : "Email envoyé. Cliquez sur le lien reçu pour terminer la connexion.",
       )
     } catch (caughtError) {
-      reportClientError("account-auth-sign-in", caughtError)
-      setError(caughtError instanceof Error ? caughtError.message : "Connexion impossible pour le moment.")
+      reportClientError("account-auth-magic-link", caughtError)
+      setError("Impossible d'envoyer le lien de connexion.")
     } finally {
-      setIsSubmitting(false)
+      setIsSendingMagicLink(false)
     }
   }
 
@@ -113,7 +293,7 @@ export function AccountAuthCard({ email, isAuthenticated, onSessionChanged }: Ac
       }
     } catch (caughtError) {
       reportClientError("account-auth-google-sign-in", caughtError)
-      setError(caughtError instanceof Error ? caughtError.message : "Connexion Google impossible pour le moment.")
+      setError("Connexion Google impossible pour le moment.")
       setIsSigningInWithGoogle(false)
     }
   }
@@ -132,10 +312,14 @@ export function AccountAuthCard({ email, isAuthenticated, onSessionChanged }: Ac
       }
 
       await onSessionChanged?.()
-      setSuccess("Vous avez été déconnecté.")
+      setSuccess("Vous êtes déconnecté.")
+
+      if (redirectAfterSignOut) {
+        window.location.assign(redirectAfterSignOut)
+      }
     } catch (caughtError) {
       reportClientError("account-auth-sign-out", caughtError)
-      setError(caughtError instanceof Error ? caughtError.message : "Déconnexion impossible pour le moment.")
+      setError("Déconnexion impossible pour le moment.")
     } finally {
       setIsSigningOut(false)
     }
@@ -166,7 +350,7 @@ export function AccountAuthCard({ email, isAuthenticated, onSessionChanged }: Ac
 
   return (
     <div className="space-y-4">
-      {siteConfig.auth.googleOAuthEnabled && (
+      {siteConfig.auth.googleOAuthEnabled && !isForgotPasswordMode && (
         <button
           type="button"
           className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200/80 bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50"
@@ -174,20 +358,14 @@ export function AccountAuthCard({ email, isAuthenticated, onSessionChanged }: Ac
           onClick={handleGoogleSignIn}
         >
           <GoogleIcon />
-          {isSigningInWithGoogle ? "Connexion..." : "Créer ou continuer avec Google"}
+          {isSigningInWithGoogle ? "Connexion..." : "Continuer avec Google"}
         </button>
       )}
 
-      <form className="space-y-3" onSubmit={handleSubmit}>
-        <div className="rounded-[20px] border border-sky-100 bg-sky-50/75 p-4 text-sm leading-6 text-sky-950">
-          <div className="font-semibold">Pas de mot de passe à créer</div>
-          <p className="mt-1">
-            Entrez votre email. Si aucun compte n’existe encore, il sera créé automatiquement avec le lien sécurisé.
-          </p>
-        </div>
+      <form className="space-y-3" onSubmit={handlePasswordSubmit}>
         <div>
           <label htmlFor="account-email" className="mb-2 block text-sm font-medium text-slate-800">
-            Votre email
+            Email
           </label>
           <input
             id="account-email"
@@ -196,17 +374,118 @@ export function AccountAuthCard({ email, isAuthenticated, onSessionChanged }: Ac
             className={inputClass}
             placeholder="vous@exemple.fr"
             value={emailInput}
-            onChange={(event) => setEmailInput(event.currentTarget.value)}
+            onChange={(event) => {
+              setEmailInput(event.currentTarget.value)
+              setMagicLinkEmailInput(event.currentTarget.value)
+            }}
           />
         </div>
+
+        {!isForgotPasswordMode && (
+          <div>
+            <label htmlFor="account-password" className="mb-2 block text-sm font-medium text-slate-800">
+              Mot de passe
+            </label>
+            <input
+              id="account-password"
+              type="password"
+              autoComplete={isSignUpMode ? "new-password" : "current-password"}
+              className={inputClass}
+              value={passwordInput}
+              onChange={(event) => setPasswordInput(event.currentTarget.value)}
+            />
+            {isSignUpMode && (
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                {MIN_PASSWORD_LENGTH} caractères minimum.
+              </p>
+            )}
+          </div>
+        )}
+
+        {isSignUpMode && (
+          <div>
+            <label htmlFor="account-password-confirmation" className="mb-2 block text-sm font-medium text-slate-800">
+              Confirmer le mot de passe
+            </label>
+            <input
+              id="account-password-confirmation"
+              type="password"
+              autoComplete="new-password"
+              className={inputClass}
+              value={passwordConfirmation}
+              onChange={(event) => setPasswordConfirmation(event.currentTarget.value)}
+            />
+          </div>
+        )}
+
         <button
           type="submit"
-          className="inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
+          className="inline-flex w-full items-center justify-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
           disabled={isSubmitting || isSigningInWithGoogle}
         >
-          {isSubmitting ? "Envoi du lien..." : "Créer / ouvrir mon compte"}
+          {isSubmitting
+            ? isForgotPasswordMode
+              ? "Envoi..."
+              : isSignUpMode
+                ? "Création..."
+                : "Connexion..."
+            : isForgotPasswordMode
+              ? "Envoyer l'email"
+              : isSignUpMode
+                ? "Créer un compte"
+                : "Se connecter"}
         </button>
       </form>
+
+      <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+        {!isSignInMode && (
+          <Link href={getAuthHref("/connexion")} className="font-medium text-sky-800 hover:underline">
+            Se connecter
+          </Link>
+        )}
+        {!isSignUpMode && (
+          <Link href={getAuthHref("/inscription")} className="font-medium text-sky-800 hover:underline">
+            Créer un compte
+          </Link>
+        )}
+        {!isForgotPasswordMode && (
+          <Link href={getAuthHref("/mot-de-passe-oublie")} className="font-medium text-sky-800 hover:underline">
+            Mot de passe oublié ?
+          </Link>
+        )}
+      </div>
+
+      {!isForgotPasswordMode && (
+        <details className="rounded-[18px] border border-slate-200/80 bg-slate-50/70 p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-slate-800">
+            Recevoir un lien de connexion par email
+          </summary>
+          <form className="mt-4 space-y-3" onSubmit={handleMagicLinkSubmit}>
+            <div>
+              <label htmlFor="magic-link-email" className="mb-2 block text-sm font-medium text-slate-800">
+                Email
+              </label>
+              <input
+                id="magic-link-email"
+                type="email"
+                autoComplete="email"
+                className={inputClass}
+                placeholder="vous@exemple.fr"
+                value={magicLinkEmailInput}
+                onChange={(event) => setMagicLinkEmailInput(event.currentTarget.value)}
+              />
+            </div>
+            <button
+              type="submit"
+              className="inline-flex items-center rounded-full border border-slate-200/80 bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50"
+              disabled={isSendingMagicLink || isSubmitting}
+            >
+              {isSendingMagicLink ? "Envoi du lien..." : "Envoyer un lien sécurisé"}
+            </button>
+          </form>
+        </details>
+      )}
+
       {error && <div className="text-sm text-red-600">{error}</div>}
       {success && <div className="text-sm text-emerald-700">{success}</div>}
     </div>

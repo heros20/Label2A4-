@@ -6,7 +6,7 @@ export const runtime = "nodejs"
 
 function getSafeRedirectPath(request: NextRequest) {
   const nextPath = request.nextUrl.searchParams.get("next")
-  return nextPath && nextPath.startsWith("/") ? nextPath : "/compte"
+  return nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/compte"
 }
 
 export async function GET(request: NextRequest) {

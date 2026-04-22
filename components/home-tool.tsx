@@ -1,8 +1,30 @@
 "use client"
 
 import Link from "next/link"
-import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react"
-import { Download, FileText, Leaf, MoveDown, MoveUp, Printer, RotateCcw, RotateCw, Trash2, Upload } from "lucide-react"
+import {
+  startTransition,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from "react"
+import {
+  Download,
+  FileText,
+  Leaf,
+  LogOut,
+  MoveDown,
+  MoveUp,
+  Printer,
+  RotateCcw,
+  RotateCw,
+  Trash2,
+  Upload,
+  UserRound,
+} from "lucide-react"
 import { ManualCropEditor } from "@/components/manual-crop-editor"
 import { trackClientEvent } from "@/lib/client-analytics"
 import { downloadBlob, printBlob } from "@/lib/download"
@@ -30,6 +52,7 @@ import { reportClientError } from "@/lib/client-monitoring"
 import { calculateLabelImpact } from "@/lib/impact"
 import type { AccessSnapshot, ImpactSnapshot } from "@/lib/monetization-types"
 import { formatEuroFromCents, getPlanLabel, siteConfig } from "@/lib/site-config"
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
 import { cn, formatFileSize } from "@/lib/utils"
 
 type FileWithId = File & { id: string }
@@ -140,6 +163,7 @@ export function HomeTool() {
   const [resultPreviewError, setResultPreviewError] = useState("")
   const [accessSnapshot, setAccessSnapshot] = useState<AccessSnapshot | null>(null)
   const [isLoadingAccess, setIsLoadingAccess] = useState(true)
+  const [isSigningOutFromHome, setIsSigningOutFromHome] = useState(false)
   const [accessError, setAccessError] = useState("")
   const [impactSnapshot, setImpactSnapshot] = useState<ImpactSnapshot | null>(null)
   const [impactError, setImpactError] = useState("")
@@ -259,28 +283,28 @@ export function HomeTool() {
     }
   }, [])
 
+  const loadAccessSnapshot = useCallback(async (signal?: AbortSignal) => {
+    const response = await fetch("/api/access", {
+      cache: "no-store",
+      signal,
+    })
+    const payload = (await response.json()) as AccessResponsePayload
+
+    if (!response.ok || !payload.access) {
+      throw new Error(payload.error ?? "Impossible de charger votre quota.")
+    }
+
+    setAccessSnapshot(payload.access)
+    setAccessError("")
+  }, [])
+
   useEffect(() => {
     const controller = new AbortController()
     let active = true
 
     setIsLoadingAccess(true)
 
-    fetch("/api/access", {
-      cache: "no-store",
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        const payload = (await response.json()) as AccessResponsePayload
-
-        if (!response.ok || !payload.access) {
-          throw new Error(payload.error ?? "Impossible de charger votre quota.")
-        }
-
-        if (active) {
-          setAccessSnapshot(payload.access)
-          setAccessError("")
-        }
-      })
+    loadAccessSnapshot(controller.signal)
       .catch((error) => {
         if (!active || (error instanceof DOMException && error.name === "AbortError")) {
           return
@@ -304,7 +328,7 @@ export function HomeTool() {
       active = false
       controller.abort()
     }
-  }, [])
+  }, [loadAccessSnapshot])
 
   useEffect(() => {
     const mediaQuery = window.matchMedia(MOBILE_MEDIA_QUERY)
@@ -584,6 +608,27 @@ export function HomeTool() {
 
     setAccessSnapshot(snapshot)
     setAccessError("")
+  }
+
+  const handleHomeSignOut = async () => {
+    setIsSigningOutFromHome(true)
+    setAccessError("")
+
+    try {
+      const supabase = getSupabaseBrowserClient()
+      const { error } = await supabase.auth.signOut()
+
+      if (error) {
+        throw error
+      }
+
+      await loadAccessSnapshot()
+    } catch (error) {
+      reportClientError("home-auth-sign-out", error)
+      setAccessError("Déconnexion impossible pour le moment.")
+    } finally {
+      setIsSigningOutFromHome(false)
+    }
   }
 
   const handleExportAction = async (action: "download" | "print") => {
@@ -908,6 +953,53 @@ export function HomeTool() {
       >
         <div className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.2),transparent_56%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.16),transparent_36%)]" />
         <div className="pointer-events-none absolute -right-24 top-10 h-48 w-48 rounded-full bg-sky-200/40 blur-3xl" />
+
+        <header className="relative mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <Link href="/" className="text-sm font-semibold tracking-[0.18em] text-slate-900">
+            Label2A4
+          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            {isLoadingAccess && !accessSnapshot ? (
+              <span className="rounded-full border border-slate-200/80 bg-white/70 px-4 py-2 text-sm font-semibold text-slate-500">
+                Compte...
+              </span>
+            ) : accessSnapshot?.isAuthenticated ? (
+              <>
+                <Link
+                  href="/compte"
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-sky-300 hover:text-sky-800"
+                >
+                  <UserRound className="h-4 w-4" />
+                  Mon espace
+                </Link>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/70 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-white disabled:opacity-50"
+                  disabled={isSigningOutFromHome}
+                  onClick={handleHomeSignOut}
+                >
+                  <LogOut className="h-4 w-4" />
+                  {isSigningOutFromHome ? "Déconnexion..." : "Se déconnecter"}
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/connexion"
+                  className="inline-flex items-center rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-sky-300 hover:text-sky-800"
+                >
+                  Se connecter
+                </Link>
+                <Link
+                  href="/inscription"
+                  className="inline-flex items-center rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+                >
+                  Créer un compte
+                </Link>
+              </>
+            )}
+          </div>
+        </header>
 
         <div className="relative grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
           <div className="max-w-4xl">

@@ -17,23 +17,22 @@ const cardClass =
 const vercelProjectDashboardUrl = "https://vercel.com/herosqwerty-1719s-projects/label2a4"
 
 const lastUpdateDoneItems = [
-  "Paiement Stripe modernisé avec Checkout, SDK Stripe à jour, cartes, PayPal, Apple Pay et Google Pay via moyens dynamiques.",
-  "Codes promo serveur ajoutés : validation backend, réservation anti-double usage, réductions fixes/pourcentage et essai gratuit 7 jours.",
-  "Quota gratuit renforcé : invité signé, compte gratuit, premium, garde anti-abus serveur et rate limiting.",
-  "Compteur écologique ajouté : feuilles économisées, étiquettes optimisées, compteur individuel et global plateforme.",
-  "Footer crédibilisé avec le lien créateur KB et le logo demandé.",
-  "Admin enrichi : création/désactivation des promos, tableau impact/quota/promo et purge cron quotidienne.",
-  "ESLint installé pour contrôler le code avant push.",
-  "Documentation technique ajoutée dans docs/payment-promo-quota-architecture.md.",
+  "Connexion email + mot de passe ajoutée avec Supabase signInWithPassword.",
+  "Création de compte ajoutée avec Supabase signUp et validation minimale du mot de passe.",
+  "Mot de passe oublié ajouté avec resetPasswordForEmail, puis définition du nouveau mot de passe avec updateUser.",
+  "Le lien magique existant est conservé en option secondaire depuis la page de connexion.",
+  "La route /compte est protégée côté serveur par le proxy Next 16 et redirige vers /connexion si aucune session n'est active.",
+  "La home affiche discrètement Se connecter / Créer un compte, ou Mon espace / Se déconnecter si l'utilisateur est connecté.",
+  "Les textes de l'espace compte ont été ajustés pour faire du mot de passe le parcours principal.",
 ] as const
 
 const ownerTodoItems = [
-  "Appliquer dans Supabase les fichiers SQL : supabase/quota.sql, supabase/billing.sql, supabase/promo_codes.sql et supabase/impact.sql.",
-  "Activer dans Stripe Dashboard les moyens de paiement souhaités : carte, PayPal, Apple Pay et Google Pay.",
-  "Enregistrer les domaines de paiement Stripe pour Apple Pay / Google Pay en test et en production.",
-  "Vérifier les variables d'environnement Stripe, Supabase, quota, prix et CRON_SECRET dans Vercel.",
-  "Tester un achat pass 24h, un abonnement mensuel, un abonnement annuel, un code promo actif et un quota atteint.",
-  "Créer ou ajuster les codes commerciaux depuis l'onglet admin, sans SQL manuel.",
+  "Dans Supabase Auth, vérifier que le provider Email est activé et décider si la confirmation email est obligatoire.",
+  "Ajouter l'URL du site dans Site URL : http://localhost:3000 en local, puis l'URL Vercel de production.",
+  "Autoriser les Redirect URLs : http://localhost:3000/auth/callback, http://localhost:3000/auth/reset-password, https://label2a4.com/auth/callback et https://label2a4.com/auth/reset-password.",
+  "Vérifier les templates Supabase de confirmation email et de reset password.",
+  "Tester création de compte, connexion, déconnexion, mauvais mot de passe, mot de passe oublié, reset, home connecté/déconnecté et accès /compte sans session.",
+  "Vérifier en production que les variables NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY et SUPABASE_SERVICE_ROLE_KEY sont bien configurées.",
 ] as const
 
 export default async function AdminPage() {
@@ -125,11 +124,11 @@ export default async function AdminPage() {
           <div>
             <div className="text-sm font-semibold uppercase tracking-[0.16em] text-sky-800">Dernière mise à jour</div>
             <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
-              Paiement, promos, écologie, crédibilité et quota
+              Auth email + mot de passe
             </h2>
           </div>
           <div className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
-            Patch poussé sur master
+            Patch auth vérifié
           </div>
         </div>
 

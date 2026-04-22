@@ -106,7 +106,7 @@ export function AccountPortal() {
             </h2>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
               {accountsEnabled
-                ? "Votre compte Label2A4 se crée avec votre email. Aucun mot de passe n'est nécessaire : vous recevez un lien sécurisé pour accéder à vos achats, au portail Stripe et à vos accès premium."
+                ? "Votre compte Label2A4 se connecte avec email et mot de passe. Le lien email reste disponible en secours depuis la page de connexion."
                 : "Cet espace vous permet de vérifier votre état d'accès, votre quota et vos liens de facturation."}
             </p>
           </div>
@@ -150,18 +150,18 @@ export function AccountPortal() {
       {accountsEnabled && (
         <section id="connexion" className={cardClass}>
           <h2 className="text-xl font-semibold text-slate-950">
-            {checkoutPlanId ? "Créer un compte pour finaliser l’achat" : "Créer ou ouvrir mon compte"}
+            {checkoutPlanId ? "Finaliser avec mon compte" : "Connexion et sécurité"}
           </h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">
             {checkoutPlanId && checkoutPlanLabel && !accessSnapshot?.isAuthenticated
-              ? `Vous avez choisi ${checkoutPlanLabel}${checkoutPlanPriceLabel ? ` (${checkoutPlanPriceLabel})` : ""}. Entrez votre email pour créer ou ouvrir le compte qui recevra cet achat avant le paiement.`
-              : "Entrez votre email pour recevoir un lien sécurisé. Si vous êtes nouveau, votre compte sera créé automatiquement ; sinon, vous serez connecté à votre compte existant."}
+              ? `Vous avez choisi ${checkoutPlanLabel}${checkoutPlanPriceLabel ? ` (${checkoutPlanPriceLabel})` : ""}. Connectez-vous pour rattacher l'achat à ce compte avant le paiement.`
+              : "Gérez votre session et votre email de compte. La connexion principale utilise maintenant un mot de passe."}
           </p>
-          {!accessSnapshot?.isAuthenticated && (
+          {!isLoading && !accessSnapshot?.isAuthenticated && (
             <div className="mt-5 grid gap-3 md:grid-cols-3">
               {[
                 ["1", "Entrez votre email"],
-                ["2", "Cliquez sur le lien reçu"],
+                ["2", "Saisissez votre mot de passe"],
                 ["3", "Retrouvez vos achats ici"],
               ].map(([step, label]) => (
                 <div key={step} className="rounded-[18px] border border-slate-200/80 bg-slate-50/80 p-4">
@@ -174,11 +174,17 @@ export function AccountPortal() {
             </div>
           )}
           <div className="mt-5 max-w-md">
-            <AccountAuthCard
-              email={accessSnapshot?.userEmail}
-              isAuthenticated={Boolean(accessSnapshot?.isAuthenticated)}
-              onSessionChanged={loadAccessSnapshot}
-            />
+            {isLoading ? (
+              <div className="rounded-[20px] border border-slate-200/80 bg-slate-50/80 p-4 text-sm text-slate-600">
+                Chargement de votre session...
+              </div>
+            ) : (
+              <AccountAuthCard
+                email={accessSnapshot?.userEmail}
+                isAuthenticated={Boolean(accessSnapshot?.isAuthenticated)}
+                onSessionChanged={loadAccessSnapshot}
+              />
+            )}
           </div>
           {checkoutPlanId && accessSnapshot?.isAuthenticated && (
             <div className="mt-5 max-w-md rounded-[20px] border border-sky-100 bg-sky-50/70 p-4">

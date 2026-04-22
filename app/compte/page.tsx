@@ -10,7 +10,7 @@ export default function ComptePage() {
   return (
     <PageShell
       title="Mon compte"
-      intro="Créez ou ouvrez votre compte avec un lien email sans mot de passe, puis retrouvez vos accès premium, votre quota et votre facturation."
+      intro="Retrouvez vos accès premium, votre quota et votre facturation après connexion avec email et mot de passe."
     >
       <AnalyticsEventOnMount eventName="account_viewed" />
       <AccountPortal />
