@@ -6,6 +6,7 @@ import {
   ANALYTICS_DISABLE_KEY,
   COOKIE_CONSENT_COOKIE_NAME,
   COOKIE_CONSENT_KEY,
+  COOKIE_CONSENT_UPDATED_EVENT,
   type CookieConsentStatus,
 } from "@/lib/cookie-consent"
 import { siteConfig } from "@/lib/site-config"
@@ -38,6 +39,7 @@ export function CookieConsentBanner() {
       window.localStorage.setItem(ANALYTICS_DISABLE_KEY, "1")
     }
 
+    window.dispatchEvent(new Event(COOKIE_CONSENT_UPDATED_EVENT))
     setIsVisible(false)
   }
 
@@ -49,10 +51,12 @@ export function CookieConsentBanner() {
     <div className="fixed inset-x-3 bottom-3 z-40 mx-auto w-full max-w-4xl rounded-[24px] border border-white/70 bg-slate-950/95 p-4 text-white shadow-[0_28px_70px_-30px_rgba(15,23,42,0.86)] backdrop-blur-xl">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-3xl">
-          <div className="text-sm font-semibold uppercase tracking-[0.16em] text-sky-200">Mesure d’audience</div>
+          <div className="text-sm font-semibold uppercase tracking-[0.16em] text-sky-200">
+            Publicité et mesure d’audience
+          </div>
           <p className="mt-2 text-sm leading-6 text-white/85">
-            Ce site peut utiliser une mesure d’audience et des événements de conversion pour suivre les visites et les
-            performances commerciales. Vous pouvez accepter ou refuser ces traceurs facultatifs.{" "}
+            La version gratuite peut afficher des annonces et utiliser une mesure d’audience pour suivre les visites et
+            les performances commerciales. Vous pouvez accepter ou refuser ces traceurs facultatifs.{" "}
             <Link href="/cookies" className="font-medium text-sky-200 hover:underline">
               En savoir plus
             </Link>

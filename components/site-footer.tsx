@@ -1,5 +1,6 @@
 import Link from "next/link"
 import Image from "next/image"
+import { SiteLogo } from "@/components/site-logo"
 import { siteConfig } from "@/lib/site-config"
 
 const footerLinkGroups = [
@@ -54,7 +55,7 @@ export function SiteFooter() {
       <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-7 px-4 py-8 sm:px-6 lg:px-8">
         <div className="grid gap-8 xl:grid-cols-[minmax(280px,0.75fr)_1.25fr] xl:items-start">
           <div className="max-w-xl">
-            <div className="text-lg font-semibold text-slate-950">{siteConfig.siteName}</div>
+            <SiteLogo markClassName="h-11 w-11" textClassName="text-2xl" />
             <p className="mt-2 text-sm leading-6 text-slate-600">{siteConfig.description}</p>
             <p className="mt-3 text-sm text-slate-500">
               Contact support:{" "}
@@ -90,9 +91,6 @@ export function SiteFooter() {
             © {new Date().getFullYear()} {siteConfig.siteName}. Tous droits réservés.
           </div>
           <div className="flex flex-col gap-3 sm:items-end">
-            <div>
-              {siteConfig.business.businessName} · {siteConfig.business.siret}
-            </div>
             <a
               href="https://heros20.github.io/Portfolio-2.0/"
               target="_blank"

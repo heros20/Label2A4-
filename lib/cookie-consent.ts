@@ -1,5 +1,6 @@
 export const COOKIE_CONSENT_KEY = "label2a4-cookie-consent"
 export const COOKIE_CONSENT_COOKIE_NAME = "label2a4_cookie_consent"
+export const COOKIE_CONSENT_UPDATED_EVENT = "label2a4-cookie-consent-updated"
 export const ANALYTICS_DISABLE_KEY = "va-disable"
 
 export type CookieConsentStatus = "accepted" | "refused"

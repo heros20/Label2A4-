@@ -6,6 +6,13 @@ const landingTitle = "Imprimer plusieurs étiquettes PDF sur une feuille A4"
 const landingDescription =
   "Guide pratique pour transformer vos étiquettes PDF Chronopost, Colissimo et Mondial Relay en planches A4 x4 prêtes à imprimer."
 
+const landingImage = {
+  url: siteConfig.brand.logoPng,
+  width: siteConfig.brand.logoWidth,
+  height: siteConfig.brand.logoHeight,
+  alt: `Logo ${siteConfig.siteName}`,
+}
+
 export const metadata: Metadata = {
   title: landingTitle,
   description: landingDescription,
@@ -19,11 +26,13 @@ export const metadata: Metadata = {
     siteName: siteConfig.siteName,
     title: `${landingTitle} | ${siteConfig.siteName}`,
     description: landingDescription,
+    images: [landingImage],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: `${landingTitle} | ${siteConfig.siteName}`,
     description: landingDescription,
+    images: [siteConfig.brand.logoPng],
   },
 }
 

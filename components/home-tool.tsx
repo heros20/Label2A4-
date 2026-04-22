@@ -26,6 +26,7 @@ import {
   UserRound,
 } from "lucide-react"
 import { ManualCropEditor } from "@/components/manual-crop-editor"
+import { SiteLogo } from "@/components/site-logo"
 import { trackClientEvent } from "@/lib/client-analytics"
 import { downloadBlob, printBlob } from "@/lib/download"
 import {
@@ -955,9 +956,7 @@ export function HomeTool() {
         <div className="pointer-events-none absolute -right-24 top-10 h-48 w-48 rounded-full bg-sky-200/40 blur-3xl" />
 
         <header className="relative mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <Link href="/" className="text-sm font-semibold tracking-[0.18em] text-slate-900">
-            Label2A4
-          </Link>
+          <SiteLogo markClassName="h-11 w-11" textClassName="text-2xl" />
           <div className="flex flex-wrap items-center gap-2">
             {isLoadingAccess && !accessSnapshot ? (
               <span className="rounded-full border border-slate-200/80 bg-white/70 px-4 py-2 text-sm font-semibold text-slate-500">

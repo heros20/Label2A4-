@@ -449,6 +449,12 @@ export const seoPageList = Object.values(seoPages)
 export function getSeoMetadata(page: SeoPageContent): Metadata {
   const canonical = new URL(page.path, siteConfig.siteUrl).toString()
   const title = `${page.metaTitle} | ${siteConfig.siteName}`
+  const image = {
+    url: siteConfig.brand.logoPng,
+    width: siteConfig.brand.logoWidth,
+    height: siteConfig.brand.logoHeight,
+    alt: `Logo ${siteConfig.siteName}`,
+  }
 
   return {
     title: page.metaTitle,
@@ -463,11 +469,13 @@ export function getSeoMetadata(page: SeoPageContent): Metadata {
       siteName: siteConfig.siteName,
       title,
       description: page.metaDescription,
+      images: [image],
     },
     twitter: {
-      card: "summary",
+      card: "summary_large_image",
       title,
       description: page.metaDescription,
+      images: [siteConfig.brand.logoPng],
     },
   }
 }

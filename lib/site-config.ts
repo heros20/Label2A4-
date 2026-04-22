@@ -9,14 +9,16 @@ function isConfiguredValue(value: string) {
   return Boolean(value.trim()) && !value.includes("À compléter") && !value.includes("a-completer")
 }
 
-const configuredFreeDailySheets = readNumber(process.env.NEXT_PUBLIC_FREE_DAILY_A4_SHEETS, 5)
+const DEFAULT_GUEST_DAILY_A4_SHEETS = 2
+const DEFAULT_FREE_ACCOUNT_DAILY_A4_SHEETS = 4
+
 const configuredGuestDailySheets = readNumber(
   process.env.NEXT_PUBLIC_GUEST_DAILY_A4_SHEETS,
-  Math.min(configuredFreeDailySheets, 3),
+  DEFAULT_GUEST_DAILY_A4_SHEETS,
 )
 const configuredFreeAccountDailySheets = readNumber(
   process.env.NEXT_PUBLIC_FREE_ACCOUNT_DAILY_A4_SHEETS,
-  configuredFreeDailySheets,
+  DEFAULT_FREE_ACCOUNT_DAILY_A4_SHEETS,
 )
 const configuredAnonymousAbuseDailySheets = readNumber(
   process.env.ANONYMOUS_ABUSE_DAILY_A4_SHEETS,
@@ -69,6 +71,7 @@ export const siteConfig = {
   },
   compliance: {
     adsEnabled: process.env.NEXT_PUBLIC_ADS_ENABLED === "true",
+    adsenseClientId: process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID ?? "ca-pub-6958980790642483",
     optionalTrackersEnabled: process.env.NEXT_PUBLIC_OPTIONAL_TRACKERS_ENABLED === "true",
   },
   dataHandling: {
@@ -80,6 +83,14 @@ export const siteConfig = {
   },
   auth: {
     googleOAuthEnabled: process.env.NEXT_PUBLIC_AUTH_GOOGLE_ENABLED === "true",
+  },
+  brand: {
+    logoSvg: "/images/logo/label2a4.svg",
+    logoPng: "/images/logo/label2a4.png",
+    logoMarkPng: "/images/logo/label2a4-mark.png",
+    faviconIco: "/images/logo/label2a4.ico",
+    logoWidth: 2760,
+    logoHeight: 1504,
   },
 } as const
 
