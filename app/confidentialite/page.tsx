@@ -19,7 +19,8 @@ export default function ConfidentialitePage() {
         <p>
           Le site traite les fichiers PDF déposés pour produire le résultat demandé, les identifiants techniques
           nécessaires au quota gratuit et à la prévention d&apos;abus, les informations de paiement transmises par Stripe
-          et les données minimales de support si vous nous contactez.
+          et les données minimales de support si vous nous contactez, y compris les pieces jointes que vous choisissez
+          d&apos;ajouter a votre demande.
         </p>
       </section>
 
@@ -52,14 +53,19 @@ export default function ConfidentialitePage() {
           fonctionnement du service. Les journaux techniques et données minimales liées au quota et à la prévention
           d&apos;abus sont conservés pendant {siteConfig.dataHandling.technicalLogRetentionDays} jours.
         </p>
+        <p>
+          Les pieces jointes envoyees au support servent uniquement au suivi de votre demande et ne sont pas publiees par
+          le site.
+        </p>
       </section>
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold text-slate-950">5. Destinataires</h2>
         <p>
           Les données nécessaires au paiement sont traitées par Stripe. L&apos;hébergement est assuré par {siteConfig.host.name}.
-          La mesure d&apos;audience est fournie via Vercel Analytics. Aucun réseau publicitaire n&apos;est utilisé et aucun PDF
-          n&apos;est revendu, cédé ou stocké à des fins marketing.
+          La mesure d&apos;audience est fournie via Vercel Analytics. Les demandes de support peuvent transiter par le
+          prestataire d&apos;email transactionnel configure pour le support. Aucun réseau publicitaire n&apos;est utilisé et aucun
+          PDF n&apos;est revendu, cédé ou stocké à des fins marketing.
         </p>
       </section>
 

@@ -6,7 +6,13 @@ interface BrevoEmailAddress {
   name?: string
 }
 
+interface BrevoAttachment {
+  content: string
+  name: string
+}
+
 interface SendBrevoEmailInput {
+  attachments?: BrevoAttachment[]
   htmlContent: string
   replyTo?: BrevoEmailAddress
   subject: string
@@ -62,6 +68,7 @@ export async function sendBrevoTransactionalEmail(input: SendBrevoEmailInput) {
       "content-type": "application/json",
     },
     body: JSON.stringify({
+      attachment: input.attachments?.length ? input.attachments : undefined,
       htmlContent: input.htmlContent,
       replyTo: input.replyTo,
       sender: getBrevoSender(),
