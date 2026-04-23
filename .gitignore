@@ -12,3 +12,4 @@ build
 FUSION-ROGNAGE
 
 .vercel
+.env*.local
