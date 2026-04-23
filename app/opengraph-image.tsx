@@ -4,7 +4,7 @@ import { join } from "node:path"
 import { siteConfig } from "@/lib/site-config"
 
 export const runtime = "nodejs"
-export const alt = "Fini le gaspillage. Imprime 4 étiquettes sur une seule feuille A4."
+export const alt = "4 en 1 : imprime malin, économise du papier."
 export const size = {
   width: 1200,
   height: 630,
@@ -34,34 +34,22 @@ export default async function Image() {
           src={logoSrc}
           alt={siteConfig.siteName}
           style={{
-            width: 760,
-            height: 414,
+            width: 820,
+            height: 446,
             objectFit: "contain",
           }}
         />
         <div
           style={{
             color: "#0f172a",
-            fontSize: 54,
+            fontSize: 50,
             fontWeight: 800,
             letterSpacing: 0,
             lineHeight: 1.12,
             textAlign: "center",
           }}
         >
-          {siteConfig.primarySlogan}
-        </div>
-        <div
-          style={{
-            color: "#0369a1",
-            fontSize: 30,
-            fontWeight: 700,
-            letterSpacing: 0,
-            lineHeight: 1.2,
-            textAlign: "center",
-          }}
-        >
-          Imprime malin, économise du papier.
+          {siteConfig.socialTagline}
         </div>
       </div>
     ),

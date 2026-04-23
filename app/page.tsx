@@ -3,19 +3,19 @@ import { HomeTool } from "@/components/home-tool"
 import { siteConfig } from "@/lib/site-config"
 
 export const metadata: Metadata = {
-  title: "Fini le gaspillage : 4 étiquettes colis sur une feuille A4",
+  title: "Étiquettes PDF en A4 x4 pour vos transporteurs",
   description:
-    "Imprimez jusqu'à 4 étiquettes colis sur une seule feuille A4. Optimisez vos PDF Chronopost, Colissimo, Mondial Relay et Happy Post pour économiser papier et encre.",
+    "Regroupez vos étiquettes PDF Chronopost, Colissimo, Mondial Relay et Happy Post sur des feuilles A4 x4 prêtes à imprimer.",
   alternates: {
     canonical: siteConfig.siteUrl,
   },
   openGraph: {
-    title: siteConfig.primarySlogan,
+    title: "Étiquettes PDF en A4 x4 pour vos transporteurs",
     description: siteConfig.socialTagline,
     url: siteConfig.siteUrl,
   },
   twitter: {
-    title: siteConfig.primarySlogan,
+    title: "Étiquettes PDF en A4 x4 pour vos transporteurs",
     description: siteConfig.socialTagline,
   },
 }
