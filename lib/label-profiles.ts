@@ -57,7 +57,7 @@ export const MONDIAL_RELAY_VARIANTS = [
     slug: "variante-1",
     title: "Variante 1",
     shortLabel: "V1",
-    description: "54% gauche + 40% haut",
+    description: "",
     crop: {
       side: "left",
       portion: 0.54,
@@ -70,7 +70,7 @@ export const MONDIAL_RELAY_VARIANTS = [
     slug: "variante-2",
     title: "Variante 2",
     shortLabel: "V2",
-    description: "X 12 · Y 60 · L 77 · H 38",
+    description: "",
     cropRect: {
       x: 0.12,
       y: 0.6,
