@@ -41,7 +41,7 @@ export const siteConfig = {
   description:
     process.env.NEXT_PUBLIC_SITE_DESCRIPTION ??
     "Regroupez vos étiquettes PDF Chronopost, Colissimo, Mondial Relay et Happy Post sur des feuilles A4 x4 prêtes à imprimer.",
-  socialTagline: "4 en 1 : imprime malin, économise du papier.",
+  socialTagline: "Fini le gaspillage. Imprime 4 étiquettes sur une seule feuille A4.",
   supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "support@label2a4.local",
   supportResponseDelay:
     process.env.NEXT_PUBLIC_SUPPORT_RESPONSE_DELAY ?? "Réponse sous 2 jours ouvrés.",

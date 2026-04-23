@@ -4,7 +4,7 @@ import { join } from "node:path"
 import { siteConfig } from "@/lib/site-config"
 
 export const runtime = "nodejs"
-export const alt = "4 en 1 : imprime malin, économise du papier."
+export const alt = "Fini le gaspillage. Imprime 4 étiquettes sur une seule feuille A4."
 export const size = {
   width: 1200,
   height: 630,
