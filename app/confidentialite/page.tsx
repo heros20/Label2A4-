@@ -18,9 +18,9 @@ export default function ConfidentialitePage() {
         <h2 className="text-xl font-semibold text-slate-950">1. Données traitées</h2>
         <p>
           Le site traite les fichiers PDF déposés pour produire le résultat demandé, les identifiants techniques
-          nécessaires au quota gratuit et à la prévention d&apos;abus, les informations de paiement transmises par Stripe
-          et les données minimales de support si vous nous contactez, y compris les pieces jointes que vous choisissez
-          d&apos;ajouter a votre demande.
+          nécessaires au quota gratuit et à la prévention d&apos;abus, les informations transmises par le prestataire de
+          paiement et les données minimales de support si vous nous contactez, y compris les pièces jointes que vous
+          choisissez d&apos;ajouter à votre demande.
         </p>
       </section>
 
@@ -37,7 +37,7 @@ export default function ConfidentialitePage() {
         <h2 className="text-xl font-semibold text-slate-950">3. Base légale</h2>
         <p>
           Les traitements strictement nécessaires reposent sur l&apos;exécution du service demandé. Les paiements sont
-          gérés par Stripe. La mesure d&apos;audience et les événements de conversion sont activés uniquement si vous
+          gérés par le prestataire de paiement. La mesure d&apos;audience et les événements de conversion sont activés uniquement si vous
           acceptez les traceurs facultatifs via le bandeau prévu à cet effet.
         </p>
       </section>
@@ -54,7 +54,7 @@ export default function ConfidentialitePage() {
           d&apos;abus sont conservés pendant {siteConfig.dataHandling.technicalLogRetentionDays} jours.
         </p>
         <p>
-          Les pieces jointes envoyees au support servent uniquement au suivi de votre demande et ne sont pas publiees par
+          Les pièces jointes envoyées au support servent uniquement au suivi de votre demande et ne sont pas publiées par
           le site.
         </p>
       </section>
@@ -62,9 +62,9 @@ export default function ConfidentialitePage() {
       <section className="space-y-3">
         <h2 className="text-xl font-semibold text-slate-950">5. Destinataires</h2>
         <p>
-          Les données nécessaires au paiement sont traitées par Stripe. L&apos;hébergement est assuré par {siteConfig.host.name}.
-          La mesure d&apos;audience est fournie via Vercel Analytics. Les demandes de support peuvent transiter par le
-          prestataire d&apos;email transactionnel configure pour le support. Aucun réseau publicitaire n&apos;est utilisé et aucun
+          Les données nécessaires au paiement sont traitées par un prestataire spécialisé. L&apos;hébergement est assuré par {siteConfig.host.name}.
+          La mesure d&apos;audience est fournie par un outil d&apos;analyse respectueux du consentement. Les demandes de support peuvent transiter par le
+          prestataire d&apos;email transactionnel configuré pour le support. Aucun réseau publicitaire n&apos;est utilisé et aucun
           PDF n&apos;est revendu, cédé ou stocké à des fins marketing.
         </p>
       </section>

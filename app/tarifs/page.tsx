@@ -61,7 +61,7 @@ export default function TarifsPage() {
             l&apos;année.
           </p>
           <p className="mt-2 text-sm text-slate-500">
-            Espace client : état du plan, accès au portail Stripe, factures et résiliation.
+            Espace client : état du plan, accès au portail de facturation, factures et résiliation.
           </p>
           <div className="mt-5">
             <CheckoutButton
@@ -85,7 +85,7 @@ export default function TarifsPage() {
             Revient à environ {annualMonthlyEquivalent} / mois.
           </p>
           <p className="mt-2 text-sm text-slate-500">
-            Espace client : état du plan, accès au portail Stripe, factures et résiliation.
+            Espace client : état du plan, accès au portail de facturation, factures et résiliation.
           </p>
           <div className="mt-5">
             <CheckoutButton

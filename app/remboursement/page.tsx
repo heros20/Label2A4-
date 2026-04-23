@@ -26,7 +26,7 @@ export default function RemboursementPage() {
         <h2 className="text-xl font-semibold text-slate-950">Délais de traitement</h2>
         <p>
           Les demandes sont étudiées au cas par cas. En cas d’acceptation, le remboursement est émis sur le moyen de
-          paiement initial via Stripe.
+          paiement initial.
         </p>
       </section>
     </PageShell>

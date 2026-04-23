@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
   try {
     if (!isStripeConfigured()) {
       return NextResponse.json(
-        { error: "Stripe n'est pas encore configuré sur cet environnement." },
+        { error: "Paiement indisponible pour le moment." },
         { status: 503 },
       )
     }
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!priceId) {
-      return NextResponse.json({ error: "Prix Stripe manquant pour cette offre." }, { status: 503 })
+      return NextResponse.json({ error: "Paiement indisponible pour cette offre." }, { status: 503 })
     }
 
     let promoReservation: PromoReservation | null = null

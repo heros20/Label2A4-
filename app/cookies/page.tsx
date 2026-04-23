@@ -23,7 +23,7 @@ export default function CookiesPage() {
       <section className="space-y-3">
         <h2 className="text-xl font-semibold text-slate-950">Mesure d&apos;audience et conversion</h2>
         <p>
-          Le site peut activer Vercel Analytics pour mesurer les visites, les pages vues et quelques événements métier
+          Le site peut activer une mesure d’audience pour compter les visites, les pages vues et quelques événements métier
           comme l&apos;ouverture du checkout, la validation du paiement ou l&apos;ouverture du portail de facturation.
         </p>
         <p>

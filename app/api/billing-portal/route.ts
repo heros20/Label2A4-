@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
   try {
     if (!isStripeConfigured()) {
-      return NextResponse.json({ error: "Stripe n'est pas configuré." }, { status: 503 })
+      return NextResponse.json({ error: "Portail de facturation indisponible." }, { status: 503 })
     }
 
     let customerId: string | undefined
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 
       if (!customerId) {
         return NextResponse.json(
-          { error: "Aucun client Stripe n'est encore rattaché à ce compte." },
+          { error: "Aucun portail de facturation n'est encore rattaché à ce compte." },
           { status: 400 },
         )
       }

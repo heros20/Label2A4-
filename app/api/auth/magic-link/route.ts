@@ -266,13 +266,13 @@ export async function POST(request: NextRequest) {
 
     if (!rateLimit.allowed) {
       return NextResponse.json(
-        { error: "Trop de demandes de connexion. Reessayez dans quelques minutes." },
+        { error: "Trop de demandes de connexion. Réessayez dans quelques minutes." },
         { status: 429 },
       )
     }
 
     if (!isSupabaseAdminConfigured()) {
-      return NextResponse.json({ error: "Supabase Admin n'est pas configure." }, { status: 503 })
+      return NextResponse.json({ error: "Connexion par lien indisponible pour le moment." }, { status: 503 })
     }
 
     const payload = (await request.json()) as MagicLinkPayload

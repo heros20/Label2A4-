@@ -17,9 +17,9 @@ const cardClass =
 const vercelProjectDashboardUrl = "https://vercel.com/herosqwerty-1719s-projects/label2a4"
 
 const lastUpdateDoneItems = [
-  "Connexion email + mot de passe ajoutée avec Supabase signInWithPassword.",
-  "Création de compte ajoutée avec Supabase signUp et validation minimale du mot de passe.",
-  "Mot de passe oublié ajouté avec resetPasswordForEmail, puis définition du nouveau mot de passe avec updateUser.",
+  "Connexion email + mot de passe ajoutée.",
+  "Création de compte ajoutée avec validation minimale du mot de passe.",
+  "Mot de passe oublié ajouté avec définition sécurisée du nouveau mot de passe.",
   "Le lien magique existant est conservé en option secondaire depuis la page de connexion.",
   "La route /compte est protégée côté serveur par le proxy Next 16 et redirige vers /connexion si aucune session n'est active.",
   "La home affiche discrètement Se connecter / Créer un compte, ou Mon espace / Se déconnecter si l'utilisateur est connecté.",
@@ -27,12 +27,12 @@ const lastUpdateDoneItems = [
 ] as const
 
 const ownerTodoItems = [
-  "Dans Supabase Auth, vérifier que le provider Email est activé et décider si la confirmation email est obligatoire.",
-  "Ajouter l'URL du site dans Site URL : http://localhost:3000 en local, puis l'URL Vercel de production.",
-  "Autoriser les Redirect URLs : http://localhost:3000/auth/callback, http://localhost:3000/auth/reset-password, https://label2a4.com/auth/callback et https://label2a4.com/auth/reset-password.",
-  "Vérifier les templates Supabase de confirmation email et de reset password.",
+  "Vérifier que la connexion par email est activée et décider si la confirmation email est obligatoire.",
+  "Ajouter l'URL locale et l'URL de production dans les réglages d'authentification.",
+  "Autoriser les redirections vers /auth/callback et /auth/reset-password en local et en production.",
+  "Vérifier les modèles d'email de confirmation et de réinitialisation.",
   "Tester création de compte, connexion, déconnexion, mauvais mot de passe, mot de passe oublié, reset, home connecté/déconnecté et accès /compte sans session.",
-  "Vérifier en production que les variables NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY et SUPABASE_SERVICE_ROLE_KEY sont bien configurées.",
+  "Vérifier en production que les variables d'authentification serveur et client sont bien configurées.",
 ] as const
 
 export default async function AdminPage() {
@@ -41,12 +41,11 @@ export default async function AdminPage() {
 
   if (!isConfigured) {
     return (
-      <PageShell title="Admin" intro="Le dashboard admin nécessite un token dédié côté serveur.">
+      <PageShell title="Admin" intro="Cette page est privée.">
         <section className={cardClass}>
           <h2 className="text-xl font-semibold text-slate-950">Configuration requise</h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Ajoutez la variable d&apos;environnement <code>ADMIN_DASHBOARD_TOKEN</code> pour activer la connexion à ce
-            dashboard.
+            Terminez la configuration privée de l’administration pour activer cette page.
           </p>
         </section>
       </PageShell>
@@ -84,7 +83,7 @@ export default async function AdminPage() {
     >
       <section className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-sm text-slate-600">
-          Source de vérité trafic: Vercel Analytics. Source de vérité revenu et abonnements: Stripe.
+          Source de vérité trafic : mesure d’audience. Source de vérité revenu et abonnements : prestataire de paiement.
         </div>
         <AdminLogoutButton />
       </section>
@@ -157,8 +156,8 @@ export default async function AdminPage() {
             <h3 className="font-semibold text-slate-950">Codes promo et utilité</h3>
             <div className="text-xs font-medium text-slate-500">
               {dashboard.promoCodesConfigured
-                ? "Codes lus depuis Supabase"
-                : "Schéma promo à appliquer dans Supabase"}
+                ? "Codes lus depuis la base"
+                : "Configuration promo incomplète"}
             </div>
           </div>
 
@@ -183,7 +182,7 @@ export default async function AdminPage() {
                 : "w-fit rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800"
             }
           >
-            {dashboard.operationalRowsConfigured ? "Données Supabase" : "Configuration incomplète"}
+            {dashboard.operationalRowsConfigured ? "Données disponibles" : "Configuration incomplète"}
           </div>
         </div>
 
@@ -259,8 +258,8 @@ export default async function AdminPage() {
         <section className={cardClass}>
           <h2 className="text-xl font-semibold text-slate-950">Suivi trafic et conversion</h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Les visites, pages vues et événements de conversion sont envoyés à Vercel Analytics. Ouvrez le dashboard
-            du projet pour voir le trafic et les événements.
+            Les visites, pages vues et événements de conversion sont envoyés à l’outil de mesure d’audience. Ouvrez le
+            tableau de bord du projet pour voir le trafic et les événements.
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
             <a
@@ -269,7 +268,7 @@ export default async function AdminPage() {
               rel="noreferrer"
               className="inline-flex items-center rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
             >
-              Ouvrir Vercel Analytics
+              Ouvrir l’analyse
             </a>
             <a
               href={vercelProjectDashboardUrl}
@@ -277,7 +276,7 @@ export default async function AdminPage() {
               rel="noreferrer"
               className="inline-flex items-center rounded-full border border-slate-200/80 bg-white px-4 py-2 text-sm font-semibold text-slate-800"
             >
-              Ouvrir le projet Vercel
+              Ouvrir le projet
             </a>
           </div>
           <div className="mt-4 space-y-2 text-sm text-slate-600">
@@ -292,7 +291,7 @@ export default async function AdminPage() {
         </section>
 
         <section className={cardClass}>
-          <h2 className="text-xl font-semibold text-slate-950">État Stripe</h2>
+          <h2 className="text-xl font-semibold text-slate-950">État paiement</h2>
           <div className="mt-4 flex flex-wrap gap-3">
             <a
               href={`${stripeDashboardBaseUrl}/payments`}
@@ -320,7 +319,7 @@ export default async function AdminPage() {
             </a>
           </div>
           <div className="mt-4 space-y-2 text-sm text-slate-600">
-            <p>Stripe configuré: {dashboard.stripeConfigured ? "oui" : "non"}</p>
+            <p>Paiement configuré: {dashboard.stripeConfigured ? "oui" : "non"}</p>
             <p>Portail client configuré: {dashboard.stripePortalConfigured ? "oui" : "non"}</p>
             <p>Abonnements en essai: {dashboard.subscriptionsTrialing}</p>
             <p>Abonnements en retard de paiement: {dashboard.subscriptionsPastDue}</p>

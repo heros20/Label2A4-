@@ -129,23 +129,23 @@ async function handleSubscriptionEvent(subscription: Stripe.Subscription) {
 export async function POST(request: NextRequest) {
   try {
     if (!isStripeConfigured()) {
-      return NextResponse.json({ error: "Stripe n'est pas configuré." }, { status: 503 })
+      return NextResponse.json({ error: "Paiement indisponible." }, { status: 503 })
     }
 
     if (!isBillingStoreConfigured()) {
-      return NextResponse.json({ error: "Supabase billing n'est pas configuré." }, { status: 503 })
+      return NextResponse.json({ error: "Facturation indisponible." }, { status: 503 })
     }
 
     const webhookSecret = getStripeWebhookSecret()
 
     if (!webhookSecret) {
-      return NextResponse.json({ error: "STRIPE_WEBHOOK_SECRET manquant." }, { status: 503 })
+      return NextResponse.json({ error: "Configuration de paiement incomplète." }, { status: 503 })
     }
 
     const signature = request.headers.get("stripe-signature")
 
     if (!signature) {
-      return NextResponse.json({ error: "Signature Stripe manquante." }, { status: 400 })
+      return NextResponse.json({ error: "Signature de paiement manquante." }, { status: 400 })
     }
 
     const payload = await request.text()
@@ -197,6 +197,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true })
   } catch (error) {
     console.error("[label2a4-stripe-webhook]", error)
-    return NextResponse.json({ error: "Webhook Stripe invalide." }, { status: 400 })
+    return NextResponse.json({ error: "Notification de paiement invalide." }, { status: 400 })
   }
 }

@@ -110,7 +110,7 @@ function ensureAdminAccess(request: NextRequest) {
   }
 
   if (!isSupabaseAdminConfigured()) {
-    return jsonError("Supabase service role n'est pas configure pour gerer les codes promo.", 503)
+    return jsonError("Configuration serveur incomplète pour gérer les codes promo.", 503)
   }
 
   return null
@@ -189,11 +189,11 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       if (isMissingPromoStorageError(error)) {
-        return jsonError("Table promo_codes absente. Appliquez supabase/promo_codes.sql une seule fois.", 503)
+        return jsonError("Configuration promo incomplète.", 503)
       }
 
       if (error.code === "23505") {
-        return jsonError("Ce code promo existe deja.", 409)
+        return jsonError("Ce code promo existe déjà.", 409)
       }
 
       throw new Error(error.message)
@@ -223,7 +223,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (typeof payload.active !== "boolean") {
-      return jsonError("Etat actif/inactif invalide.", 400)
+      return jsonError("État actif/inactif invalide.", 400)
     }
 
     const supabase = getSupabaseAdminClient()
@@ -239,7 +239,7 @@ export async function PATCH(request: NextRequest) {
 
     if (error) {
       if (isMissingPromoStorageError(error)) {
-        return jsonError("Table promo_codes absente. Appliquez supabase/promo_codes.sql une seule fois.", 503)
+        return jsonError("Configuration promo incomplète.", 503)
       }
 
       throw new Error(error.message)

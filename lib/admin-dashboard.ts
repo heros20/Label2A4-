@@ -201,7 +201,7 @@ function getFallbackOperationalRows(detail: string): AdminOperationalRow[] {
     {
       category: "Configuration",
       detail,
-      metric: "Supabase",
+      metric: "Stockage",
       status: "warning",
       value: "Non disponible",
     },
@@ -212,7 +212,7 @@ async function getAdminOperationalRows() {
   if (!isSupabaseAdminConfigured()) {
     return {
       configured: false,
-      rows: getFallbackOperationalRows("Ajoutez SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY pour lire ces indicateurs."),
+      rows: getFallbackOperationalRows("Terminez la configuration serveur pour lire ces indicateurs."),
     }
   }
 
@@ -247,7 +247,7 @@ async function getAdminOperationalRows() {
     return {
       configured: false,
       rows: getFallbackOperationalRows(
-        "Appliquez les fichiers SQL Supabase du projet pour activer impact, quota, promos et rate limiting.",
+        "Terminez la configuration des tables de suivi pour activer impact, quota, promos et rate limiting.",
       ),
     }
   }
@@ -288,7 +288,7 @@ async function getAdminOperationalRows() {
       },
       {
         category: "Quota",
-        detail: `${formatInteger(quotaRows.length)} identites suivies aujourd'hui en UTC.`,
+        detail: `${formatInteger(quotaRows.length)} identités suivies aujourd’hui en UTC.`,
         metric: "Feuilles consommees aujourd'hui",
         status: quotaSheetsToday > 0 ? "ok" : "muted",
         value: formatInteger(quotaSheetsToday),

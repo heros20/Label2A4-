@@ -20,7 +20,7 @@ export default function ResiliationPage() {
           <Link href="/compte" className="text-sky-800 hover:underline">
             Mon compte
           </Link>
-          . Vous y retrouverez le bouton d’accès au portail Stripe.
+          . Vous y retrouverez le bouton d’accès au portail de facturation.
         </p>
         <BillingPortalButton
           label="Ouvrir le portail de résiliation"

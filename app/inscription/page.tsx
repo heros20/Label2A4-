@@ -16,9 +16,6 @@ export default function InscriptionPage() {
     >
       <section className={cardClass}>
         <h2 className="text-xl font-semibold text-slate-950">Nouveau compte</h2>
-        <p className="mt-3 text-sm leading-6 text-slate-600">
-          Si Supabase demande une confirmation email, le compte sera actif après validation du lien reçu.
-        </p>
         <div className="mt-5 max-w-md">
           <AccountAuthCard initialMode="sign-up" isAuthenticated={false} />
         </div>

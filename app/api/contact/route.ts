@@ -203,7 +203,7 @@ async function validateAttachments(files: File[]) {
     totalSize += file.size
     if (totalSize > MAX_TOTAL_ATTACHMENT_BYTES) {
       throw new ContactValidationError(
-        `Les pieces jointes doivent faire ${formatFileSize(MAX_TOTAL_ATTACHMENT_BYTES)} maximum au total.`,
+        `Les pièces jointes doivent faire ${formatFileSize(MAX_TOTAL_ATTACHMENT_BYTES)} maximum au total.`,
         413,
       )
     }
@@ -294,7 +294,7 @@ function buildContactTextContent(input: {
 
 function buildAttachmentHtmlContent(attachments: ValidatedAttachment[]) {
   if (!attachments.length) {
-    return `<p style="margin:0;font-size:14px;line-height:1.65;color:#526072;">Aucune piece jointe.</p>`
+    return `<p style="margin:0;font-size:14px;line-height:1.65;color:#526072;">Aucune pièce jointe.</p>`
   }
 
   const items = attachments
@@ -422,7 +422,7 @@ export async function POST(request: NextRequest) {
 
     if (!rateLimit.allowed) {
       return NextResponse.json(
-        { error: "Trop de demandes de contact. Reessayez dans quelques minutes." },
+        { error: "Trop de demandes de contact. Réessayez dans quelques minutes." },
         { status: 429 },
       )
     }

@@ -38,9 +38,9 @@ export default function CgvPage() {
       <section className="space-y-3">
         <h2 className="text-xl font-semibold text-slate-950">3. Paiement, renouvellement et facturation</h2>
         <p>
-          Les paiements sont sécurisés via Stripe. Les abonnements se renouvellent automatiquement à chaque échéance
-          jusqu’à résiliation. Les reçus et factures sont émis par le prestataire de paiement selon votre configuration
-          Stripe.
+          Les paiements sont sécurisés par un prestataire spécialisé. Les abonnements se renouvellent automatiquement à
+          chaque échéance jusqu’à résiliation. Les reçus et factures sont émis par le prestataire de paiement selon la
+          configuration du service.
         </p>
       </section>
 

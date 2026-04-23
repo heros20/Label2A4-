@@ -130,7 +130,7 @@ export function AccountPortal() {
             )}
             {accessSnapshot?.subscriptionStatus && (
               <div className="mt-1">
-                <strong>État Stripe :</strong> {accessSnapshot.subscriptionStatus}
+                <strong>État de facturation :</strong> {accessSnapshot.subscriptionStatus}
               </div>
             )}
             {accessSnapshot?.expiresAt && (
@@ -196,7 +196,7 @@ export function AccountPortal() {
               ) : (
                 <>
                   <p className="mb-4 text-sm leading-6 text-sky-950">
-                    Compte connecté. Vous pouvez maintenant continuer vers le paiement Stripe pour{" "}
+                    Compte connecté. Vous pouvez maintenant continuer vers le paiement pour{" "}
                     <strong>{checkoutPlanLabel}</strong>.
                   </p>
                   <CheckoutButton
@@ -237,7 +237,7 @@ export function AccountPortal() {
         <section className={cardClass}>
           <h2 className="text-xl font-semibold text-slate-950">Facturation et abonnement</h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Depuis le portail Stripe, vous pouvez consulter vos reçus ou factures, mettre à jour votre moyen de
+            Depuis le portail de facturation, vous pouvez consulter vos reçus ou factures, mettre à jour votre moyen de
             paiement et résilier votre abonnement en ligne.
           </p>
 
@@ -251,10 +251,10 @@ export function AccountPortal() {
               <div className="space-y-3 text-sm leading-6 text-slate-600">
                 <p>
                   {!accessSnapshot?.paymentsAvailable
-                    ? "Le portail Stripe n'est pas encore disponible sur cet environnement."
+                    ? "Le portail de facturation n'est pas encore disponible."
                     : accountsEnabled && !accessSnapshot?.isAuthenticated
                       ? "Connectez-vous d'abord à votre compte pour retrouver vos achats et votre portail de facturation."
-                      : "Le portail apparaîtra dès qu'un achat Stripe sera rattaché à ce compte."}
+                      : "Le portail apparaîtra dès qu'un achat sera rattaché à ce compte."}
                 </p>
                 <Link
                   href="/tarifs"
@@ -274,7 +274,7 @@ export function AccountPortal() {
           <h2 className="text-xl font-semibold text-slate-950">Ce que couvre cet espace</h2>
           <div className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
             <p>1. Vérifier votre plan actif et votre quota restant.</p>
-            <p>2. Ouvrir le portail Stripe pour les reçus, la carte bancaire et la résiliation.</p>
+            <p>2. Ouvrir le portail de facturation pour les reçus, la carte bancaire et la résiliation.</p>
             <p>3. Retrouver vos accès premium depuis n'importe quel appareil connecté au même compte.</p>
           </div>
         </section>

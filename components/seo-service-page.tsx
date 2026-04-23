@@ -1,7 +1,61 @@
+import Image from "next/image"
 import Link from "next/link"
 import type { SeoPageContent } from "@/lib/seo-pages"
 
-function SheetComparisonVisual() {
+const CHRONOPOST_COMPARISON_IMAGES = [
+  {
+    label: "Avant",
+    labelClassName: "text-slate-600",
+    panelClassName: "border-slate-200 bg-slate-50",
+    src: "/images/chronopost/leboncoinx1.pdf.jpg",
+    alt: "Bordereau Chronopost imprimé seul sur une feuille",
+    frameClassName: "w-full max-w-full shrink-0 aspect-[1755/1240] rotate-90",
+    imageClassName: "object-contain object-center",
+  },
+  {
+    label: "Après",
+    labelClassName: "text-sky-800",
+    panelClassName: "border-sky-200 bg-sky-50",
+    src: "/images/chronopost/leboncoinx4.pdf.jpg",
+    alt: "Quatre bordereaux Chronopost regroupés sur une feuille A4",
+    frameClassName: "h-full max-h-full shrink-0 aspect-[1241/1754]",
+    imageClassName: "object-contain object-center",
+  },
+] as const
+
+function ChronopostSheetComparisonVisual() {
+  return (
+    <div className="rounded-[30px] border border-slate-200/80 bg-white/78 p-4 shadow-[0_28px_70px_-52px_rgba(15,23,42,0.35)]">
+      <div className="grid gap-4 sm:grid-cols-2">
+        {CHRONOPOST_COMPARISON_IMAGES.map((preview) => (
+          <div key={preview.label}>
+            <div className={`mb-3 text-sm font-semibold ${preview.labelClassName}`}>{preview.label}</div>
+            <div className={`relative aspect-[3/4] overflow-hidden rounded-[22px] border ${preview.panelClassName}`}>
+              <div className="absolute inset-0 flex items-center justify-center p-3">
+                <div className={`relative ${preview.frameClassName}`}>
+                  <Image
+                    src={preview.src}
+                    alt={preview.alt}
+                    fill
+                    priority
+                    sizes="(min-width: 1024px) 320px, (min-width: 640px) 42vw, 100vw"
+                    className={preview.imageClassName}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function SheetComparisonVisual({ pagePath }: { pagePath: string }) {
+  if (pagePath === "/chronopost") {
+    return <ChronopostSheetComparisonVisual />
+  }
+
   return (
     <div className="rounded-[30px] border border-slate-200/80 bg-white/78 p-4 shadow-[0_28px_70px_-52px_rgba(15,23,42,0.35)]">
       <div className="grid gap-4 sm:grid-cols-2">
@@ -99,7 +153,7 @@ export function SeoServicePage({ page, children }: SeoServicePageProps) {
           </div>
         </div>
 
-        <SheetComparisonVisual />
+        <SheetComparisonVisual pagePath={page.path} />
       </section>
 
       <section className="mt-12 grid gap-4 md:grid-cols-2">

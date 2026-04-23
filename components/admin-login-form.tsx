@@ -46,7 +46,7 @@ export function AdminLoginForm() {
           value={token}
           onChange={(event) => setToken(event.currentTarget.value)}
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
-          placeholder="Saisissez le token de dashboard"
+          placeholder="Saisissez le code d’accès admin"
           autoComplete="current-password"
         />
       </div>
@@ -55,7 +55,7 @@ export function AdminLoginForm() {
         disabled={isLoading || !token.trim()}
         className="inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50"
       >
-        {isLoading ? "Connexion..." : "Ouvrir le dashboard"}
+        {isLoading ? "Connexion..." : "Ouvrir l’administration"}
       </button>
       {error && <p className="text-sm text-red-600">{error}</p>}
     </form>

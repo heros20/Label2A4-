@@ -9,7 +9,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type ChangeEvent,
 } from "react"
 import {
   Download,
@@ -103,23 +102,6 @@ function isDefaultManualCrop(crop?: ManualCropRect | null) {
     normalized.width === DEFAULT_MANUAL_CROP_RECT.width &&
     normalized.height === DEFAULT_MANUAL_CROP_RECT.height
   )
-}
-
-function formatCropPercent(value: number) {
-  return `${Math.round(value * 100)}%`
-}
-
-function formatCropInputValue(value: number) {
-  return Math.round(value * 100)
-}
-
-function formatManualCropSummary(crop?: ManualCropRect | null) {
-  if (!crop || isDefaultManualCrop(crop)) {
-    return "Page entière"
-  }
-
-  const normalized = normalizeManualCropRect(crop)
-  return `X ${formatCropPercent(normalized.x)} · Y ${formatCropPercent(normalized.y)} · L ${formatCropPercent(normalized.width)} · H ${formatCropPercent(normalized.height)}`
 }
 
 function formatInteger(value: number) {
@@ -965,23 +947,6 @@ export function HomeTool() {
     })
   }
 
-  const updateFocusedManualCropFromPercent =
-    (field: keyof ManualCropRect) => (event: ChangeEvent<HTMLInputElement>) => {
-      if (!focusedFile) {
-        return
-      }
-
-      const numericValue = event.currentTarget.valueAsNumber
-      if (Number.isNaN(numericValue)) {
-        return
-      }
-
-      setManualCropForFile(focusedFile.id, {
-        ...focusedManualCrop,
-        [field]: numericValue / 100,
-      })
-    }
-
   const focusAdjacentFile = (direction: -1 | 1) => {
     const nextIndex = focusedFileIndex + direction
     if (nextIndex < 0 || nextIndex >= files.length) {
@@ -1313,7 +1278,7 @@ export function HomeTool() {
               <div>
                 <h3 className="text-base font-semibold text-slate-950">Variantes Mondial Relay</h3>
                 <p className="mt-1 text-sm text-slate-600">
-                  Choisissez la variante de rognage a appliquer au lot.
+                  Choisissez la variante de rognage à appliquer au lot.
                 </p>
               </div>
               <div className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
@@ -1403,7 +1368,7 @@ export function HomeTool() {
                   <div>
                     <div className="text-sm font-medium text-slate-900">Rotation du lot</div>
                     <div className="mt-1 text-sm text-slate-500">
-                      Appliquez un angle commun apres le rognage, puis ajustez fichier par fichier si besoin.
+                      Appliquez un angle commun après le rognage, puis ajustez fichier par fichier si besoin.
                     </div>
                   </div>
                   <div className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">
@@ -1726,68 +1691,12 @@ export function HomeTool() {
                   </div>
                 )}
 
-                <p className="mt-4 text-sm text-slate-500">
-                  Sur mobile, affinez aussi la zone avec les champs ci-dessous pour éviter les manipulations trop fines
-                  au doigt.
-                </p>
-                <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-5">
-                  <div className={cn(metricClass, "col-span-2 lg:col-span-1")}>
+                <div className="mt-5 grid gap-3 sm:max-w-xs">
+                  <div className={metricClass}>
                     <div className="text-sm text-slate-500">État</div>
                     <div className="mt-1 font-medium text-slate-900">
                       {isDefaultManualCrop(focusedManualCrop) ? "Page entière" : "Zone personnalisée"}
                     </div>
-                  </div>
-                  <div className={metricClass}>
-                    <div className="text-sm text-slate-500">X</div>
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      min={0}
-                      max={100}
-                      step={1}
-                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-base font-medium text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
-                      value={formatCropInputValue(focusedManualCrop.x)}
-                      onChange={updateFocusedManualCropFromPercent("x")}
-                    />
-                  </div>
-                  <div className={metricClass}>
-                    <div className="text-sm text-slate-500">Y</div>
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      min={0}
-                      max={100}
-                      step={1}
-                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-base font-medium text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
-                      value={formatCropInputValue(focusedManualCrop.y)}
-                      onChange={updateFocusedManualCropFromPercent("y")}
-                    />
-                  </div>
-                  <div className={metricClass}>
-                    <div className="text-sm text-slate-500">Largeur</div>
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      min={1}
-                      max={100}
-                      step={1}
-                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-base font-medium text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
-                      value={formatCropInputValue(focusedManualCrop.width)}
-                      onChange={updateFocusedManualCropFromPercent("width")}
-                    />
-                  </div>
-                  <div className={metricClass}>
-                    <div className="text-sm text-slate-500">Hauteur</div>
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      min={1}
-                      max={100}
-                      step={1}
-                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-base font-medium text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
-                      value={formatCropInputValue(focusedManualCrop.height)}
-                      onChange={updateFocusedManualCropFromPercent("height")}
-                    />
                   </div>
                 </div>
               </div>
@@ -1859,7 +1768,8 @@ export function HomeTool() {
                   </div>
                   {focusedFile && (
                     <div className="mt-2 text-sm text-slate-600">
-                      {focusedFile.name} : {formatManualCropSummary(manualCropsByFileId[focusedFile.id])}
+                      {focusedFile.name} :{" "}
+                      {isDefaultManualCrop(manualCropsByFileId[focusedFile.id]) ? "page entière" : "zone personnalisée"}
                     </div>
                   )}
                 </div>

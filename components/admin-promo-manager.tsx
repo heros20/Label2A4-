@@ -151,9 +151,9 @@ export function AdminPromoManager({ configured, promoCodes }: AdminPromoManagerP
       <form onSubmit={submitCreatePromo} className="rounded-[20px] border border-slate-200/80 bg-white/85 p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h3 className="font-semibold text-slate-950">Creer un code promo</h3>
+            <h3 className="font-semibold text-slate-950">Créer un code promo</h3>
             <p className="mt-1 text-sm leading-6 text-slate-600">
-              Creation securisee cote serveur, sans prix transmis par le client au moment du paiement.
+              Création sécurisée côté serveur, sans prix transmis par le client au moment du paiement.
             </p>
           </div>
           <div
@@ -163,7 +163,7 @@ export function AdminPromoManager({ configured, promoCodes }: AdminPromoManagerP
                 : "w-fit rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800"
             }
           >
-            {configured ? "Supabase pret" : "SQL requis"}
+            {configured ? "Configuration prête" : "Configuration requise"}
           </div>
         </div>
 
@@ -179,7 +179,7 @@ export function AdminPromoManager({ configured, promoCodes }: AdminPromoManagerP
           </label>
 
           <label className="grid gap-2 text-sm font-medium text-slate-700">
-            Libelle
+            Libellé
             <input
               value={label}
               onChange={(event) => setLabel(event.currentTarget.value)}
@@ -194,8 +194,8 @@ export function AdminPromoManager({ configured, promoCodes }: AdminPromoManagerP
               onChange={(event) => setKind(event.currentTarget.value as PromoKind)}
               className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
             >
-              <option value="percent">Reduction en %</option>
-              <option value="fixed">Reduction fixe</option>
+              <option value="percent">Réduction en %</option>
+              <option value="fixed">Réduction fixe</option>
               <option value="trial">Essai gratuit</option>
             </select>
           </label>
@@ -254,7 +254,7 @@ export function AdminPromoManager({ configured, promoCodes }: AdminPromoManagerP
           </label>
 
           <label className="grid gap-2 text-sm font-medium text-slate-700">
-            Limite par identite
+            Limite par identité
             <input
               type="number"
               min="1"
@@ -314,10 +314,10 @@ export function AdminPromoManager({ configured, promoCodes }: AdminPromoManagerP
             disabled={!configured || isSubmitting}
             className="inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50"
           >
-            {isSubmitting ? "Creation..." : "Creer le code"}
+            {isSubmitting ? "Création..." : "Créer le code"}
           </button>
           {!configured && (
-            <p className="text-sm text-amber-800">Appliquez d'abord supabase/promo_codes.sql pour activer la creation.</p>
+            <p className="text-sm text-amber-800">Terminez la configuration des codes promo pour activer la création.</p>
           )}
           {message && <p className="text-sm font-medium text-emerald-700">{message}</p>}
           {error && <p className="text-sm font-medium text-red-600">{error}</p>}
@@ -329,7 +329,7 @@ export function AdminPromoManager({ configured, promoCodes }: AdminPromoManagerP
           <div className="rounded-[18px] border border-slate-200/80 bg-white p-4 text-sm leading-6 text-slate-600">
             {configured
               ? "Aucun code promo n'est configuré pour le moment."
-              : "Connectez Supabase et appliquez le schéma promo pour gérer les codes depuis cette interface."}
+              : "Terminez la configuration promo pour gérer les codes depuis cette interface."}
           </div>
         ) : promoCodes.map((promo) => (
           <div key={promo.code} className="rounded-[18px] border border-slate-200/80 bg-white p-4 text-sm text-slate-700">
@@ -355,7 +355,7 @@ export function AdminPromoManager({ configured, promoCodes }: AdminPromoManagerP
                     disabled={toggleCode === promo.code}
                     className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 transition hover:border-sky-300 hover:text-sky-800 disabled:opacity-50"
                   >
-                    {toggleCode === promo.code ? "Modification..." : promo.active ? "Desactiver" : "Activer"}
+                    {toggleCode === promo.code ? "Modification..." : promo.active ? "Désactiver" : "Activer"}
                   </button>
                 )}
               </div>

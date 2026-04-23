@@ -63,11 +63,11 @@ export async function GET(request: NextRequest) {
   }
 
   if (request.headers.get("authorization") !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "Acces cron refuse." }, { status: 401 })
+    return NextResponse.json({ error: "Accès refusé." }, { status: 401 })
   }
 
   if (!isSupabaseAdminConfigured()) {
-    return NextResponse.json({ error: "Supabase service role non configure." }, { status: 503 })
+    return NextResponse.json({ error: "Configuration serveur incomplète." }, { status: 503 })
   }
 
   const supabase = getSupabaseAdminClient()

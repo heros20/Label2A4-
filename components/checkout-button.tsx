@@ -183,7 +183,8 @@ export function CheckoutButton({ className, label, planId }: CheckoutButtonProps
           ))}
         </div>
         <p className="mt-2 text-xs leading-5 text-slate-500">
-          
+          Les moyens de paiement disponibles s’affichent automatiquement selon votre appareil, votre navigateur et votre
+          pays. Si un portefeuille numérique n’est pas disponible, la carte bancaire reste proposée.
         </p>
       </div>
 
@@ -257,7 +258,7 @@ export function CheckoutButton({ className, label, planId }: CheckoutButtonProps
       {error && <div className="text-sm text-red-600">{error}</div>}
       {!siteConfig.launch.stripeEnabled && (
         <div className="text-xs text-slate-500">
-          Le paiement reste à brancher avec vos identifiants Stripe avant lancement public.
+          Le paiement reste à finaliser avant lancement public.
         </div>
       )}
     </div>

@@ -1,26 +1,26 @@
 # Label2A4
 
-Outil web pour transformer des PDF d'etiquettes d'expedition en planches A4 pretes a imprimer.
+Outil web pour transformer des PDF d’étiquettes d’expédition en planches A4 prêtes à imprimer.
 
 Fonctionnement actuel :
 - import d'un ou plusieurs PDF
 - profil `Chronopost`, `Colissimo`, `Mondial Relay`, `Happy Post` ou `Rognage manuel`
 - fusion dans l'ordre
-- selection des pages utiles pour les PDF multipages
-- rognage metier
+- sélection des pages utiles pour les PDF multipages
+- rognage métier
 - placement automatique par 4 sur feuille A4
 
-Regles actuelles :
-- `Chronopost` : `40% droite`
-- `Colissimo` : `X 8%` + `Y 32%` + `L 36%` + `H 29%`
-- `Mondial Relay` : `54% gauche` + `40% haut`
-- `Happy Post` : `X 8%` + `Y 5%` + `L 84%` + `H 41%`
-- `Rognage manuel` : zone definie directement sur l'apercu du PDF, fichier par fichier
+Profils actuels :
+- `Chronopost`
+- `Colissimo`
+- `Mondial Relay`
+- `Happy Post`
+- `Rognage manuel` : zone définie directement sur l’aperçu du PDF, fichier par fichier
 
 PDF multipages :
-- chaque page incluse est traitee comme une etiquette distincte
-- les pages incluses sont placees dans les emplacements A4 suivants, sans superposition
-- les pages non utiles peuvent etre decochees dans la liste des fichiers
+- chaque page incluse est traitée comme une étiquette distincte
+- les pages incluses sont placées dans les emplacements A4 suivants, sans superposition
+- les pages non utiles peuvent être décochées dans la liste des fichiers
 
 Ordre de placement sur la feuille :
 - haut droite
@@ -35,26 +35,22 @@ npm install
 npm run dev
 ```
 
-## Supabase
+## Authentification et données serveur
 
-Variables necessaires pour l'auth et les donnees serveur :
+Variables nécessaires pour l’authentification et les données serveur :
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `NEXT_PUBLIC_AUTH_GOOGLE_ENABLED=true` pour afficher le bouton "Continuer avec Google" une fois le provider Google active dans Supabase Auth
+- `NEXT_PUBLIC_AUTH_GOOGLE_ENABLED=true` pour afficher le bouton "Continuer avec Google" une fois la connexion Google activée
 
-SQL a appliquer dans Supabase :
-- `supabase/quota.sql`
-- `supabase/billing.sql`
-- `supabase/promo_codes.sql`
-- `supabase/impact.sql`
+Scripts de base de données à appliquer depuis le dossier dédié du projet.
 
-Pour la reconnexion sans email magique, activer Google dans Supabase Auth, ajouter l'URL de callback du site dans les URLs autorisees, puis activer `NEXT_PUBLIC_AUTH_GOOGLE_ENABLED`.
+Pour la reconnexion sans email magique, activez Google dans le service d’authentification, ajoutez l’URL de callback du site dans les URLs autorisées, puis activez `NEXT_PUBLIC_AUTH_GOOGLE_ENABLED`.
 
-## Stripe
+## Paiement
 
-Variables necessaires :
+Variables nécessaires :
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
 - `STRIPE_PRICE_MONTHLY`
@@ -62,45 +58,45 @@ Variables necessaires :
 - `STRIPE_PRICE_DAY_PASS`
 - `STRIPE_BILLING_PORTAL_CONFIGURATION`
 
-Le webhook Stripe doit pointer vers `/api/stripe/webhook`.
+Le webhook de paiement doit pointer vers `/api/stripe/webhook`.
 
-Stripe Checkout est utilise avec les moyens de paiement dynamiques : carte bancaire par defaut, PayPal si active dans le Dashboard Stripe, Apple Pay et Google Pay quand le domaine est enregistre et que l'appareil/navigateur est compatible. Les wallets ne doivent pas etre forces cote front : Stripe decide ce qui est affichable et la carte reste le fallback.
+Le paiement utilise une page hébergée avec moyens dynamiques : carte bancaire par défaut, PayPal si activé, Apple Pay et Google Pay quand le domaine est enregistré et que l’appareil/navigateur est compatible. Les wallets ne doivent pas être forcés côté front : le prestataire décide ce qui est affichable et la carte reste le fallback.
 
 ## Promotions, quota et impact
 
-Les codes promo sont valides cote serveur dans `promo_codes`, puis reserves dans `promo_code_redemptions` avant la creation de la session Checkout. Les remises de prix sont appliquees par coupon Stripe serveur, les essais gratuits par `trial_period_days`, et les webhooks marquent la redemption comme terminee.
+Les codes promo sont validés côté serveur, puis réservés avant la création de la session de paiement. Les remises de prix sont appliquées côté serveur, les essais gratuits par durée d’essai, et les webhooks marquent la rédemption comme terminée.
 
-L'admin `/admin` permet maintenant de creer, activer et desactiver les codes promo sans SQL manuel, une fois `supabase/promo_codes.sql` applique. Il affiche aussi un tableau impact/quota/promo pour suivre les compteurs ecologiques, le quota du jour, les redemptions promo et les buckets de rate limit.
+L’admin `/admin` permet maintenant de créer, activer et désactiver les codes promo sans SQL manuel, une fois la configuration promo appliquée. Il affiche aussi un tableau impact/quota/promo pour suivre les compteurs écologiques, le quota du jour, les rédemptions promo et les limites serveur.
 
-Le quota gratuit est pilote cote serveur :
-- invite : identifiant temporaire signe + quota plus limite
-- compte gratuit : quota lie a `auth.users.id`
-- premium : exports illimites tant que Stripe/Supabase indique un acces actif
-- anti-abus : garde secondaire par fenetre reseau et rate limiting serveur
+Le quota gratuit est piloté côté serveur :
+- invité : identifiant temporaire signé + quota plus limité
+- compte gratuit : quota lié au compte
+- premium : exports illimités tant qu’un accès actif existe
+- anti-abus : garde secondaire par fenêtre réseau et limitation serveur
 
-La logique "meme reseau = meme utilisateur" est volontairement evitee : une IP peut representer une famille, une entreprise, un VPN ou changer regulierement. Elle n'est utilisee que comme garde anti-abus large, jamais comme identite principale. Safari, Apple Pay, Google Pay et la navigation privee ne portent pas la logique metier : l'acces, les promos et le quota sont revus par le backend et les webhooks Stripe.
+La logique "même réseau = même utilisateur" est volontairement évitée : une IP peut représenter une famille, une entreprise, un VPN ou changer régulièrement. Elle n’est utilisée que comme garde anti-abus large, jamais comme identité principale. Safari, Apple Pay, Google Pay et la navigation privée ne portent pas la logique métier : l’accès, les promos et le quota sont revus par le backend et les webhooks de paiement.
 
-Le compteur ecologique utilise une formule explicable : sans optimisation, une etiquette = une feuille A4 ; avec Label2A4, quatre etiquettes peuvent tenir sur une feuille. Les arbres sauves restent une estimation indicative basee sur 8 000 feuilles A4 par arbre.
+Le compteur écologique utilise une formule explicable : sans optimisation, une étiquette = une feuille A4 ; avec Label2A4, quatre étiquettes peuvent tenir sur une feuille. Les arbres sauvés restent une estimation indicative basée sur 8 000 feuilles A4 par arbre.
 
-Note technique detaillee : `docs/payment-promo-quota-architecture.md`.
+Note technique détaillée : `docs/payment-promo-quota-architecture.md`.
 
 ## Cron de purge
 
-`vercel.json` declare une purge quotidienne sur `/api/cron/cleanup`. Configurez `CRON_SECRET` dans Vercel : la route refuse les appels sans `Authorization: Bearer $CRON_SECRET`. Les variables optionnelles `RATE_LIMIT_RETENTION_DAYS`, `QUOTA_USAGE_RETENTION_DAYS` et `PROMO_REDEMPTION_RETENTION_DAYS` ajustent la retention.
+`vercel.json` déclare une purge quotidienne sur `/api/cron/cleanup`. Configurez `CRON_SECRET` en production : la route refuse les appels sans `Authorization: Bearer $CRON_SECRET`. Les variables optionnelles `RATE_LIMIT_RETENTION_DAYS`, `QUOTA_USAGE_RETENTION_DAYS` et `PROMO_REDEMPTION_RETENTION_DAYS` ajustent la rétention.
 
-## Brevo
+## Email transactionnel
 
-Le formulaire `/contact` envoie les demandes support avec l'API transactionnelle Brevo. Variables serveur :
+Le formulaire `/contact` envoie les demandes support avec l’API transactionnelle configurée. Variables serveur :
 - `BREVO_API_KEY`
-- `BREVO_SENDER_EMAIL` : expediteur valide dans Brevo, recommande `support@label2a4.com`
+- `BREVO_SENDER_EMAIL` : expéditeur valide, recommandé `support@label2a4.com`
 - `BREVO_SENDER_NAME`
 - `BREVO_SUPPORT_TO_EMAIL` : destinataire support, fallback sur `NEXT_PUBLIC_SUPPORT_EMAIL`
 - `BREVO_SUPPORT_TO_NAME`
 
-Les emails de creation/connexion de compte passent aussi par `/api/auth/magic-link`, qui genere le lien Supabase cote serveur puis l'envoie via Brevo. Cela force le sender Brevo configure dans `BREVO_SENDER_EMAIL` au lieu de dependre de l'expediteur SMTP par defaut Supabase.
+Les emails de création/connexion de compte passent aussi par `/api/auth/magic-link`, qui génère le lien côté serveur puis l’envoie via le prestataire d’email transactionnel.
 
-Ne jamais exposer `BREVO_API_KEY` cote client et ne jamais la commit. Ajoutez-la dans `.env.local` en local et dans les variables d'environnement Vercel en production. Si Supabase SMTP est aussi configure, alignez son sender sur `support@label2a4.com` pour eviter les emails systeme incoherents.
+Ne jamais exposer `BREVO_API_KEY` côté client et ne jamais la commit. Ajoutez-la dans `.env.local` en local et dans les variables d’environnement de production. Si un SMTP système est aussi configuré, alignez son sender sur `support@label2a4.com` pour éviter les emails système incohérents.
 
 ## Fallback actuel
 
-Si Supabase Auth/Admin n'est pas configure, l'application conserve un fallback de developpement base sur cookies signes. En production, Supabase Admin et les RPC SQL sont necessaires pour eviter les contournements evidents par navigateur prive ou changement de navigateur.
+Si l’authentification serveur n’est pas configurée, l’application conserve un fallback de développement basé sur cookies signés. En production, l’authentification serveur et les RPC SQL sont nécessaires pour éviter les contournements évidents par navigateur privé ou changement de navigateur.

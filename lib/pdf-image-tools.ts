@@ -20,7 +20,7 @@ function canvasToBlob(canvas: HTMLCanvasElement) {
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((blob) => {
       if (!blob) {
-        reject(new Error("Impossible de generer l'apercu."))
+        reject(new Error("Impossible de générer l’aperçu."))
         return
       }
 
@@ -79,7 +79,7 @@ export async function renderPdfPagesToImages(
 
       const context = canvas.getContext("2d", { alpha: false })
       if (!context) {
-        throw new Error("Impossible d'initialiser le canvas d'apercu.")
+        throw new Error("Impossible d’initialiser le canvas d’aperçu.")
       }
 
       context.fillStyle = "#ffffff"

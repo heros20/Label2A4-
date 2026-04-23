@@ -91,7 +91,7 @@ export const MONDIAL_RELAY_VARIANTS = [
     slug: "variante-1",
     title: "Variante 1",
     shortLabel: "V1",
-    description: "",
+    description: "Découpe principale",
     cropRect: {
       x: 0,
       y: 0,
@@ -104,7 +104,7 @@ export const MONDIAL_RELAY_VARIANTS = [
     slug: "variante-2",
     title: "Variante 2",
     shortLabel: "V2",
-    description: "",
+    description: "Découpe alternative",
     cropRect: {
       x: 0.12,
       y: 0.6,
