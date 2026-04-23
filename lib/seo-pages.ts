@@ -210,6 +210,64 @@ export const seoPages = {
     ],
     ctaLabel: "Optimiser mes étiquettes Chronopost",
   },
+  "happy-post": {
+    path: "/happy-post",
+    metaTitle: "Imprimer des étiquettes Happy Post sur une feuille A4",
+    metaDescription:
+      "Optimisez vos étiquettes Happy Post PDF et imprimez jusqu'à 4 bordereaux colis sur une seule feuille A4 pour économiser papier et encre.",
+    eyebrow: "Happy Post",
+    title: "Imprimer plusieurs étiquettes Happy Post sur une feuille A4",
+    intro:
+      "Fini le gaspillage : Label2A4 rogne vos étiquettes Happy Post et les place sur une planche A4 x4 prête à imprimer, découper et coller.",
+    highlights: ["Happy Post", "4 étiquettes par feuille", "Économie papier"],
+    problem: {
+      title: "Une étiquette Happy Post peut consommer une feuille entière",
+      text:
+        "Quand chaque bordereau colis est imprimé seul, vous utilisez plus de papier, plus d'encre et plus de temps de découpe que nécessaire.",
+    },
+    solution: {
+      title: "Une planche A4 optimisée pour vos colis",
+      text:
+        "Importez vos PDF Happy Post, laissez Label2A4 appliquer le rognage adapté, puis générez un PDF final avec jusqu'à quatre étiquettes sur une seule feuille A4.",
+    },
+    useCases: [
+      {
+        title: "Vendeurs réguliers",
+        text: "Regroupez plusieurs envois Happy Post du jour dans un seul PDF A4 plus facile à imprimer.",
+      },
+      {
+        title: "Petits lots colis",
+        text: "Passez de plusieurs feuilles à une seule planche quand vous préparez deux, trois ou quatre expéditions.",
+      },
+      {
+        title: "Impression maison",
+        text: "Gardez votre imprimante A4 habituelle tout en réduisant le gaspillage de papier et d'encre.",
+      },
+    ],
+    economy: {
+      title: "Moins de papier, moins d'encre, plus d'efficacité",
+      text:
+        "Avec quatre étiquettes Happy Post par feuille A4, vous pouvez réduire jusqu'à 75% des feuilles utilisées sur les lots compatibles.",
+    },
+    steps: [
+      "Importez vos PDF Happy Post dans Label2A4.",
+      "Sélectionnez le profil Happy Post.",
+      "Générez puis imprimez la planche A4 optimisée.",
+    ],
+    faqs: [
+      {
+        question: "Comment imprimer plusieurs étiquettes Happy Post sur une feuille A4 ?",
+        answer:
+          "Importez vos PDF Happy Post dans Label2A4, sélectionnez le profil Happy Post, puis téléchargez le PDF A4 généré avec jusqu'à quatre étiquettes par feuille.",
+      },
+      {
+        question: "Est-ce que le rognage Happy Post est automatique ?",
+        answer:
+          "Oui. Le profil Happy Post applique un rognage prédéfini et une rotation adaptée par défaut, tout en laissant la possibilité d'ajuster l'orientation si besoin.",
+      },
+    ],
+    ctaLabel: "Optimiser mes étiquettes Happy Post",
+  },
   vinted: {
     path: "/vinted",
     metaTitle: "Imprimer des étiquettes Vinted sur une feuille A4",
@@ -437,7 +495,7 @@ export const seoPages = {
       {
         question: "L’économie dépend-elle du transporteur ?",
         answer:
-          "Elle dépend surtout du nombre d’étiquettes et du rognage disponible. Label2A4 couvre Chronopost, Colissimo, Mondial Relay et un mode manuel.",
+          "Elle dépend surtout du nombre d'étiquettes et du rognage disponible. Label2A4 couvre Chronopost, Colissimo, Mondial Relay, Happy Post et un mode manuel.",
       },
     ],
     ctaLabel: "Estimer mes économies",

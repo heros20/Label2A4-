@@ -18,6 +18,7 @@ const footerLinkGroups = [
       { href: "/mondial-relay", label: "Mondial Relay" },
       { href: "/colissimo", label: "Colissimo" },
       { href: "/chronopost", label: "Chronopost" },
+      { href: "/happy-post", label: "Happy Post" },
     ],
   },
   {

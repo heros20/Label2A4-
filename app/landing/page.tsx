@@ -2,9 +2,9 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { siteConfig } from "@/lib/site-config"
 
-const landingTitle = "Imprimer plusieurs étiquettes PDF sur une feuille A4"
+const landingTitle = "Fini le gaspillage : 4 étiquettes sur une feuille A4"
 const landingDescription =
-  "Guide pratique pour transformer vos étiquettes PDF Chronopost, Colissimo et Mondial Relay en planches A4 x4 prêtes à imprimer."
+  "Guide pratique pour imprimer vos étiquettes colis Chronopost, Colissimo, Mondial Relay et Happy Post sur une seule feuille A4."
 
 const landingImage = {
   url: siteConfig.brand.logoPng,
@@ -51,6 +51,11 @@ const faqs = [
     question: "Peut-on imprimer plusieurs étiquettes sur une feuille ?",
     answer:
       "Oui. Label2A4 compose jusqu’à quatre étiquettes PDF sur une feuille A4, selon le nombre de fichiers importés.",
+  },
+  {
+    question: "Quels transporteurs sont compatibles ?",
+    answer:
+      "Label2A4 propose des profils pour Chronopost, Colissimo, Mondial Relay et Happy Post, avec un mode manuel pour les autres formats PDF.",
   },
   {
     question: "Est-ce utile pour Vinted et Leboncoin ?",

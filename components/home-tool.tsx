@@ -1088,22 +1088,36 @@ export function HomeTool() {
         <div className="relative grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
           <div className="max-w-4xl">
             <span className="inline-flex items-center rounded-full border border-sky-200/80 bg-sky-100/80 px-4 py-1 text-sm font-medium text-sky-950 shadow-sm">
-              Préparation d’étiquettes PDF
+              Impression d'étiquettes colis
             </span>
             <h1 className="mt-5 max-w-3xl text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl lg:text-[3.55rem] lg:leading-[1.02]">
-              Étiquettes PDF vers A4 x4, avec un rendu propre et prêt à imprimer
+              {siteConfig.primarySlogan}
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-              Importez vos PDF, choisissez le bon rognage puis récupérez une planche A4 nette, adaptée aux formats
-              transporteurs et aux cas manuels.
+              {siteConfig.supportingSlogan}
             </p>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link
+                href="#importer-pdf"
+                className="inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white shadow-[0_18px_40px_-30px_rgba(15,23,42,0.45)] transition hover:bg-slate-800"
+              >
+                {siteConfig.primaryCtaLabel}
+              </Link>
+              <Link
+                href="/tarifs"
+                className="inline-flex items-center rounded-full border border-slate-200/80 bg-white px-5 py-3 text-sm font-semibold text-slate-800 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.2)] transition hover:border-sky-300 hover:text-sky-800"
+              >
+                {siteConfig.secondaryCtaLabel}
+              </Link>
+            </div>
 
             <div className="mt-6 flex flex-wrap gap-3 text-sm text-slate-700">
               <span className="rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 shadow-sm">
                 Chronopost, Colissimo, Mondial Relay, Happy Post
               </span>
               <span className="rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 shadow-sm">
-                Rognage manuel sur aperçu
+                Économie de papier et d'encre
               </span>
               <span className="rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 shadow-sm">
                 Placement A4 x4 automatique
@@ -1188,6 +1202,7 @@ export function HomeTool() {
           </div>
 
           <label
+            id="importer-pdf"
             className={cn(
               "group relative flex min-h-[280px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[32px] border border-dashed border-sky-300/80 bg-[linear-gradient(165deg,rgba(255,255,255,0.95),rgba(241,245,249,0.94))] px-6 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_28px_80px_-56px_rgba(3,105,161,0.55)] transition duration-200",
               "hover:border-sky-500 hover:bg-white",

@@ -40,8 +40,13 @@ export const siteConfig = {
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "https://label2a4.vercel.app",
   description:
     process.env.NEXT_PUBLIC_SITE_DESCRIPTION ??
-    "Regroupez vos étiquettes PDF Chronopost, Colissimo, Mondial Relay et Happy Post sur des feuilles A4 x4 prêtes à imprimer.",
-  socialTagline: "4 en 1 : imprime malin, économise du papier.",
+    "Fini le gaspillage : imprimez jusqu'à 4 étiquettes colis Chronopost, Colissimo, Mondial Relay ou Happy Post sur une seule feuille A4.",
+  primarySlogan: "Fini le gaspillage. 4 étiquettes, 1 feuille A4.",
+  socialTagline: "Fini le gaspillage. Imprime 4 étiquettes sur une seule feuille A4.",
+  supportingSlogan:
+    "Optimise automatiquement tes étiquettes colis pour tenir sur une seule feuille. Moins de papier, moins d'encre, plus d'efficacité.",
+  primaryCtaLabel: "Générer mes étiquettes maintenant",
+  secondaryCtaLabel: "Essayer gratuitement",
   supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "support@label2a4.local",
   supportResponseDelay:
     process.env.NEXT_PUBLIC_SUPPORT_RESPONSE_DELAY ?? "Réponse sous 2 jours ouvrés.",
