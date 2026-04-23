@@ -1,12 +1,8 @@
 import type { Metadata } from "next"
-import { headers } from "next/headers"
-import { NextRequest, NextResponse } from "next/server"
 import { AdsenseManager } from "@/components/adsense-manager"
 import { CookieConsentBanner } from "@/components/cookie-consent-banner"
 import { SiteAnalytics } from "@/components/site-analytics"
 import { SiteFooter } from "@/components/site-footer"
-import { getAccessSnapshot } from "@/lib/access-control"
-import { getAdsenseScriptUrl } from "@/lib/adsense"
 import { siteConfig } from "@/lib/site-config"
 import "./globals.css"
 
@@ -51,36 +47,6 @@ const structuredData = {
   ],
 }
 
-async function getAdsenseHeadScriptUrl() {
-  if (!siteConfig.compliance.adsEnabled) {
-    return ""
-  }
-
-  const adsenseScriptUrl = getAdsenseScriptUrl(siteConfig.compliance.adsenseClientId)
-
-  if (!adsenseScriptUrl) {
-    return ""
-  }
-
-  const requestHeaders = new Headers(await headers())
-  const forwardedHost = requestHeaders.get("x-forwarded-host")
-  const host = forwardedHost ?? requestHeaders.get("host") ?? siteUrl.host
-  const protocol = requestHeaders.get("x-forwarded-proto") ?? siteUrl.protocol.replace(":", "")
-
-  try {
-    const request = new NextRequest(`${protocol}://${host}/`, {
-      headers: requestHeaders,
-    })
-    const response = new NextResponse()
-    const access = await getAccessSnapshot(request, response)
-
-    return access.isPremium ? "" : adsenseScriptUrl
-  } catch (error) {
-    console.warn("[label2a4-adsense-head]", error)
-    return ""
-  }
-}
-
 export const metadata: Metadata = {
   applicationName: siteConfig.siteName,
   title: {
@@ -105,13 +71,13 @@ export const metadata: Metadata = {
     url: siteConfig.siteUrl,
     siteName: siteConfig.siteName,
     title: siteConfig.siteName,
-    description: siteConfig.description,
+    description: siteConfig.socialTagline,
     images: [brandImage],
   },
   twitter: {
     card: "summary_large_image",
     title: siteConfig.siteName,
-    description: siteConfig.description,
+    description: siteConfig.socialTagline,
     images: [siteConfig.brand.logoPng],
   },
   icons: {
@@ -143,16 +109,9 @@ export const metadata: Metadata = {
   },
 }
 
-export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const adsenseHeadScriptUrl = await getAdsenseHeadScriptUrl()
-
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="fr">
-      <head>
-        {adsenseHeadScriptUrl && (
-          <script async src={adsenseHeadScriptUrl} crossOrigin="anonymous" />
-        )}
-      </head>
       <body className="min-h-screen bg-[linear-gradient(180deg,#f4fbff_0%,#eef4f8_52%,#edf2f7_100%)] text-slate-950 antialiased">
         <script
           type="application/ld+json"

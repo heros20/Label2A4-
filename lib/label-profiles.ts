@@ -1,5 +1,6 @@
 export type HorizontalCropSide = "left" | "right"
 export type VerticalCropSide = "top" | "bottom"
+export type LabelRotation = 0 | 90 | 180 | 270
 
 export interface LabelCropRule {
   side: HorizontalCropSide
@@ -23,6 +24,7 @@ export interface PresetCropRectVariant {
   description: string
   crop?: LabelCropRule
   cropRect?: ManualCropRect
+  defaultRotation?: LabelRotation
 }
 
 export const DEFAULT_MANUAL_CROP_RECT: ManualCropRect = {
@@ -43,6 +45,7 @@ export interface PresetLabelProfile extends BaseLabelProfile {
   mode: "preset"
   crop?: LabelCropRule
   cropRect?: ManualCropRect
+  defaultRotation?: LabelRotation
 }
 
 export interface ManualLabelProfile extends BaseLabelProfile {
@@ -51,6 +54,37 @@ export interface ManualLabelProfile extends BaseLabelProfile {
 
 export type LabelProfile = PresetLabelProfile | ManualLabelProfile
 
+export const CHRONOPOST_VARIANTS = [
+  {
+    id: "standard",
+    slug: "standard",
+    title: "Standard",
+    shortLabel: "Standard",
+    description: "",
+    crop: {
+      side: "right",
+      portion: 0.4,
+    },
+  },
+  {
+    id: "temu",
+    slug: "variante-temu",
+    title: "Variante Temu",
+    shortLabel: "Temu",
+    description: "",
+    cropRect: {
+      x: 0.29,
+      y: 0.03,
+      width: 0.43,
+      height: 0.18,
+    },
+    defaultRotation: 90,
+  },
+] as const satisfies readonly PresetCropRectVariant[]
+
+export type ChronopostVariantId = (typeof CHRONOPOST_VARIANTS)[number]["id"]
+export const DEFAULT_CHRONOPOST_VARIANT_ID: ChronopostVariantId = CHRONOPOST_VARIANTS[0].id
+
 export const MONDIAL_RELAY_VARIANTS = [
   {
     id: "variant-1",
@@ -58,11 +92,11 @@ export const MONDIAL_RELAY_VARIANTS = [
     title: "Variante 1",
     shortLabel: "V1",
     description: "",
-    crop: {
-      side: "left",
-      portion: 0.54,
-      verticalSide: "top",
-      verticalPortion: 0.4,
+    cropRect: {
+      x: 0,
+      y: 0,
+      width: 0.53,
+      height: 0.56,
     },
   },
   {
@@ -90,10 +124,7 @@ export const LABEL_PROFILES = [
     title: "Chronopost",
     shortLabel: "Chronopost",
     mode: "preset",
-    crop: {
-      side: "right",
-      portion: 0.4,
-    },
+    crop: CHRONOPOST_VARIANTS[0].crop,
   },
   {
     id: "colissimo",
@@ -114,7 +145,7 @@ export const LABEL_PROFILES = [
     title: "Mondial Relay",
     shortLabel: "Mondial Relay",
     mode: "preset",
-    crop: MONDIAL_RELAY_VARIANTS[0].crop,
+    cropRect: MONDIAL_RELAY_VARIANTS[0].cropRect,
   },
   {
     id: "happy-post",
@@ -128,6 +159,7 @@ export const LABEL_PROFILES = [
       width: 0.84,
       height: 0.41,
     },
+    defaultRotation: 90,
   },
   {
     id: "manual",
@@ -150,7 +182,15 @@ export function getLabelProfile(profileId: LabelProfileId) {
   return LABEL_PROFILE_MAP[profileId]
 }
 
-export function getMondialRelayVariant(variantId: MondialRelayVariantId = DEFAULT_MONDIAL_RELAY_VARIANT_ID) {
+export function getChronopostVariant(
+  variantId: ChronopostVariantId = DEFAULT_CHRONOPOST_VARIANT_ID,
+): PresetCropRectVariant {
+  return CHRONOPOST_VARIANTS.find((variant) => variant.id === variantId) ?? CHRONOPOST_VARIANTS[0]
+}
+
+export function getMondialRelayVariant(
+  variantId: MondialRelayVariantId = DEFAULT_MONDIAL_RELAY_VARIANT_ID,
+): PresetCropRectVariant {
   return (
     MONDIAL_RELAY_VARIANTS.find((variant) => variant.id === variantId) ?? MONDIAL_RELAY_VARIANTS[0]
   )
@@ -158,21 +198,38 @@ export function getMondialRelayVariant(variantId: MondialRelayVariantId = DEFAUL
 
 export function getResolvedLabelProfile(
   profileId: LabelProfileId,
-  options: { mondialRelayVariantId?: MondialRelayVariantId } = {},
+  options: {
+    chronopostVariantId?: ChronopostVariantId
+    mondialRelayVariantId?: MondialRelayVariantId
+  } = {},
 ): LabelProfile {
   const profile = getLabelProfile(profileId)
 
-  if (profile.id !== "mondial-relay") {
-    return profile
+  if (profile.id === "chronopost") {
+    const variant = getChronopostVariant(options.chronopostVariantId)
+
+    return {
+      ...profile,
+      slug: `${profile.slug}-${variant.slug}`,
+      shortLabel: `${profile.shortLabel} ${variant.shortLabel}`,
+      crop: variant.crop,
+      cropRect: variant.cropRect,
+      defaultRotation: variant.defaultRotation,
+    }
   }
 
-  const variant = getMondialRelayVariant(options.mondialRelayVariantId)
+  if (profile.id === "mondial-relay") {
+    const variant = getMondialRelayVariant(options.mondialRelayVariantId)
 
-  return {
-    ...profile,
-    slug: `${profile.slug}-${variant.slug}`,
-    shortLabel: `${profile.shortLabel} ${variant.shortLabel}`,
-    crop: "crop" in variant ? variant.crop : undefined,
-    cropRect: "cropRect" in variant ? variant.cropRect : undefined,
+    return {
+      ...profile,
+      slug: `${profile.slug}-${variant.slug}`,
+      shortLabel: `${profile.shortLabel} ${variant.shortLabel}`,
+      crop: variant.crop,
+      cropRect: variant.cropRect,
+      defaultRotation: variant.defaultRotation,
+    }
   }
+
+  return profile
 }

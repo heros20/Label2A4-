@@ -9,6 +9,15 @@ export const metadata: Metadata = {
   alternates: {
     canonical: siteConfig.siteUrl,
   },
+  openGraph: {
+    title: "Étiquettes PDF en A4 x4 pour vos transporteurs",
+    description: siteConfig.socialTagline,
+    url: siteConfig.siteUrl,
+  },
+  twitter: {
+    title: "Étiquettes PDF en A4 x4 pour vos transporteurs",
+    description: siteConfig.socialTagline,
+  },
 }
 
 export default function HomePage() {

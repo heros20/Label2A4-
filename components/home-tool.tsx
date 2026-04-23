@@ -30,11 +30,14 @@ import { SiteLogo } from "@/components/site-logo"
 import { trackClientEvent } from "@/lib/client-analytics"
 import { downloadBlob, printBlob } from "@/lib/download"
 import {
+  CHRONOPOST_VARIANTS,
+  DEFAULT_CHRONOPOST_VARIANT_ID,
   DEFAULT_MANUAL_CROP_RECT,
   DEFAULT_MONDIAL_RELAY_VARIANT_ID,
   LABEL_PROFILES,
   MONDIAL_RELAY_VARIANTS,
   getResolvedLabelProfile,
+  type ChronopostVariantId,
   type LabelProfileId,
   type ManualCropRect,
   type MondialRelayVariantId,
@@ -62,11 +65,13 @@ type AccessResponsePayload = { access?: AccessSnapshot; error?: string }
 type ImpactResponsePayload = { error?: string; impact?: ImpactSnapshot }
 type ExportResponsePayload = {
   allowed?: boolean
+  consumedSheets?: number
   error?: string
   impact?: ImpactSnapshot
   reason?: string
   snapshot?: AccessSnapshot
 }
+type GeneratedResult = { blob: Blob; exportId: string; name: string }
 
 const MOBILE_MEDIA_QUERY = "(max-width: 1023px)"
 const PDF_ROTATION_PRESETS: Array<{ value: PdfRotation; label: string }> = [
@@ -82,6 +87,8 @@ const SINGLE_LABEL_PLACEMENTS: Array<{ id: SingleLabelSlot; label: string }> = [
   { id: "bottom-left", label: "En bas à gauche" },
   { id: "bottom-right", label: "En bas à droite" },
 ]
+const FREE_MAX_PDF_FILES_PER_BATCH = siteConfig.pricing.freeMaxPdfFilesPerBatch
+const FREE_MAX_A4_SHEETS_PER_EXPORT = siteConfig.pricing.freeMaxA4SheetsPerExport
 
 function isDefaultManualCrop(crop?: ManualCropRect | null) {
   if (!crop) {
@@ -141,6 +148,9 @@ export function HomeTool() {
   const [files, setFiles] = useState<FileWithId[]>([])
   const [focusedFileId, setFocusedFileId] = useState<string | null>(null)
   const [profileId, setProfileId] = useState<LabelProfileId>(LABEL_PROFILES[0].id)
+  const [chronopostVariantId, setChronopostVariantId] = useState<ChronopostVariantId>(
+    DEFAULT_CHRONOPOST_VARIANT_ID,
+  )
   const [mondialRelayVariantId, setMondialRelayVariantId] = useState<MondialRelayVariantId>(
     DEFAULT_MONDIAL_RELAY_VARIANT_ID,
   )
@@ -149,10 +159,11 @@ export function HomeTool() {
   const [rotationsByFileId, setRotationsByFileId] = useState<Record<string, PdfRotation>>({})
   const [selectedPageIndicesByFileId, setSelectedPageIndicesByFileId] = useState<Record<string, number[]>>({})
   const [pageCounts, setPageCounts] = useState<Record<string, number>>({})
+  const [uploadError, setUploadError] = useState("")
   const [manualPreview, setManualPreview] = useState<PreviewImage | null>(null)
   const [isLoadingManualPreview, setIsLoadingManualPreview] = useState(false)
   const [manualPreviewError, setManualPreviewError] = useState("")
-  const [result, setResult] = useState<{ blob: Blob; name: string } | null>(null)
+  const [result, setResult] = useState<GeneratedResult | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [resultError, setResultError] = useState("")
   const [resultUrl, setResultUrl] = useState<string | null>(null)
@@ -174,11 +185,13 @@ export function HomeTool() {
   const appendFilesInputRef = useRef<HTMLInputElement | null>(null)
 
   const baseSelectedProfile = LABEL_PROFILES.find((profile) => profile.id === profileId) ?? LABEL_PROFILES[0]
-  const selectedProfile = getResolvedLabelProfile(profileId, { mondialRelayVariantId })
+  const selectedProfile = getResolvedLabelProfile(profileId, { chronopostVariantId, mondialRelayVariantId })
   const focusedFile = files.find((file) => file.id === focusedFileId) ?? files[0] ?? null
   const focusedFileIndex = focusedFile ? files.findIndex((file) => file.id === focusedFile.id) : -1
   const focusedManualCrop = focusedFile ? manualCropsByFileId[focusedFile.id] ?? DEFAULT_MANUAL_CROP_RECT : DEFAULT_MANUAL_CROP_RECT
-  const focusedRotation = focusedFile ? rotationsByFileId[focusedFile.id] ?? 0 : 0
+  const selectedDefaultRotation = selectedProfile.mode === "preset" ? normalizePdfRotation(selectedProfile.defaultRotation ?? 0) : 0
+  const focusedRotation = focusedFile ? rotationsByFileId[focusedFile.id] ?? selectedDefaultRotation : selectedDefaultRotation
+  const isChronopostProfile = baseSelectedProfile.id === "chronopost"
   const isMondialRelayProfile = baseSelectedProfile.id === "mondial-relay"
   const isManualProfile = selectedProfile.mode === "manual"
   const deferredManualCropsByFileId = useDeferredValue(manualCropsByFileId)
@@ -229,10 +242,23 @@ export function HomeTool() {
     [files, manualCropsByFileId],
   )
   const rotatedFileCount = useMemo(
-    () => files.reduce((sum, file) => sum + ((rotationsByFileId[file.id] ?? 0) !== 0 ? 1 : 0), 0),
-    [files, rotationsByFileId],
+    () =>
+      files.reduce(
+        (sum, file) => sum + ((rotationsByFileId[file.id] ?? selectedDefaultRotation) !== 0 ? 1 : 0),
+        0,
+      ),
+    [files, rotationsByFileId, selectedDefaultRotation],
   )
   const premiumPlanLabel = accessSnapshot?.plan && accessSnapshot.plan !== "free" ? getPlanLabel(accessSnapshot.plan) : null
+  const hasPremiumAccess = accessSnapshot?.isPremium === true
+  const shouldApplyFreeBatchLimits = accessSnapshot ? !accessSnapshot.isPremium : false
+  const exceedsFreeFileLimit = shouldApplyFreeBatchLimits && files.length > FREE_MAX_PDF_FILES_PER_BATCH
+  const exceedsFreeSheetLimit = shouldApplyFreeBatchLimits && totalSheets > FREE_MAX_A4_SHEETS_PER_EXPORT
+  const freeBatchLimitError = exceedsFreeFileLimit
+    ? `La version gratuite accepte jusqu'a ${FREE_MAX_PDF_FILES_PER_BATCH} PDF par lot. Passez en premium pour les gros lots.`
+    : exceedsFreeSheetLimit
+      ? `La version gratuite genere une seule planche A4 par lot. Passez en premium pour exporter ${totalSheets} planches.`
+      : ""
 
   useEffect(() => {
     if (!result?.blob) {
@@ -553,12 +579,21 @@ export function HomeTool() {
       return
     }
 
+    if (freeBatchLimitError) {
+      setResult(null)
+      setResultError(freeBatchLimitError)
+      setExportError("")
+      setIsGenerating(false)
+      return
+    }
+
     let active = true
     setIsGenerating(true)
     setResultError("")
     setExportError("")
 
     buildLabelA4Pdf(files, profileId, {
+      chronopostVariantId,
       manualCropsByFileId: activeManualCropsByFileId,
       mondialRelayVariantId,
       rotationsByFileId: deferredRotationsByFileId,
@@ -569,7 +604,8 @@ export function HomeTool() {
         if (active) {
           setResult({
             blob,
-            name: buildLabelPdfName(files, profileId, { mondialRelayVariantId }),
+            exportId: crypto.randomUUID(),
+            name: buildLabelPdfName(files, profileId, { chronopostVariantId, mondialRelayVariantId }),
           })
         }
       })
@@ -594,9 +630,11 @@ export function HomeTool() {
     }
   }, [
     activeManualCropsByFileId,
+    chronopostVariantId,
     deferredRotationsByFileId,
     deferredSelectedPageIndicesByFileId,
     files,
+    freeBatchLimitError,
     mondialRelayVariantId,
     profileId,
     singleLabelSlot,
@@ -648,9 +686,11 @@ export function HomeTool() {
         },
         body: JSON.stringify({
           action,
+          exportId: result.exportId,
           fileName: result.name,
           labelCount: Math.max(totalLabels, 1),
           sheetCount: estimatedSheetCountForExport || 1,
+          sourceFileCount: files.length,
         }),
       })
 
@@ -662,6 +702,18 @@ export function HomeTool() {
       }
 
       if (!response.ok || !payload.allowed) {
+        if (payload.reason === "free-file-limit") {
+          throw new Error(
+            `La version gratuite accepte jusqu'a ${FREE_MAX_PDF_FILES_PER_BATCH} PDF par lot. Passez en premium pour exporter des lots plus volumineux.`,
+          )
+        }
+
+        if (payload.reason === "free-sheet-limit") {
+          throw new Error(
+            `La version gratuite permet une seule planche A4 par lot. Passez en premium pour exporter ${estimatedSheetCountForExport || 1} planche(s).`,
+          )
+        }
+
         if (payload.reason === "quota-exceeded") {
           throw new Error(
             `Votre quota gratuit du jour est atteint. Passez en illimité pour exporter ${estimatedSheetCountForExport || 1} planche(s) A4 supplémentaire(s).`,
@@ -672,6 +724,10 @@ export function HomeTool() {
           throw new Error(
             "Le quota invité de sécurité est atteint sur cette connexion. Connectez-vous pour retrouver un quota lié à votre compte.",
           )
+        }
+
+        if (payload.reason === "invalid-export-id") {
+          throw new Error("Le PDF doit etre regenere avant export. Modifiez le lot ou rechargez la page, puis reessayez.")
         }
 
         throw new Error(payload.error ?? "Impossible de valider cet export.")
@@ -715,7 +771,7 @@ export function HomeTool() {
       Object.fromEntries(
         nextFiles.flatMap((file) => {
           const rotation = current[file.id]
-          return rotation ? [[file.id, rotation] as const] : []
+          return rotation !== undefined ? [[file.id, rotation] as const] : []
         }),
       ),
     )
@@ -730,9 +786,38 @@ export function HomeTool() {
   }
 
   const addFiles = (incomingFiles: File[]) => {
+    setUploadError("")
+
     const pdfFiles = incomingFiles
       .filter((file) => file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf"))
       .map((file) => Object.assign(file, { id: crypto.randomUUID() }) as FileWithId)
+
+    if (pdfFiles.length === 0) {
+      setUploadError("Ajoutez uniquement des fichiers PDF.")
+      return
+    }
+
+    if (!hasPremiumAccess) {
+      const availableSlots = Math.max(FREE_MAX_PDF_FILES_PER_BATCH - files.length, 0)
+
+      if (availableSlots <= 0) {
+        setUploadError(
+          `La version gratuite accepte jusqu'a ${FREE_MAX_PDF_FILES_PER_BATCH} PDF par lot. Passez en premium pour en ajouter davantage.`,
+        )
+        return
+      }
+
+      const acceptedFiles = pdfFiles.slice(0, availableSlots)
+
+      if (acceptedFiles.length < pdfFiles.length) {
+        setUploadError(
+          `Seuls ${FREE_MAX_PDF_FILES_PER_BATCH} PDF peuvent etre ajoutes en version gratuite. Le surplus a ete ignore.`,
+        )
+      }
+
+      updateFiles([...files, ...acceptedFiles])
+      return
+    }
 
     updateFiles([...files, ...pdfFiles])
   }
@@ -808,7 +893,7 @@ export function HomeTool() {
       setRotationsByFileId((current) => {
         const next = { ...current }
 
-        if (normalized === 0) {
+        if (normalized === selectedDefaultRotation) {
           delete next[fileId]
         } else {
           next[fileId] = normalized
@@ -828,7 +913,7 @@ export function HomeTool() {
   }
 
   const rotateFile = (fileId: string, delta: -90 | 90) => {
-    setRotationForFile(fileId, (rotationsByFileId[fileId] ?? 0) + delta)
+    setRotationForFile(fileId, (rotationsByFileId[fileId] ?? selectedDefaultRotation) + delta)
   }
 
   const selectAllPagesForFile = (fileId: string) => {
@@ -871,7 +956,7 @@ export function HomeTool() {
 
   const applyRotationToAllFiles = (rotation: PdfRotation) => {
     startTransition(() => {
-      if (rotation === 0) {
+      if (rotation === selectedDefaultRotation) {
         setRotationsByFileId({})
         return
       }
@@ -1136,6 +1221,9 @@ export function HomeTool() {
                 Sélection multiple
               </span>
             </div>
+            {uploadError && (
+              <p className="mt-4 max-w-sm text-sm font-medium text-amber-700">{uploadError}</p>
+            )}
           </label>
         </div>
 
@@ -1166,11 +1254,58 @@ export function HomeTool() {
               <p className="mt-3 text-sm leading-6 text-slate-600">
                 {profile.mode === "manual"
                   ? "Sélection directe sur l’aperçu du PDF."
-                  : "Rognage transporteur appliqué automatiquement."}
+                  : "Format optimisé automatiquement."}
               </p>
             </button>
           ))}
         </div>
+
+        {isChronopostProfile && (
+          <div className="relative mt-4 rounded-[28px] border border-slate-200/80 bg-white/82 p-4 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.2)]">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h3 className="text-base font-semibold text-slate-950">Variantes Chronopost</h3>
+                <p className="mt-1 text-sm text-slate-600">
+                  Choisissez le rognage Chronopost a appliquer au lot.
+                </p>
+              </div>
+              <div className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
+                Variante active :{" "}
+                {CHRONOPOST_VARIANTS.find((variant) => variant.id === chronopostVariantId)?.title}
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {CHRONOPOST_VARIANTS.map((variant) => (
+                <button
+                  key={variant.id}
+                  type="button"
+                  className={cn(
+                    "rounded-[22px] border px-4 py-4 text-left transition duration-200",
+                    chronopostVariantId === variant.id
+                      ? "border-sky-400 bg-[linear-gradient(135deg,rgba(240,249,255,0.95),rgba(255,255,255,0.96))] shadow-[0_18px_40px_-34px_rgba(2,132,199,0.36)]"
+                      : "border-slate-200/80 bg-slate-50/80 hover:border-slate-300 hover:bg-white",
+                  )}
+                  onClick={() => setChronopostVariantId(variant.id)}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="font-medium text-slate-950">{variant.title}</div>
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                      {variant.shortLabel}
+                    </span>
+                  </div>
+                  <div className="mt-2 text-sm text-slate-600">{variant.description}</div>
+                  {"defaultRotation" in variant && variant.defaultRotation !== undefined && (
+                    <div className="mt-3 inline-flex rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-800">
+                      Rotation par defaut {variant.defaultRotation}
+                      {"\u00B0"}
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {isMondialRelayProfile && (
           <div className="relative mt-4 rounded-[28px] border border-slate-200/80 bg-white/82 p-4 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.2)]">
@@ -1248,12 +1383,20 @@ export function HomeTool() {
                   <button
                     type="button"
                     className="rounded-full border border-slate-200/80 bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-red-300 hover:text-red-600"
-                    onClick={() => updateFiles([])}
+                    onClick={() => {
+                      setUploadError("")
+                      updateFiles([])
+                    }}
                   >
                     Vider
                   </button>
                 </div>
               </div>
+              {uploadError && (
+                <div className="mt-4 rounded-[20px] border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm font-medium text-amber-800">
+                  {uploadError}
+                </div>
+              )}
 
               <div className="mt-5 rounded-[24px] border border-slate-200/80 bg-slate-50/80 p-4">
                 <div className="flex flex-wrap items-start justify-between gap-4">
@@ -1272,7 +1415,10 @@ export function HomeTool() {
                   {PDF_ROTATION_PRESETS.map((rotationPreset) => {
                     const allFilesUsePreset =
                       files.length > 0 &&
-                      files.every((file) => (rotationsByFileId[file.id] ?? 0) === rotationPreset.value)
+                      files.every(
+                        (file) =>
+                          (rotationsByFileId[file.id] ?? selectedDefaultRotation) === rotationPreset.value,
+                      )
 
                     return (
                       <button
@@ -1296,7 +1442,7 @@ export function HomeTool() {
               <div className="mt-6 space-y-3">
                 {files.map((file, index) => {
                   const hasCustomManualCrop = Boolean(manualCropsByFileId[file.id])
-                  const fileRotation = rotationsByFileId[file.id] ?? 0
+                  const fileRotation = rotationsByFileId[file.id] ?? selectedDefaultRotation
                   const filePageCount = pageCounts[file.id]
                   const selectedPageIndices = filePageCount
                     ? normalizePageSelection(filePageCount, selectedPageIndicesByFileId[file.id])

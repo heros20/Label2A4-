@@ -11,6 +11,8 @@ function isConfiguredValue(value: string) {
 
 const DEFAULT_GUEST_DAILY_A4_SHEETS = 2
 const DEFAULT_FREE_ACCOUNT_DAILY_A4_SHEETS = 4
+const DEFAULT_FREE_MAX_A4_SHEETS_PER_EXPORT = 1
+const DEFAULT_FREE_MAX_PDF_FILES_PER_BATCH = 4
 
 const configuredGuestDailySheets = readNumber(
   process.env.NEXT_PUBLIC_GUEST_DAILY_A4_SHEETS,
@@ -24,6 +26,14 @@ const configuredAnonymousAbuseDailySheets = readNumber(
   process.env.ANONYMOUS_ABUSE_DAILY_A4_SHEETS,
   Math.max(configuredGuestDailySheets * 4, configuredFreeAccountDailySheets * 2),
 )
+const configuredFreeMaxSheetsPerExport = readNumber(
+  process.env.NEXT_PUBLIC_FREE_MAX_A4_SHEETS_PER_EXPORT,
+  DEFAULT_FREE_MAX_A4_SHEETS_PER_EXPORT,
+)
+const configuredFreeMaxPdfFilesPerBatch = readNumber(
+  process.env.NEXT_PUBLIC_FREE_MAX_PDF_FILES_PER_BATCH,
+  DEFAULT_FREE_MAX_PDF_FILES_PER_BATCH,
+)
 
 export const siteConfig = {
   siteName: process.env.NEXT_PUBLIC_SITE_NAME ?? "Label2A4",
@@ -31,6 +41,7 @@ export const siteConfig = {
   description:
     process.env.NEXT_PUBLIC_SITE_DESCRIPTION ??
     "Regroupez vos étiquettes PDF Chronopost, Colissimo, Mondial Relay et Happy Post sur des feuilles A4 x4 prêtes à imprimer.",
+  socialTagline: "4 en 1 : imprime malin, économise du papier.",
   supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "support@label2a4.local",
   supportResponseDelay:
     process.env.NEXT_PUBLIC_SUPPORT_RESPONSE_DELAY ?? "Réponse sous 2 jours ouvrés.",
@@ -64,6 +75,8 @@ export const siteConfig = {
     anonymousAbuseDailyA4Sheets: configuredAnonymousAbuseDailySheets,
     freeAccountDailyA4Sheets: configuredFreeAccountDailySheets,
     freeDailyA4Sheets: configuredFreeAccountDailySheets,
+    freeMaxA4SheetsPerExport: configuredFreeMaxSheetsPerExport,
+    freeMaxPdfFilesPerBatch: configuredFreeMaxPdfFilesPerBatch,
     guestDailyA4Sheets: configuredGuestDailySheets,
     monthlyPriceCents: readNumber(process.env.NEXT_PUBLIC_MONTHLY_PRICE_CENTS, 399),
     annualPriceCents: readNumber(process.env.NEXT_PUBLIC_ANNUAL_PRICE_CENTS, 2900),

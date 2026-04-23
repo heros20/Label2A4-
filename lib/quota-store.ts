@@ -18,6 +18,12 @@ interface ConsumeStoredQuotaWithGuardInput {
   sheetCount: number
 }
 
+interface ConsumeStoredQuotaWithGuardOnceInput extends ConsumeStoredQuotaWithGuardInput {
+  action: "download" | "print"
+  exportId: string
+  fileName?: string
+}
+
 interface ConsumeStoredDailyQuotaRow {
   allowed: boolean
   next_used_sheets: number
@@ -28,6 +34,11 @@ interface ConsumeStoredQuotaWithGuardRow extends ConsumeStoredDailyQuotaRow {
   guard_next_used_sheets: number
   guard_used_sheets: number
   reason: string | null
+}
+
+interface ConsumeStoredQuotaWithGuardOnceRow extends ConsumeStoredQuotaWithGuardRow {
+  already_exported: boolean
+  consumed_sheets: number
 }
 
 export function isQuotaDatabaseConfigured() {
@@ -114,6 +125,51 @@ export async function consumeStoredQuotaWithGuard(input: ConsumeStoredQuotaWithG
 
   return {
     allowed: row.allowed,
+    guardNextUsedSheets: row.guard_next_used_sheets,
+    guardUsedSheets: row.guard_used_sheets,
+    nextUsedSheets: row.next_used_sheets,
+    reason: row.reason ?? null,
+    usedSheets: row.used_sheets,
+  }
+}
+
+export async function consumeStoredQuotaWithGuardOnce(input: ConsumeStoredQuotaWithGuardOnceInput) {
+  const supabase = getSupabaseAdminClient()
+  const { data, error } = await supabase.rpc("consume_daily_quota_guarded_once", {
+    p_action: input.action,
+    p_day_key: input.dayKey,
+    p_export_id: input.exportId,
+    p_file_name: input.fileName ?? null,
+    p_guard_hash: input.guardHash ?? null,
+    p_guard_limit: input.guardLimit ?? null,
+    p_primary_hash: input.primaryHash,
+    p_primary_limit: input.primaryLimit,
+    p_sheet_count: input.sheetCount,
+  })
+
+  if (error) {
+    throw new Error(`Unable to update idempotent stored quota: ${error.message}`)
+  }
+
+  const row = (Array.isArray(data) ? data[0] : data) as ConsumeStoredQuotaWithGuardOnceRow | null
+
+  if (
+    !row ||
+    typeof row.allowed !== "boolean" ||
+    typeof row.used_sheets !== "number" ||
+    typeof row.next_used_sheets !== "number" ||
+    typeof row.guard_used_sheets !== "number" ||
+    typeof row.guard_next_used_sheets !== "number" ||
+    typeof row.already_exported !== "boolean" ||
+    typeof row.consumed_sheets !== "number"
+  ) {
+    throw new Error("Unexpected response from consume_daily_quota_guarded_once RPC.")
+  }
+
+  return {
+    allowed: row.allowed,
+    alreadyExported: row.already_exported,
+    consumedSheets: row.consumed_sheets,
     guardNextUsedSheets: row.guard_next_used_sheets,
     guardUsedSheets: row.guard_used_sheets,
     nextUsedSheets: row.next_used_sheets,

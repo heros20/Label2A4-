@@ -4,7 +4,7 @@ import { join } from "node:path"
 import { siteConfig } from "@/lib/site-config"
 
 export const runtime = "nodejs"
-export const alt = "Label2A4 - etiquettes PDF en A4 x4"
+export const alt = "4 en 1 : imprime malin, économise du papier."
 export const size = {
   width: 1200,
   height: 630,
@@ -22,21 +22,35 @@ export default async function Image() {
           width: "100%",
           height: "100%",
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
           background: "#f8fbfd",
-          padding: "48px",
+          gap: "22px",
+          padding: "64px",
         }}
       >
         <img
           src={logoSrc}
           alt={siteConfig.siteName}
           style={{
-            width: 1060,
-            height: 578,
+            width: 820,
+            height: 446,
             objectFit: "contain",
           }}
         />
+        <div
+          style={{
+            color: "#0f172a",
+            fontSize: 50,
+            fontWeight: 800,
+            letterSpacing: 0,
+            lineHeight: 1.12,
+            textAlign: "center",
+          }}
+        >
+          {siteConfig.socialTagline}
+        </div>
       </div>
     ),
     size,

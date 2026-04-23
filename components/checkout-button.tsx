@@ -183,8 +183,7 @@ export function CheckoutButton({ className, label, planId }: CheckoutButtonProps
           ))}
         </div>
         <p className="mt-2 text-xs leading-5 text-slate-500">
-          Stripe affiche automatiquement les moyens disponibles selon votre appareil, navigateur, pays et les méthodes
-          activées dans le Dashboard. Si un wallet n'est pas disponible, la carte bancaire reste le fallback.
+          
         </p>
       </div>
 

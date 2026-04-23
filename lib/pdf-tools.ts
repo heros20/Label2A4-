@@ -2,6 +2,7 @@ import { degrees, PDFDocument } from "pdf-lib"
 import {
   DEFAULT_MANUAL_CROP_RECT,
   getResolvedLabelProfile,
+  type ChronopostVariantId,
   type LabelCropRule,
   type LabelProfileId,
   type ManualCropRect,
@@ -28,6 +29,7 @@ export interface BuildLabelOptions {
   singleLabelSlot?: SingleLabelSlot
   manualCrop?: ManualCropRect | null
   manualCropsByFileId?: Record<string, ManualCropRect>
+  chronopostVariantId?: ChronopostVariantId
   mondialRelayVariantId?: MondialRelayVariantId
   rotationsByFileId?: Record<string, PdfRotation>
   selectedPageIndicesByFileId?: Record<string, number[]>
@@ -243,11 +245,13 @@ export async function buildLabelA4Pdf(
   }
 
   const profile = getResolvedLabelProfile(profileId, {
+    chronopostVariantId: options.chronopostVariantId,
     mondialRelayVariantId: options.mondialRelayVariantId,
   })
   const manualCropsByFileId = options.manualCropsByFileId ?? {}
   const fallbackManualCrop = options.manualCrop ?? DEFAULT_MANUAL_CROP_RECT
   const rotationsByFileId = options.rotationsByFileId ?? {}
+  const defaultRotation = normalizePdfRotation(profile.mode === "preset" ? profile.defaultRotation ?? 0 : 0)
   const selectedPageIndicesByFileId = options.selectedPageIndicesByFileId ?? {}
   const preparedSources = await Promise.all(
     files.map(async (file) => {
@@ -283,7 +287,7 @@ export async function buildLabelA4Pdf(
     const copiedPages = await output.copyPages(source, pageIndices)
 
     for (const copiedPage of copiedPages) {
-      const rotation = normalizePdfRotation((file.id ? rotationsByFileId[file.id] : undefined) ?? 0)
+      const rotation = normalizePdfRotation((file.id ? rotationsByFileId[file.id] : undefined) ?? defaultRotation)
       let croppedSize: { width: number; height: number }
 
       if (profile.mode === "manual") {
@@ -342,9 +346,13 @@ export async function buildLabelA4Pdf(
 export function buildLabelPdfName(
   files: File[],
   profileId: LabelProfileId,
-  options: { mondialRelayVariantId?: MondialRelayVariantId } = {},
+  options: {
+    chronopostVariantId?: ChronopostVariantId
+    mondialRelayVariantId?: MondialRelayVariantId
+  } = {},
 ) {
   const profile = getResolvedLabelProfile(profileId, {
+    chronopostVariantId: options.chronopostVariantId,
     mondialRelayVariantId: options.mondialRelayVariantId,
   })
   return `${sanitizePdfName(files[0].name)}_${profile.slug}_a4_x4.pdf`

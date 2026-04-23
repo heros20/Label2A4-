@@ -46,9 +46,11 @@ export async function POST(request: NextRequest) {
 
     const payload = (await request.json()) as {
       action?: "download" | "print"
+      exportId?: string
       fileName?: string
       labelCount?: number
       sheetCount?: number
+      sourceFileCount?: number
     }
 
     if (!payload.action || !["download", "print"].includes(payload.action)) {
@@ -63,8 +65,13 @@ export async function POST(request: NextRequest) {
 
     const decision = await consumeExportQuota(request, cookieDraft, {
       action: payload.action,
+      exportId: payload.exportId,
       fileName: payload.fileName,
       sheetCount: exportCounts.sheetCount,
+      sourceFileCount:
+        typeof payload.sourceFileCount === "number" && Number.isFinite(payload.sourceFileCount)
+          ? Math.ceil(payload.sourceFileCount)
+          : undefined,
     })
 
     const impact = calculateLabelImpact({
@@ -73,7 +80,7 @@ export async function POST(request: NextRequest) {
     })
     let impactSnapshot: ImpactSnapshot | undefined
 
-    if (decision.allowed) {
+    if (decision.allowed && (decision.consumedSheets ?? exportCounts.sheetCount) > 0) {
       try {
         impactSnapshot = (
           await recordExportImpact({
