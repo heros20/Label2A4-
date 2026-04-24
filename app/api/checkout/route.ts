@@ -160,7 +160,6 @@ export async function POST(request: NextRequest) {
       : null
 
     const session = await stripe.checkout.sessions.create({
-      allow_promotion_codes: false,
       billing_address_collection: "auto",
       cancel_url: `${origin}/paiement/annule`,
       client_reference_id: authenticatedUser?.id ?? anonymousId,
