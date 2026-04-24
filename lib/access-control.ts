@@ -350,6 +350,23 @@ function buildAuthState(input: { userEmail?: string | null; userId?: string | nu
   }
 }
 
+function getAdminPremiumEmails() {
+  return new Set(
+    (process.env.ADMIN_PREMIUM_EMAILS ?? "")
+      .split(",")
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean),
+  )
+}
+
+function isAdminPremiumAccount(authState: AuthState) {
+  if (!authState.userEmail) {
+    return false
+  }
+
+  return getAdminPremiumEmails().has(authState.userEmail.toLowerCase())
+}
+
 function getStoredPlanCookie(request: NextRequest) {
   return decodeSignedCookie<PlanCookiePayload>(request.cookies.get(PLAN_COOKIE)?.value)
 }
@@ -434,6 +451,16 @@ async function resolvePlanState(
   anonymousId: string,
   authState: AuthState,
 ): Promise<ResolvedPlanState> {
+  if (authState.isAuthenticated && isAdminPremiumAccount(authState)) {
+    return {
+      plan: "annual",
+      isPremium: true,
+      expiresAt: null,
+      subscriptionStatus: "admin",
+      email: authState.userEmail ?? undefined,
+    }
+  }
+
   if (isSupabaseAuthConfigured() && authState.userId) {
     return resolveStoredPlanStateForUser(authState.userId)
   }
