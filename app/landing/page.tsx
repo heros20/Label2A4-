@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import Image from "next/image"
 import Link from "next/link"
 import { siteConfig } from "@/lib/site-config"
 
@@ -64,6 +65,23 @@ const faqs = [
   },
 ] as const
 
+const LANDING_COMPARISON_IMAGES = [
+  {
+    label: "Avant",
+    panelClassName: "border-slate-200 bg-slate-50",
+    src: "/images/chronopost/leboncoinx1.pdf.jpg",
+    alt: "Bordereau Chronopost imprimé seul sur une feuille",
+    frameClassName: "w-full max-w-full shrink-0 aspect-[1755/1240] rotate-270 scale-140",
+  },
+  {
+    label: "Après",
+    panelClassName: "border-sky-200 bg-sky-50",
+    src: "/images/chronopost/leboncoinx4.pdf.jpg",
+    alt: "Quatre bordereaux Chronopost regroupés sur une feuille A4",
+    frameClassName: "h-full max-h-full shrink-0 aspect-[1241/1754]",
+  },
+] as const
+
 function PaperScene() {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-y-8 right-0 hidden w-[46%] lg:block">
@@ -98,30 +116,34 @@ function BeforeAfter() {
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <article className="rounded-[28px] border border-slate-200/80 bg-white/76 p-5 shadow-[0_24px_60px_-48px_rgba(15,23,42,0.28)]">
-          <h3 className="text-xl font-semibold text-slate-950">PDF brut</h3>
-          <div className="mt-5 aspect-[4/3] rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-            <div className="h-full rounded-[20px] border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="h-4 w-1/2 rounded-full bg-slate-300" />
-              <div className="mt-5 h-20 rounded-xl bg-slate-950" />
-              <div className="mt-5 h-3 w-3/4 rounded-full bg-slate-200" />
-              <div className="mt-3 h-3 w-2/3 rounded-full bg-slate-200" />
-            </div>
-          </div>
-        </article>
-
-        <article className="rounded-[28px] border border-sky-200 bg-sky-50/78 p-5 shadow-[0_24px_60px_-48px_rgba(3,105,161,0.28)]">
-          <h3 className="text-xl font-semibold text-slate-950">Résultat A4 x4</h3>
-          <div className="mt-5 grid aspect-[4/3] grid-cols-2 gap-4 rounded-[24px] border border-sky-200 bg-white p-5">
-            {[0, 1, 2, 3].map((item) => (
-              <div key={item} className="rounded-2xl border border-sky-200 bg-sky-50 p-3 shadow-sm">
-                <div className="h-2.5 w-2/3 rounded-full bg-sky-200" />
-                <div className="mt-3 h-12 rounded-lg bg-slate-950" />
-                <div className="mt-3 h-2 w-3/4 rounded-full bg-slate-200" />
+        {LANDING_COMPARISON_IMAGES.map((preview) => (
+          <article
+            key={preview.label}
+            className={`rounded-[28px] border p-5 ${
+              preview.label === "Avant"
+                ? "border-slate-200/80 bg-white/76 shadow-[0_24px_60px_-48px_rgba(15,23,42,0.28)]"
+                : "border-sky-200 bg-sky-50/78 shadow-[0_24px_60px_-48px_rgba(3,105,161,0.28)]"
+            }`}
+          >
+            <h3 className="text-xl font-semibold text-slate-950">{preview.label}</h3>
+            <div
+              className={`relative mt-5 aspect-[3/4] overflow-hidden rounded-[24px] border ${preview.panelClassName}`}
+            >
+              <div className="absolute inset-0 flex items-center justify-center p-3">
+                <div className={`relative ${preview.frameClassName}`}>
+                  <Image
+                    src={preview.src}
+                    alt={preview.alt}
+                    fill
+                    priority
+                    sizes="(min-width: 1024px) 320px, (min-width: 640px) 42vw, 100vw"
+                    className="object-contain object-center"
+                  />
+                </div>
               </div>
-            ))}
-          </div>
-        </article>
+            </div>
+          </article>
+        ))}
       </div>
     </section>
   )

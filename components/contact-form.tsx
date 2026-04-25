@@ -129,7 +129,11 @@ export function ContactForm({ supportEmail }: ContactFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-[24px] border border-slate-200/80 bg-white/78 p-5 shadow-[0_22px_50px_-42px_rgba(15,23,42,0.24)]">
+    <form
+      id="contact-form"
+      onSubmit={handleSubmit}
+      className="rounded-[24px] border border-slate-200/80 bg-white/78 p-5 shadow-[0_22px_50px_-42px_rgba(15,23,42,0.24)]"
+    >
       <div className="grid gap-4 md:grid-cols-2">
         <label className="grid gap-2 text-sm font-medium text-slate-700">
           Nom
@@ -178,6 +182,9 @@ export function ContactForm({ supportEmail }: ContactFormProps) {
       <div className="mt-4 grid gap-2 text-sm font-medium text-slate-700">
         <span>Pieces jointes</span>
         <div className="rounded-2xl border border-slate-200 bg-white p-4">
+          <p className="mb-3 text-sm font-normal leading-6 text-slate-600">
+            Pour une étiquette non reconnue, joignez de préférence le PDF source ou une capture du bordereau à analyser.
+          </p>
           <input
             ref={fileInputRef}
             id="contact-attachments"

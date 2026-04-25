@@ -111,6 +111,7 @@ export const MONDIAL_RELAY_VARIANTS = [
       width: 0.77,
       height: 0.38,
     },
+    defaultRotation: 270,
   },
 ] as const satisfies readonly PresetCropRectVariant[]
 

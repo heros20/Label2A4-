@@ -64,7 +64,7 @@ function getFriendlyAuthError(error: unknown, fallback: string) {
   }
 
   if (message.includes("already registered") || message.includes("already exists")) {
-    return "Un compte existe déjà pour cet email. Connectez-vous."
+    return "Un compte existe déjà pour cet email. Connectez-vous ou utilisez « Mot de passe oublié ? »."
   }
 
   if (message.includes("password")) {
@@ -206,7 +206,9 @@ export function AccountAuthCard({
           return
         }
 
-        setSuccess("Compte créé. Vérifiez votre email si une confirmation est nécessaire.")
+        setSuccess(
+          "Si cette adresse est valide, vous recevrez un email. Ouvrez-le pour valider votre compte. (Pensez à vérifier vos spams)",
+        )
         return
       }
 
@@ -442,6 +444,8 @@ export function AccountAuthCard({
                 ? "Créer un compte"
                 : "Se connecter"}
         </button>
+        {error && <div className="text-sm text-red-600">{error}</div>}
+        {success && <div className="text-sm text-emerald-700">{success}</div>}
       </form>
 
       <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
@@ -493,8 +497,6 @@ export function AccountAuthCard({
         </details>
       )}
 
-      {error && <div className="text-sm text-red-600">{error}</div>}
-      {success && <div className="text-sm text-emerald-700">{success}</div>}
     </div>
   )
 }

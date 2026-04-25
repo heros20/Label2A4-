@@ -1312,6 +1312,17 @@ export function HomeTool() {
             </div>
           </div>
         )}
+
+        <div className="mt-4 rounded-[24px] border border-emerald-200/80 bg-emerald-50/80 p-4 text-sm leading-6 text-emerald-950 shadow-[0_18px_40px_-34px_rgba(34,197,94,0.18)]">
+          <p className="font-semibold">Votre étiquette n&apos;est pas présente ?</p>
+          <p className="mt-1">
+            Envoyez-nous votre PDF via le{" "}
+            <Link href="/contact#contact-form" className="font-semibold underline underline-offset-2 hover:text-emerald-800">
+              formulaire de contact avec pièce jointe
+            </Link>
+            . Cela nous permet de vérifier le format et d&apos;ajouter une prise en charge adaptée si possible.
+          </p>
+        </div>
       </section>
 
       {files.length > 0 && (

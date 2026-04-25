@@ -9,7 +9,7 @@ const CHRONOPOST_COMPARISON_IMAGES = [
     panelClassName: "border-slate-200 bg-slate-50",
     src: "/images/chronopost/leboncoinx1.pdf.jpg",
     alt: "Bordereau Chronopost imprimé seul sur une feuille",
-    frameClassName: "w-full max-w-full shrink-0 aspect-[1755/1240] rotate-90",
+    frameClassName: "w-full max-w-full shrink-0 aspect-[1755/1240] rotate-270 scale-140",
     imageClassName: "object-contain object-center",
   },
   {
@@ -23,11 +23,107 @@ const CHRONOPOST_COMPARISON_IMAGES = [
   },
 ] as const
 
-function ChronopostSheetComparisonVisual() {
+const LEBONCOIN_COMPARISON_IMAGES = [
+  {
+    label: "Avant",
+    labelClassName: "text-slate-600",
+    panelClassName: "border-slate-200 bg-slate-50",
+    src: "/images/leboncoin/leboncoinx1.jpg",
+    alt: "Bordereau Leboncoin imprimé seul sur une feuille",
+    frameClassName: "w-full max-w-full shrink-0 aspect-[1755/1240] rotate-270 scale-140",
+    imageClassName: "object-contain object-center",
+  },
+  {
+    label: "Après",
+    labelClassName: "text-sky-800",
+    panelClassName: "border-sky-200 bg-sky-50",
+    src: "/images/leboncoin/leboncoinx4.jpg",
+    alt: "Quatre bordereaux Leboncoin regroupés sur une feuille A4",
+    frameClassName: "h-full max-h-full shrink-0 aspect-[1241/1754]",
+    imageClassName: "object-contain object-center",
+  },
+] as const
+
+const MONDIAL_RELAY_COMPARISON_IMAGES = [
+  {
+    label: "Avant",
+    labelClassName: "text-slate-600",
+    panelClassName: "border-slate-200 bg-slate-50",
+    src: "/images/mondial-relais/mondialx1.jpg",
+    alt: "Bordereau Mondial Relay imprimé seul sur une feuille",
+    frameClassName: "h-full max-h-full shrink-0 aspect-[1241/1754] scale-110",
+    imageClassName: "object-contain object-center",
+  },
+  {
+    label: "Après",
+    labelClassName: "text-sky-800",
+    panelClassName: "border-sky-200 bg-sky-50",
+    src: "/images/mondial-relais/mondialx4.jpg",
+    alt: "Quatre bordereaux Mondial Relay regroupés sur une feuille A4",
+    frameClassName: "h-full max-h-full shrink-0 aspect-[1241/1754]",
+    imageClassName: "object-contain object-center",
+  },
+] as const
+
+const HAPPY_POST_COMPARISON_IMAGES = [
+  {
+    label: "Avant",
+    labelClassName: "text-slate-600",
+    panelClassName: "border-slate-200 bg-slate-50",
+    src: "/images/happy-post/happyx1.jpg",
+    alt: "Bordereau Happy Post imprimé seul sur une feuille",
+    frameClassName: "h-full max-h-full shrink-0 aspect-[1241/1754]",
+    imageClassName: "object-contain object-center",
+  },
+  {
+    label: "Après",
+    labelClassName: "text-sky-800",
+    panelClassName: "border-sky-200 bg-sky-50",
+    src: "/images/happy-post/happyx4.jpg",
+    alt: "Quatre bordereaux Happy Post regroupés sur une feuille A4",
+    frameClassName: "h-full max-h-full shrink-0 aspect-[1241/1754]",
+    imageClassName: "object-contain object-center",
+  },
+] as const
+
+const COLISSIMO_COMPARISON_IMAGES = [
+  {
+    label: "Avant",
+    labelClassName: "text-slate-600",
+    panelClassName: "border-slate-200 bg-slate-50",
+    src: "/images/colissimo/colissimox1.jpg",
+    alt: "Bordereau Colissimo imprimé seul sur une feuille",
+    frameClassName: "w-full max-w-full shrink-0 aspect-[1755/1240] rotate-270 scale-140",
+    imageClassName: "object-contain object-center",
+  },
+  {
+    label: "Après",
+    labelClassName: "text-sky-800",
+    panelClassName: "border-sky-200 bg-sky-50",
+    src: "/images/colissimo/colissimox4.jpg",
+    alt: "Quatre bordereaux Colissimo regroupés sur une feuille A4",
+    frameClassName: "h-full max-h-full shrink-0 aspect-[1241/1754]",
+    imageClassName: "object-contain object-center",
+  },
+] as const
+
+function ImageComparisonVisual({
+  previews,
+}: {
+  previews: readonly {
+    label: string
+    labelClassName: string
+    panelClassName: string
+    src: string
+    alt: string
+    frameClassName: string
+    imageClassName: string
+  }[]
+}) {
   return (
     <div className="rounded-[30px] border border-slate-200/80 bg-white/78 p-4 shadow-[0_28px_70px_-52px_rgba(15,23,42,0.35)]">
       <div className="grid gap-4 sm:grid-cols-2">
-        {CHRONOPOST_COMPARISON_IMAGES.map((preview) => (
+        {previews.map((preview) => (
           <div key={preview.label}>
             <div className={`mb-3 text-sm font-semibold ${preview.labelClassName}`}>{preview.label}</div>
             <div className={`relative aspect-[3/4] overflow-hidden rounded-[22px] border ${preview.panelClassName}`}>
@@ -51,9 +147,50 @@ function ChronopostSheetComparisonVisual() {
   )
 }
 
+function ChronopostSheetComparisonVisual() {
+  return <ImageComparisonVisual previews={CHRONOPOST_COMPARISON_IMAGES} />
+}
+
+function LeboncoinSheetComparisonVisual() {
+  return <ImageComparisonVisual previews={LEBONCOIN_COMPARISON_IMAGES} />
+}
+
+function MondialRelaySheetComparisonVisual() {
+  return <ImageComparisonVisual previews={MONDIAL_RELAY_COMPARISON_IMAGES} />
+}
+
+function HappyPostSheetComparisonVisual() {
+  return <ImageComparisonVisual previews={HAPPY_POST_COMPARISON_IMAGES} />
+}
+
+function ColissimoSheetComparisonVisual() {
+  return <ImageComparisonVisual previews={COLISSIMO_COMPARISON_IMAGES} />
+}
+
 function SheetComparisonVisual({ pagePath }: { pagePath: string }) {
-  if (pagePath === "/chronopost") {
+  if (
+    pagePath === "/chronopost" ||
+    pagePath === "/vinted" ||
+    pagePath === "/entreprises" ||
+    pagePath === "/economies"
+  ) {
     return <ChronopostSheetComparisonVisual />
+  }
+
+  if (pagePath === "/leboncoin") {
+    return <LeboncoinSheetComparisonVisual />
+  }
+
+  if (pagePath === "/mondial-relay") {
+    return <MondialRelaySheetComparisonVisual />
+  }
+
+  if (pagePath === "/happy-post") {
+    return <HappyPostSheetComparisonVisual />
+  }
+
+  if (pagePath === "/colissimo") {
+    return <ColissimoSheetComparisonVisual />
   }
 
   return (
@@ -198,6 +335,14 @@ export function SeoServicePage({ page, children }: SeoServicePageProps) {
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-800">Économie</p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">{page.economy.title}</h2>
           <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">{page.economy.text}</p>
+          {page.path === "/entreprises" && (
+            <Link
+              href="/economies#simulateur"
+              className="mt-4 inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-900 transition hover:border-emerald-300 hover:bg-emerald-100"
+            >
+              Ouvrir le simulateur
+            </Link>
+          )}
         </div>
 
         <div className="rounded-[28px] border border-slate-200/80 bg-white/76 p-5 shadow-[0_24px_60px_-48px_rgba(15,23,42,0.28)]">
