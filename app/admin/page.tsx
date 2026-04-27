@@ -118,6 +118,14 @@ export default async function AdminPage() {
         >
           Impact / quota
         </a>
+        <a
+          href="/support-publicite-label2a4"
+          target="_blank"
+          rel="noreferrer"
+          className="rounded-full border border-slate-200/80 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-sky-300 hover:text-sky-800"
+        >
+          Flyer colis
+        </a>
       </nav>
 
       <section id="derniere-mise-a-jour" className={cardClass}>
