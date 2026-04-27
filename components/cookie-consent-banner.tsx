@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import Link from "next/link"
+import { useEffect, useState } from "react"
+import type { Locale } from "@/lib/i18n"
 import {
   ANALYTICS_DISABLE_KEY,
   COOKIE_CONSENT_COOKIE_NAME,
@@ -9,9 +10,10 @@ import {
   COOKIE_CONSENT_UPDATED_EVENT,
   type CookieConsentStatus,
 } from "@/lib/cookie-consent"
+import { localizePath } from "@/lib/i18n"
 import { siteConfig } from "@/lib/site-config"
 
-export function CookieConsentBanner() {
+export function CookieConsentBanner({ locale }: { locale: Locale }) {
   const [isVisible, setIsVisible] = useState(false)
 
   useEffect(() => {
@@ -52,13 +54,14 @@ export function CookieConsentBanner() {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-3xl">
           <div className="text-sm font-semibold uppercase tracking-[0.16em] text-sky-200">
-            Publicité et mesure d’audience
+            {locale === "en" ? "Ads and analytics" : "Publicité et mesure d’audience"}
           </div>
           <p className="mt-2 text-sm leading-6 text-white/85">
-            La version gratuite peut afficher des annonces et utiliser une mesure d’audience pour suivre les visites et
-            les performances commerciales. Vous pouvez accepter ou refuser ces traceurs facultatifs.{" "}
-            <Link href="/cookies" className="font-medium text-sky-200 hover:underline">
-              En savoir plus
+            {locale === "en"
+              ? "The free version may display ads and use analytics to measure visits and commercial performance. You can accept or refuse these optional trackers."
+              : "La version gratuite peut afficher des annonces et utiliser une mesure d’audience pour suivre les visites et les performances commerciales. Vous pouvez accepter ou refuser ces traceurs facultatifs."}{" "}
+            <Link href={localizePath("/cookies", locale)} className="font-medium text-sky-200 hover:underline">
+              {locale === "en" ? "Learn more" : "En savoir plus"}
             </Link>
           </p>
         </div>
@@ -69,14 +72,14 @@ export function CookieConsentBanner() {
             className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white"
             onClick={() => saveConsent("refused")}
           >
-            Refuser
+            {locale === "en" ? "Reject" : "Refuser"}
           </button>
           <button
             type="button"
             className="rounded-full bg-sky-400 px-4 py-2 text-sm font-semibold text-slate-950"
             onClick={() => saveConsent("accepted")}
           >
-            Accepter
+            {locale === "en" ? "Accept" : "Accepter"}
           </button>
         </div>
       </div>

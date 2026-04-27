@@ -1,10 +1,11 @@
 import { SeoServicePage } from "@/components/seo-service-page"
-import { getSeoMetadata, seoPages } from "@/lib/seo-pages"
+import { getSeoMetadata, getSeoPage } from "@/lib/seo-pages"
 
-const page = seoPages["happy-post"]
+const locale = "fr" as const
+const page = getSeoPage("happy-post", locale)
 
-export const metadata = getSeoMetadata(page)
+export const metadata = getSeoMetadata(page, locale)
 
 export default function HappyPostPage() {
-  return <SeoServicePage page={page} />
+  return <SeoServicePage page={page} locale={locale} />
 }

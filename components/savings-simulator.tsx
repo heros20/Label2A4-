@@ -13,6 +13,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 import { useMemo, useState } from "react"
+import type { Locale } from "@/lib/i18n"
 
 const PAPER_COST_PER_SHEET_EUR = 4.95 / 500
 const BLACK_INK_EQUIVALENT_PER_STANDALONE_LABEL_EUR = 0.15
@@ -23,12 +24,16 @@ const A4_SHEET_WEIGHT_GRAMS = 5
 const RANGE_MAX = 1000
 const RANGE_TICKS = [0, 250, 500, 750, 1000] as const
 
-function formatInteger(value: number) {
-  return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(value)
+function getNumberLocale(locale: Locale) {
+  return locale === "en" ? "en-US" : "fr-FR"
 }
 
-function formatEuro(value: number) {
-  return new Intl.NumberFormat("fr-FR", {
+function formatInteger(value: number, locale: Locale) {
+  return new Intl.NumberFormat(getNumberLocale(locale), { maximumFractionDigits: 0 }).format(value)
+}
+
+function formatEuro(value: number, locale: Locale) {
+  return new Intl.NumberFormat(getNumberLocale(locale), {
     style: "currency",
     currency: "EUR",
     minimumFractionDigits: 2,
@@ -36,8 +41,8 @@ function formatEuro(value: number) {
   }).format(value)
 }
 
-function formatMetric(value: number, maximumFractionDigits = 1) {
-  return new Intl.NumberFormat("fr-FR", {
+function formatMetric(value: number, locale: Locale, maximumFractionDigits = 1) {
+  return new Intl.NumberFormat(getNumberLocale(locale), {
     minimumFractionDigits: Number.isInteger(value) ? 0 : 1,
     maximumFractionDigits,
   }).format(value)
@@ -79,12 +84,12 @@ const STAT_CARD_STYLES = {
 } as const
 
 interface StatCardProps {
+  badge?: string
+  caption: string
   icon: LucideIcon
   title: string
-  value: string
-  caption: string
   tone: keyof typeof STAT_CARD_STYLES
-  badge?: string
+  value: string
 }
 
 function StatCard({ icon: Icon, title, value, caption, tone, badge }: StatCardProps) {
@@ -112,12 +117,12 @@ function StatCard({ icon: Icon, title, value, caption, tone, badge }: StatCardPr
 }
 
 interface DetailCardProps {
+  caption: string
   icon: LucideIcon
   iconClassName: string
+  note: string
   title: string
   value: string
-  caption: string
-  note: string
 }
 
 function DetailCard({ icon: Icon, iconClassName, title, value, caption, note }: DetailCardProps) {
@@ -136,8 +141,8 @@ function DetailCard({ icon: Icon, iconClassName, title, value, caption, note }: 
 
 interface EquivalentRowProps {
   icon: LucideIcon
-  value: string
   label: string
+  value: string
 }
 
 function EquivalentRow({ icon: Icon, value, label }: EquivalentRowProps) {
@@ -154,7 +159,7 @@ function EquivalentRow({ icon: Icon, value, label }: EquivalentRowProps) {
   )
 }
 
-export function SavingsSimulator() {
+export function SavingsSimulator({ locale }: { locale: Locale }) {
   const [monthlyPackages, setMonthlyPackages] = useState(500)
 
   const savings = useMemo(() => {
@@ -174,19 +179,19 @@ export function SavingsSimulator() {
     const yearlyPaperWeightSavedKg = (yearlySheetsSaved * A4_SHEET_WEIGHT_GRAMS) / 1000
 
     return {
-      sheetsWithoutOptimization,
-      sheetsWithOptimization,
-      monthlySheetsSaved,
-      yearlySheetsSaved,
-      monthlyPaperSavedEuro,
-      yearlyPaperSavedEuro,
-      monthlyEuroSaved,
-      yearlyEuroSaved,
       monthlyBlackInkSaved,
-      yearlyBlackInkSaved,
+      monthlyEuroSaved,
+      monthlyPaperSavedEuro,
+      monthlySheetsSaved,
       paperReductionPercent,
-      yearlyReamsSaved,
+      sheetsWithOptimization,
+      sheetsWithoutOptimization,
+      yearlyBlackInkSaved,
+      yearlyEuroSaved,
+      yearlyPaperSavedEuro,
       yearlyPaperWeightSavedKg,
+      yearlyReamsSaved,
+      yearlySheetsSaved,
     }
   }, [monthlyPackages])
 
@@ -196,18 +201,23 @@ export function SavingsSimulator() {
       className="rounded-[32px] border border-slate-200/80 bg-white/90 p-5 shadow-[0_32px_80px_-56px_rgba(15,23,42,0.35)] sm:p-6 lg:p-8"
     >
       <div className="flex flex-col gap-2">
-        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-sky-800">Simulateur</p>
-        <h2 className="text-3xl font-semibold tracking-tight text-slate-950">Calculez vos économies réelles</h2>
+        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-sky-800">
+          {locale === "en" ? "Simulator" : "Simulateur"}
+        </p>
+        <h2 className="text-3xl font-semibold tracking-tight text-slate-950">
+          {locale === "en" ? "Estimate your real savings" : "Calculez vos économies réelles"}
+        </h2>
         <p className="max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">
-          Le calcul compare une impression classique à une feuille par étiquette avec une planche A4 x4. L’estimation
-          inclut par défaut le papier et une hypothèse d’encre noire moyenne à 0,15 € par bordereau.
+          {locale === "en"
+            ? "This calculation compares the default one-label-per-sheet print workflow with an A4 x4 sheet. The estimate includes paper by default and an average black ink assumption of €0.15 per standalone label."
+            : "Le calcul compare une impression classique à une feuille par étiquette avec une planche A4 x4. L’estimation inclut par défaut le papier et une hypothèse d’encre noire moyenne à 0,15 € par bordereau."}
         </p>
       </div>
 
       <div className="mt-8 grid gap-4 lg:grid-cols-[220px_1fr] lg:items-start">
         <div className="rounded-[22px] border border-slate-200/80 bg-slate-50/70 p-4">
           <label htmlFor="monthly-packages" className="block text-sm font-semibold text-slate-900">
-            Colis par mois
+            {locale === "en" ? "Parcels per month" : "Colis par mois"}
           </label>
           <input
             id="monthly-packages"
@@ -228,7 +238,7 @@ export function SavingsSimulator() {
             max={RANGE_MAX}
             value={Math.min(monthlyPackages, RANGE_MAX)}
             onChange={(event) => setMonthlyPackages(normalizePackages(Number(event.target.value)))}
-            aria-label="Volume de colis par mois"
+            aria-label={locale === "en" ? "Monthly parcel volume" : "Volume de colis par mois"}
             className="w-full accent-sky-700"
           />
           <div className="relative mt-2 h-4 text-[11px] font-medium text-slate-400">
@@ -256,31 +266,39 @@ export function SavingsSimulator() {
       <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4" aria-live="polite">
         <StatCard
           icon={FileText}
-          title="Feuilles sans optimisation"
-          value={formatInteger(savings.sheetsWithoutOptimization)}
-          caption="par mois"
+          title={locale === "en" ? "Sheets without optimization" : "Feuilles sans optimisation"}
+          value={formatInteger(savings.sheetsWithoutOptimization, locale)}
+          caption={locale === "en" ? "per month" : "par mois"}
           tone="slate"
         />
         <StatCard
           icon={LayoutGrid}
-          title="Feuilles avec A4 x4"
-          value={formatInteger(savings.sheetsWithOptimization)}
-          caption="par mois"
+          title={locale === "en" ? "Sheets with A4 x4" : "Feuilles avec A4 x4"}
+          value={formatInteger(savings.sheetsWithOptimization, locale)}
+          caption={locale === "en" ? "per month" : "par mois"}
           tone="sky"
         />
         <StatCard
           icon={Leaf}
-          title="Feuilles économisées"
-          value={formatInteger(savings.monthlySheetsSaved)}
-          caption={`soit ${formatInteger(savings.yearlySheetsSaved)} par an`}
+          title={locale === "en" ? "Sheets saved" : "Feuilles économisées"}
+          value={formatInteger(savings.monthlySheetsSaved, locale)}
+          caption={
+            locale === "en"
+              ? `${formatInteger(savings.yearlySheetsSaved, locale)} per year`
+              : `soit ${formatInteger(savings.yearlySheetsSaved, locale)} par an`
+          }
           tone="emerald"
-          badge={`-${formatInteger(savings.paperReductionPercent)}%`}
+          badge={`-${formatInteger(savings.paperReductionPercent, locale)}%`}
         />
         <StatCard
           icon={Coins}
-          title="Économies totales estimées (papier + encre)"
-          value={`${formatEuro(savings.monthlyEuroSaved)} / mois`}
-          caption={`soit ${formatEuro(savings.yearlyEuroSaved)} par an`}
+          title={locale === "en" ? "Estimated total savings (paper + ink)" : "Économies totales estimées (papier + encre)"}
+          value={locale === "en" ? `${formatEuro(savings.monthlyEuroSaved, locale)} / month` : `${formatEuro(savings.monthlyEuroSaved, locale)} / mois`}
+          caption={
+            locale === "en"
+              ? `${formatEuro(savings.yearlyEuroSaved, locale)} per year`
+              : `soit ${formatEuro(savings.yearlyEuroSaved, locale)} par an`
+          }
           tone="amber"
         />
       </div>
@@ -293,33 +311,47 @@ export function SavingsSimulator() {
             </div>
 
             <div className="flex-1">
-              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-700">Résultat</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-700">
+                {locale === "en" ? "Result" : "Résultat"}
+              </p>
               <h3 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950 sm:text-[2.1rem]">
-                Jusqu&apos;à {formatEuro(savings.monthlyEuroSaved)} d&apos;économies chaque mois !
+                {locale === "en"
+                  ? `Up to ${formatEuro(savings.monthlyEuroSaved, locale)} saved every month!`
+                  : `Jusqu’à ${formatEuro(savings.monthlyEuroSaved, locale)} d’économies chaque mois !`}
               </h3>
               <p className="mt-2 text-sm leading-6 text-slate-700 sm:text-base">
-                Soit {formatEuro(savings.yearlyEuroSaved)} par an économisés sur vos impressions de bordereaux.
+                {locale === "en"
+                  ? `${formatEuro(savings.yearlyEuroSaved, locale)} saved per year on shipping label printing.`
+                  : `Soit ${formatEuro(savings.yearlyEuroSaved, locale)} par an économisés sur vos impressions de bordereaux.`}
               </p>
 
               <div className="mt-5 grid gap-3 md:grid-cols-3">
                 <div className="rounded-[18px] border border-white/80 bg-white/85 p-3 shadow-sm">
-                  <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Papier</div>
-                  <div className="mt-1 text-lg font-semibold text-slate-950">
-                    {formatInteger(savings.yearlySheetsSaved)} feuilles
+                  <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    {locale === "en" ? "Paper" : "Papier"}
                   </div>
-                  <p className="text-sm text-slate-600">économisées par an</p>
+                  <div className="mt-1 text-lg font-semibold text-slate-950">
+                    {formatInteger(savings.yearlySheetsSaved, locale)} {locale === "en" ? "sheets" : "feuilles"}
+                  </div>
+                  <p className="text-sm text-slate-600">{locale === "en" ? "saved per year" : "économisées par an"}</p>
                 </div>
                 <div className="rounded-[18px] border border-white/80 bg-white/85 p-3 shadow-sm">
-                  <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Encre</div>
-                  <div className="mt-1 text-lg font-semibold text-slate-950">
-                    {formatEuro(savings.monthlyBlackInkSaved)}
+                  <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    {locale === "en" ? "Ink" : "Encre"}
                   </div>
-                  <p className="text-sm text-slate-600">économisés par mois</p>
+                  <div className="mt-1 text-lg font-semibold text-slate-950">
+                    {formatEuro(savings.monthlyBlackInkSaved, locale)}
+                  </div>
+                  <p className="text-sm text-slate-600">{locale === "en" ? "saved per month" : "économisés par mois"}</p>
                 </div>
                 <div className="rounded-[18px] border border-white/80 bg-white/85 p-3 shadow-sm">
-                  <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Impact</div>
-                  <div className="mt-1 text-lg font-semibold text-slate-950">-{formatInteger(savings.paperReductionPercent)}%</div>
-                  <p className="text-sm text-slate-600">de papier utilisé</p>
+                  <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    {locale === "en" ? "Impact" : "Impact"}
+                  </div>
+                  <div className="mt-1 text-lg font-semibold text-slate-950">
+                    -{formatInteger(savings.paperReductionPercent, locale)}%
+                  </div>
+                  <p className="text-sm text-slate-600">{locale === "en" ? "less paper used" : "de papier utilisé"}</p>
                 </div>
               </div>
             </div>
@@ -327,22 +359,24 @@ export function SavingsSimulator() {
         </div>
 
         <aside className="rounded-[30px] border border-emerald-200/80 bg-white/92 p-5 shadow-[0_24px_60px_-48px_rgba(15,23,42,0.22)]">
-          <p className="text-sm font-semibold uppercase tracking-[0.14em] text-emerald-700">Équivalent à :</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.14em] text-emerald-700">
+            {locale === "en" ? "Equivalent to:" : "Équivalent à :"}
+          </p>
           <div className="mt-4 space-y-3">
             <EquivalentRow
               icon={FileText}
-              value={formatInteger(savings.monthlySheetsSaved)}
-              label="feuilles économisées par mois"
+              value={formatInteger(savings.monthlySheetsSaved, locale)}
+              label={locale === "en" ? "sheets saved per month" : "feuilles économisées par mois"}
             />
             <EquivalentRow
               icon={Printer}
-              value={formatMetric(savings.yearlyReamsSaved)}
-              label="ramettes A4 préservées par an"
+              value={formatMetric(savings.yearlyReamsSaved, locale)}
+              label={locale === "en" ? "A4 paper reams saved per year" : "ramettes A4 préservées par an"}
             />
             <EquivalentRow
               icon={Leaf}
-              value={`${formatMetric(savings.yearlyPaperWeightSavedKg)} kg`}
-              label="de papier évités par an"
+              value={`${formatMetric(savings.yearlyPaperWeightSavedKg, locale)} kg`}
+              label={locale === "en" ? "paper avoided per year" : "de papier évités par an"}
             />
           </div>
         </aside>
@@ -353,7 +387,9 @@ export function SavingsSimulator() {
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-sky-700 shadow-sm">
             <Calculator className="h-5 w-5" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-950">Détail des économies</h3>
+          <h3 className="text-lg font-semibold text-slate-950">
+            {locale === "en" ? "Savings breakdown" : "Détail des économies"}
+          </h3>
           <Info className="h-4 w-4 text-slate-400" />
         </div>
 
@@ -361,47 +397,84 @@ export function SavingsSimulator() {
           <DetailCard
             icon={FileText}
             iconClassName="text-sky-700"
-            title="Estimation basse (papier seul)"
-            value={`${formatEuro(savings.monthlyPaperSavedEuro)} / mois`}
-            caption={`soit ${formatEuro(savings.yearlyPaperSavedEuro)} par an`}
-            note="Basée sur le coût du papier seul à 0,0099 € par feuille A4."
+            title={locale === "en" ? "Low estimate (paper only)" : "Estimation basse (papier seul)"}
+            value={locale === "en" ? `${formatEuro(savings.monthlyPaperSavedEuro, locale)} / month` : `${formatEuro(savings.monthlyPaperSavedEuro, locale)} / mois`}
+            caption={
+              locale === "en"
+                ? `${formatEuro(savings.yearlyPaperSavedEuro, locale)} per year`
+                : `soit ${formatEuro(savings.yearlyPaperSavedEuro, locale)} par an`
+            }
+            note={
+              locale === "en"
+                ? "Based on paper cost only at €0.0099 per A4 sheet."
+                : "Basée sur le coût du papier seul à 0,0099 € par feuille A4."
+            }
           />
           <DetailCard
             icon={Droplets}
             iconClassName="text-violet-600"
-            title="Économie d’encre"
-            value={`${formatEuro(savings.monthlyBlackInkSaved)} / mois`}
-            caption={`soit ${formatEuro(savings.yearlyBlackInkSaved)} par an`}
-            note="Basée sur 0,15 € d’encre noire estimée par bordereau imprimé seul."
+            title={locale === "en" ? "Ink savings" : "Économie d’encre"}
+            value={locale === "en" ? `${formatEuro(savings.monthlyBlackInkSaved, locale)} / month` : `${formatEuro(savings.monthlyBlackInkSaved, locale)} / mois`}
+            caption={
+              locale === "en"
+                ? `${formatEuro(savings.yearlyBlackInkSaved, locale)} per year`
+                : `soit ${formatEuro(savings.yearlyBlackInkSaved, locale)} par an`
+            }
+            note={
+              locale === "en"
+                ? "Based on an estimated €0.15 of black ink per standalone printed label."
+                : "Basée sur 0,15 € d’encre noire estimée par bordereau imprimé seul."
+            }
           />
           <DetailCard
             icon={Coins}
             iconClassName="text-amber-700"
-            title="Estimation haute (papier + encre)"
-            value={`${formatEuro(savings.monthlyEuroSaved)} / mois`}
-            caption={`soit ${formatEuro(savings.yearlyEuroSaved)} par an`}
-            note="Basée sur le papier + l’encre, soit 0,1599 € par bordereau imprimé seul évité."
+            title={locale === "en" ? "High estimate (paper + ink)" : "Estimation haute (papier + encre)"}
+            value={locale === "en" ? `${formatEuro(savings.monthlyEuroSaved, locale)} / month` : `${formatEuro(savings.monthlyEuroSaved, locale)} / mois`}
+            caption={
+              locale === "en"
+                ? `${formatEuro(savings.yearlyEuroSaved, locale)} per year`
+                : `soit ${formatEuro(savings.yearlyEuroSaved, locale)} par an`
+            }
+            note={
+              locale === "en"
+                ? "Based on paper + ink, or €0.1599 per avoided standalone printed label."
+                : "Basée sur le papier + l’encre, soit 0,1599 € par bordereau imprimé seul évité."
+            }
           />
 
           <article className="rounded-[22px] border border-sky-100 bg-sky-50/80 p-5 shadow-[0_16px_45px_-40px_rgba(15,23,42,0.25)]">
             <div className="flex items-center gap-2">
               <Calculator className="h-4 w-4 text-sky-700" />
-              <h4 className="text-sm font-semibold text-sky-700">Comment c’est calculé ?</h4>
+              <h4 className="text-sm font-semibold text-sky-700">
+                {locale === "en" ? "How is it calculated?" : "Comment c’est calculé ?"}
+              </h4>
             </div>
             <div className="mt-4 space-y-4 text-sm leading-6 text-slate-700">
               <p>
-                Feuilles économisées = <strong>{formatInteger(savings.sheetsWithoutOptimization)}</strong> -{" "}
-                <strong>ceil({formatInteger(savings.sheetsWithoutOptimization)} / 4)</strong> ={" "}
-                <strong>{formatInteger(savings.monthlySheetsSaved)}</strong>.
+                {locale === "en" ? "Sheets saved" : "Feuilles économisées"} ={" "}
+                <strong>{formatInteger(savings.sheetsWithoutOptimization, locale)}</strong> -{" "}
+                <strong>ceil({formatInteger(savings.sheetsWithoutOptimization, locale)} / 4)</strong> ={" "}
+                <strong>{formatInteger(savings.monthlySheetsSaved, locale)}</strong>.
               </p>
               <p>
-                Coût évité par bordereau seul = <strong>0,0099 €</strong> de feuille + <strong>0,15 €</strong> d’encre
-                = <strong>0,1599 €</strong>.
+                {locale === "en" ? "Avoided cost per standalone label" : "Coût évité par bordereau seul"} ={" "}
+                <strong>{formatEuro(PAPER_COST_PER_SHEET_EUR, locale)}</strong>{" "}
+                {locale === "en" ? "for paper" : "de feuille"} +{" "}
+                <strong>{formatEuro(BLACK_INK_EQUIVALENT_PER_STANDALONE_LABEL_EUR, locale)}</strong>{" "}
+                {locale === "en" ? "for ink" : "d’encre"} ={" "}
+                <strong>{formatEuro(FULL_STANDALONE_LABEL_PRINT_COST_EUR, locale)}</strong>.
               </p>
               <p>
-                Pour votre volume actuel, cela représente <strong>{formatEuro(savings.monthlyPaperSavedEuro)}</strong>{" "}
-                de papier et <strong>{formatEuro(savings.monthlyBlackInkSaved)}</strong> d’encre, soit{" "}
-                <strong>{formatEuro(savings.monthlyEuroSaved)}</strong> par mois.
+                {locale === "en"
+                  ? "For your current volume, that represents"
+                  : "Pour votre volume actuel, cela représente"}{" "}
+                <strong>{formatEuro(savings.monthlyPaperSavedEuro, locale)}</strong>{" "}
+                {locale === "en" ? "of paper and" : "de papier et"}{" "}
+                <strong>{formatEuro(savings.monthlyBlackInkSaved, locale)}</strong>{" "}
+                {locale === "en" ? "of ink, for a total of" : "d’encre, soit"}{" "}
+                <strong>{formatEuro(savings.monthlyEuroSaved, locale)}</strong>{" "}
+                {locale === "en" ? "per month." : "par mois."}
               </p>
             </div>
           </article>
@@ -411,8 +484,10 @@ export function SavingsSimulator() {
       <div className="mt-4 flex items-start gap-3 rounded-[20px] border border-sky-100 bg-sky-50/85 px-4 py-3 text-sm leading-6 text-slate-600">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-sky-700" />
         <p>
-          <strong>Bon à savoir :</strong> cette estimation varie selon votre imprimante, la couverture noire réelle des
-          bordereaux, le type de cartouche ou toner et vos réglages d’impression.
+          <strong>{locale === "en" ? "Good to know:" : "Bon à savoir :"}</strong>{" "}
+          {locale === "en"
+            ? "this estimate varies depending on your printer, the actual black coverage of your labels, the cartridge or toner used, and your print settings."
+            : "cette estimation varie selon votre imprimante, la couverture noire réelle des bordereaux, le type de cartouche ou toner et vos réglages d’impression."}
         </p>
       </div>
     </section>

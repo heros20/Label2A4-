@@ -5,7 +5,9 @@ import {
   setSubscriptionPlanCookie,
 } from "@/lib/access-control"
 import { upsertBillingCustomer, upsertDayPassEntitlement } from "@/lib/billing-store"
+import { localizePath } from "@/lib/i18n"
 import { markPromoRedemptionCompleted } from "@/lib/promo-codes"
+import { getRequestLocaleFromRequest } from "@/lib/request-locale"
 import { trackServerEvent } from "@/lib/server-analytics"
 import { getStripe, isStripeConfigured } from "@/lib/stripe"
 import { isSupabaseAuthConfigured } from "@/lib/supabase/config"
@@ -35,16 +37,19 @@ function getMetadataUserId(metadata?: Record<string, string> | null) {
 
 export async function GET(request: NextRequest) {
   const cookieDraft = new NextResponse()
+  const locale = getRequestLocaleFromRequest(request)
+
+  const buildLocalizedRedirect = (pathname: string) => buildRedirect(request, localizePath(pathname, locale))
 
   try {
     if (!isStripeConfigured()) {
-      return NextResponse.redirect(buildRedirect(request, "/paiement/annule"))
+      return NextResponse.redirect(buildLocalizedRedirect("/paiement/annule"))
     }
 
     const sessionId = request.nextUrl.searchParams.get("session_id")
 
     if (!sessionId) {
-      return NextResponse.redirect(buildRedirect(request, "/paiement/annule"))
+      return NextResponse.redirect(buildLocalizedRedirect("/paiement/annule"))
     }
 
     const stripe = getStripe()
@@ -53,7 +58,7 @@ export async function GET(request: NextRequest) {
     })
 
     if (session.status !== "complete") {
-      return NextResponse.redirect(buildRedirect(request, "/paiement/annule"))
+      return NextResponse.redirect(buildLocalizedRedirect("/paiement/annule"))
     }
 
     const planId = session.metadata?.planId
@@ -68,7 +73,7 @@ export async function GET(request: NextRequest) {
 
       if (planId === "day-pass") {
         if (session.payment_status !== "paid" || !userId) {
-          return NextResponse.redirect(buildRedirect(request, "/paiement/annule"))
+          return NextResponse.redirect(buildLocalizedRedirect("/paiement/annule"))
         }
 
         if (customerId) {
@@ -110,11 +115,11 @@ export async function GET(request: NextRequest) {
           subscriptionId,
         })
       } else {
-        return NextResponse.redirect(buildRedirect(request, "/paiement/annule"))
+        return NextResponse.redirect(buildLocalizedRedirect("/paiement/annule"))
       }
     }
 
-    const response = NextResponse.redirect(buildRedirect(request, "/paiement/succes"))
+    const response = NextResponse.redirect(buildLocalizedRedirect("/paiement/succes"))
     copyCookies(cookieDraft, response)
     await trackServerEvent(request, "checkout_completed", {
       mode: planId === "day-pass" ? "payment" : "subscription",
@@ -125,7 +130,7 @@ export async function GET(request: NextRequest) {
     return response
   } catch (error) {
     console.error("[label2a4-checkout-success]", error)
-    const response = NextResponse.redirect(buildRedirect(request, "/paiement/annule"))
+    const response = NextResponse.redirect(buildLocalizedRedirect("/paiement/annule"))
     copyCookies(cookieDraft, response)
     return response
   }

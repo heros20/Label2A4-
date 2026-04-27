@@ -1,6 +1,7 @@
 import { createHash } from "crypto"
 import { NextRequest, NextResponse } from "next/server"
 import { sendBrevoTransactionalEmail } from "@/lib/brevo"
+import { getRequestLocaleFromRequest } from "@/lib/request-locale"
 import { consumeRateLimit } from "@/lib/rate-limit"
 import { siteConfig } from "@/lib/site-config"
 
@@ -10,7 +11,10 @@ const MAX_ATTACHMENT_FILES = 3
 const MAX_ATTACHMENT_BYTES = 2 * 1024 * 1024
 const MAX_TOTAL_ATTACHMENT_BYTES = 4 * 1024 * 1024
 const MAX_CONTACT_REQUEST_BYTES = MAX_TOTAL_ATTACHMENT_BYTES + 512 * 1024
-const ACCEPTED_ATTACHMENT_LABEL = "PNG, JPG, WebP, PDF, TXT ou CSV"
+const ACCEPTED_ATTACHMENT_LABEL = {
+  en: "PNG, JPG, WebP, PDF, TXT or CSV",
+  fr: "PNG, JPG, WebP, PDF, TXT ou CSV",
+} as const
 
 interface ContactPayload {
   email?: unknown
@@ -178,11 +182,15 @@ function sanitizeAttachmentName(filename: string, extension: string, index: numb
   return `${safeBase || `piece-jointe-${index + 1}`}.${extension}`
 }
 
-async function validateAttachments(files: File[]) {
+async function validateAttachments(files: File[], locale: "fr" | "en") {
   const selectedFiles = files.filter((file) => file.name || file.size > 0)
 
   if (selectedFiles.length > MAX_ATTACHMENT_FILES) {
-    throw new ContactValidationError(`Ajoutez ${MAX_ATTACHMENT_FILES} fichiers maximum.`)
+    throw new ContactValidationError(
+      locale === "en"
+        ? `Add up to ${MAX_ATTACHMENT_FILES} files.`
+        : `Ajoutez ${MAX_ATTACHMENT_FILES} fichiers maximum.`,
+    )
   }
 
   let totalSize = 0
@@ -190,12 +198,16 @@ async function validateAttachments(files: File[]) {
 
   for (const [index, file] of selectedFiles.entries()) {
     if (file.size <= 0) {
-      throw new ContactValidationError("Un fichier joint est vide.")
+      throw new ContactValidationError(
+        locale === "en" ? "One attached file is empty." : "Un fichier joint est vide.",
+      )
     }
 
     if (file.size > MAX_ATTACHMENT_BYTES) {
       throw new ContactValidationError(
-        `Chaque fichier doit faire ${formatFileSize(MAX_ATTACHMENT_BYTES)} maximum.`,
+        locale === "en"
+          ? `Each file must be ${formatFileSize(MAX_ATTACHMENT_BYTES)} maximum.`
+          : `Chaque fichier doit faire ${formatFileSize(MAX_ATTACHMENT_BYTES)} maximum.`,
         413,
       )
     }
@@ -203,7 +215,9 @@ async function validateAttachments(files: File[]) {
     totalSize += file.size
     if (totalSize > MAX_TOTAL_ATTACHMENT_BYTES) {
       throw new ContactValidationError(
-        `Les pièces jointes doivent faire ${formatFileSize(MAX_TOTAL_ATTACHMENT_BYTES)} maximum au total.`,
+        locale === "en"
+          ? `Attachments must stay under ${formatFileSize(MAX_TOTAL_ATTACHMENT_BYTES)} total.`
+          : `Les pièces jointes doivent faire ${formatFileSize(MAX_TOTAL_ATTACHMENT_BYTES)} maximum au total.`,
         413,
       )
     }
@@ -211,7 +225,11 @@ async function validateAttachments(files: File[]) {
     const buffer = Buffer.from(await file.arrayBuffer())
     const detectedType = detectAttachmentType(buffer, file.name, file.type)
     if (!detectedType) {
-      throw new ContactValidationError(`Format de fichier refuse. Formats acceptes : ${ACCEPTED_ATTACHMENT_LABEL}.`)
+      throw new ContactValidationError(
+        locale === "en"
+          ? `Unsupported file format. Accepted formats: ${ACCEPTED_ATTACHMENT_LABEL.en}.`
+          : `Format de fichier refuse. Formats acceptes : ${ACCEPTED_ATTACHMENT_LABEL.fr}.`,
+      )
     }
 
     attachments.push({
@@ -225,21 +243,23 @@ async function validateAttachments(files: File[]) {
   return attachments
 }
 
-async function readContactRequest(request: NextRequest) {
+async function readContactRequest(request: NextRequest, locale: "fr" | "en") {
   const contentType = request.headers.get("content-type")?.toLowerCase() ?? ""
 
   if (contentType.includes("multipart/form-data")) {
     const contentLength = getRequestContentLength(request)
     if (contentLength > MAX_CONTACT_REQUEST_BYTES) {
       throw new ContactValidationError(
-        `La demande est trop lourde. Pieces jointes: ${formatFileSize(MAX_TOTAL_ATTACHMENT_BYTES)} maximum au total.`,
+        locale === "en"
+          ? `The request is too large. Attachments must stay under ${formatFileSize(MAX_TOTAL_ATTACHMENT_BYTES)} total.`
+          : `La demande est trop lourde. Pieces jointes: ${formatFileSize(MAX_TOTAL_ATTACHMENT_BYTES)} maximum au total.`,
         413,
       )
     }
 
     const formData = await request.formData()
     return {
-      attachments: await validateAttachments(formData.getAll("attachments").filter(isFileEntry)),
+      attachments: await validateAttachments(formData.getAll("attachments").filter(isFileEntry), locale),
       payload: {
         email: formData.get("email"),
         message: formData.get("message"),
@@ -257,7 +277,10 @@ async function readContactRequest(request: NextRequest) {
     }
   }
 
-  throw new ContactValidationError("Format de demande non pris en charge.", 415)
+  throw new ContactValidationError(
+    locale === "en" ? "Unsupported request format." : "Format de demande non pris en charge.",
+    415,
+  )
 }
 
 function buildAttachmentTextContent(attachments: ValidatedAttachment[]) {
@@ -413,6 +436,8 @@ function buildContactHtmlContent(input: {
 }
 
 export async function POST(request: NextRequest) {
+  const locale = getRequestLocaleFromRequest(request)
+
   try {
     const rateLimit = await consumeRateLimit(request, {
       bucket: "contact",
@@ -422,12 +447,17 @@ export async function POST(request: NextRequest) {
 
     if (!rateLimit.allowed) {
       return NextResponse.json(
-        { error: "Trop de demandes de contact. Réessayez dans quelques minutes." },
+        {
+          error:
+            locale === "en"
+              ? "Too many contact requests. Please try again in a few minutes."
+              : "Trop de demandes de contact. Réessayez dans quelques minutes.",
+        },
         { status: 429 },
       )
     }
 
-    const { attachments, payload } = await readContactRequest(request)
+    const { attachments, payload } = await readContactRequest(request, locale)
 
     if (typeof payload.website === "string" && payload.website.trim()) {
       return NextResponse.json({ ok: true })
@@ -439,11 +469,17 @@ export async function POST(request: NextRequest) {
     const message = cleanMessage(payload.message, 4000)
 
     if (!name || !email || !message) {
-      return NextResponse.json({ error: "Nom, email et message sont requis." }, { status: 400 })
+      return NextResponse.json(
+        { error: locale === "en" ? "Name, email and message are required." : "Nom, email et message sont requis." },
+        { status: 400 },
+      )
     }
 
     if (!isValidEmail(email)) {
-      return NextResponse.json({ error: "Email invalide." }, { status: 400 })
+      return NextResponse.json(
+        { error: locale === "en" ? "Invalid email." : "Email invalide." },
+        { status: 400 },
+      )
     }
 
     const emailSubject = `[${siteConfig.siteName}] ${subject}`
@@ -476,7 +512,12 @@ export async function POST(request: NextRequest) {
 
     console.error("[label2a4-contact]", error)
     return NextResponse.json(
-      { error: "Impossible d'envoyer le message pour le moment. Utilisez l'email de support." },
+      {
+        error:
+          locale === "en"
+            ? "Unable to send the message right now. Use the support email instead."
+            : "Impossible d'envoyer le message pour le moment. Utilisez l'email de support.",
+      },
       { status: 500 },
     )
   }

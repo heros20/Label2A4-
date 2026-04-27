@@ -4,6 +4,7 @@ import { calculateLabelImpact } from "@/lib/impact"
 import { recordExportImpact } from "@/lib/impact-store"
 import type { ImpactSnapshot } from "@/lib/monetization-types"
 import { consumeRateLimit } from "@/lib/rate-limit"
+import { getRequestLocaleFromRequest } from "@/lib/request-locale"
 import { trackServerEvent } from "@/lib/server-analytics"
 
 export const runtime = "nodejs"
@@ -29,6 +30,7 @@ function normalizeExportCounts(input: { labelCount?: number; sheetCount?: number
 
 export async function POST(request: NextRequest) {
   const cookieDraft = new NextResponse()
+  const locale = getRequestLocaleFromRequest(request)
 
   try {
     const rateLimit = await consumeRateLimit(request, {
@@ -39,7 +41,12 @@ export async function POST(request: NextRequest) {
 
     if (!rateLimit.allowed) {
       return NextResponse.json(
-        { error: "Trop d'exports lancés en peu de temps. Réessayez dans quelques minutes." },
+        {
+          error:
+            locale === "en"
+              ? "Too many exports were started in a short time. Please try again in a few minutes."
+              : "Trop d'exports lancés en peu de temps. Réessayez dans quelques minutes.",
+        },
         { status: 429 },
       )
     }
@@ -54,13 +61,19 @@ export async function POST(request: NextRequest) {
     }
 
     if (!payload.action || !["download", "print"].includes(payload.action)) {
-      return NextResponse.json({ error: "Action d'export invalide." }, { status: 400 })
+      return NextResponse.json(
+        { error: locale === "en" ? "Invalid export action." : "Action d'export invalide." },
+        { status: 400 },
+      )
     }
 
     const exportCounts = normalizeExportCounts(payload)
 
     if (!exportCounts) {
-      return NextResponse.json({ error: "Nombre de planches invalide." }, { status: 400 })
+      return NextResponse.json(
+        { error: locale === "en" ? "Invalid sheet count." : "Nombre de planches invalide." },
+        { status: 400 },
+      )
     }
 
     const decision = await consumeExportQuota(request, cookieDraft, {
@@ -113,6 +126,9 @@ export async function POST(request: NextRequest) {
     return response
   } catch (error) {
     console.error("[label2a4-export]", error)
-    return NextResponse.json({ error: "Impossible de valider l'export." }, { status: 500 })
+    return NextResponse.json(
+      { error: locale === "en" ? "Unable to validate the export." : "Impossible de valider l'export." },
+      { status: 500 },
+    )
   }
 }

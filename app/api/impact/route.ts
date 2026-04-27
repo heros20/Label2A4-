@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { ensureAnonymousId } from "@/lib/access-control"
 import { getImpactSnapshot } from "@/lib/impact-store"
+import { getRequestLocaleFromRequest } from "@/lib/request-locale"
 import { getAuthenticatedUser } from "@/lib/supabase/auth"
 
 export const runtime = "nodejs"
 
 export async function GET(request: NextRequest) {
   const cookieDraft = new NextResponse()
+  const locale = getRequestLocaleFromRequest(request)
 
   try {
     const anonymousId = ensureAnonymousId(request, cookieDraft)
@@ -21,7 +23,14 @@ export async function GET(request: NextRequest) {
     return response
   } catch (error) {
     console.error("[label2a4-impact]", error)
-    return NextResponse.json({ error: "Impossible de charger le compteur écologique." }, { status: 500 })
+    return NextResponse.json(
+      {
+        error:
+          locale === "en"
+            ? "Unable to load the environmental counter."
+            : "Impossible de charger le compteur écologique.",
+      },
+      { status: 500 },
+    )
   }
 }
-

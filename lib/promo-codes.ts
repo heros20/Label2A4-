@@ -1,6 +1,7 @@
 import "server-only"
 import { createHash } from "crypto"
 import Stripe from "stripe"
+import type { Locale } from "@/lib/i18n"
 import type { PremiumPlanId } from "@/lib/monetization-types"
 import type { PromoKind, PromoQuote, PromoValidationPayload, PromoValidationStatus } from "@/lib/promo-types"
 import { formatEuroFromCents, siteConfig } from "@/lib/site-config"
@@ -72,28 +73,40 @@ function getPlanAmountCents(planId: PremiumPlanId) {
   return siteConfig.pricing.dayPassPriceCents
 }
 
-function buildMessage(status: PromoValidationStatus, quote?: PromoQuote) {
-  const messages: Record<Exclude<PromoValidationStatus, "valid">, string> = {
-    already_used: "Ce code promo a déjà été utilisé pour ce compte ou cet invité.",
-    expired: "Ce code promo est expiré.",
-    exhausted: "Ce code promo a atteint sa limite d'utilisation.",
-    inactive: "Ce code promo n'est pas actif.",
-    incompatible_plan: "Ce code promo n'est pas compatible avec cette offre.",
-    invalid: "Code promo invalide.",
-    not_configured: "Les codes promo ne sont pas encore configurés sur cet environnement.",
-    not_started: "Ce code promo n'est pas encore disponible.",
+function buildMessage(status: PromoValidationStatus, locale: Locale, quote?: PromoQuote) {
+  const messages: Record<Locale, Record<Exclude<PromoValidationStatus, "valid">, string>> = {
+    en: {
+      already_used: "This promo code has already been used for this account or guest.",
+      expired: "This promo code has expired.",
+      exhausted: "This promo code has reached its usage limit.",
+      inactive: "This promo code is not active.",
+      incompatible_plan: "This promo code is not compatible with this plan.",
+      invalid: "Invalid promo code.",
+      not_configured: "Promo codes are not configured on this environment yet.",
+      not_started: "This promo code is not available yet.",
+    },
+    fr: {
+      already_used: "Ce code promo a déjà été utilisé pour ce compte ou cet invité.",
+      expired: "Ce code promo est expiré.",
+      exhausted: "Ce code promo a atteint sa limite d'utilisation.",
+      inactive: "Ce code promo n'est pas actif.",
+      incompatible_plan: "Ce code promo n'est pas compatible avec cette offre.",
+      invalid: "Code promo invalide.",
+      not_configured: "Les codes promo ne sont pas encore configurés sur cet environnement.",
+      not_started: "Ce code promo n'est pas encore disponible.",
+    },
   }
 
   if (status === "valid") {
-    return quote?.message ?? "Code promo appliqué."
+    return quote?.message ?? (locale === "en" ? "Promo code applied." : "Code promo appliqué.")
   }
 
-  return messages[status]
+  return messages[locale][status]
 }
 
-function buildPayload(status: PromoValidationStatus, quote?: PromoQuote): PromoValidationPayload {
+function buildPayload(status: PromoValidationStatus, locale: Locale, quote?: PromoQuote): PromoValidationPayload {
   return {
-    message: buildMessage(status, quote),
+    message: buildMessage(status, locale, quote),
     quote,
     status,
     valid: status === "valid",
@@ -112,7 +125,7 @@ function isAmbiguousPromoStatusRpcError(error: { message?: string } | null) {
   return Boolean(error?.message?.includes('column reference "status" is ambiguous'))
 }
 
-function buildPromoQuote(promo: PromoCodeRecord, planId: PremiumPlanId): PromoQuote {
+function buildPromoQuote(promo: PromoCodeRecord, planId: PremiumPlanId, locale: Locale): PromoQuote {
   const baseAmountCents = getPlanAmountCents(planId)
   const label = promo.label?.trim() || `Code ${promo.code}`
 
@@ -128,7 +141,10 @@ function buildPromoQuote(promo: PromoCodeRecord, planId: PremiumPlanId): PromoQu
       expiresAt: promo.expires_at,
       kind: promo.kind,
       label,
-      message: `Code appliqué : ${trialDays} jours d'essai gratuit, puis ${formatEuroFromCents(baseAmountCents)} selon l'offre choisie.`,
+      message:
+        locale === "en"
+          ? `Code applied: ${trialDays} free trial day(s), then ${formatEuroFromCents(baseAmountCents, locale)} for the selected plan.`
+          : `Code appliqué : ${trialDays} jours d'essai gratuit, puis ${formatEuroFromCents(baseAmountCents, locale)} selon l'offre choisie.`,
       planId,
       trialDays,
     }
@@ -150,7 +166,10 @@ function buildPromoQuote(promo: PromoCodeRecord, planId: PremiumPlanId): PromoQu
     expiresAt: promo.expires_at,
     kind: promo.kind,
     label,
-    message: `Code appliqué : ${formatEuroFromCents(discountAmountCents)} de réduction. Total aujourd'hui : ${formatEuroFromCents(amountDueNowCents)}.`,
+    message:
+      locale === "en"
+        ? `Code applied: ${formatEuroFromCents(discountAmountCents, locale)} discount. Due today: ${formatEuroFromCents(amountDueNowCents, locale)}.`
+        : `Code appliqué : ${formatEuroFromCents(discountAmountCents, locale)} de réduction. Total aujourd'hui : ${formatEuroFromCents(amountDueNowCents, locale)}.`,
     planId,
     trialDays: null,
   }
@@ -206,44 +225,46 @@ async function getPromoRedemptionCounts(promoId: string, redeemerHash: string): 
 
 function validatePromoRecord(input: {
   counts: PromoRedemptionCounts
+  locale: Locale
   planId: PremiumPlanId
   promo: PromoCodeRecord
 }): PromoValidationPayload {
-  const { counts, planId, promo } = input
+  const { counts, locale, planId, promo } = input
   const now = Date.now()
 
   if (!promo.active) {
-    return buildPayload("inactive")
+    return buildPayload("inactive", locale)
   }
 
   if (promo.starts_at && new Date(promo.starts_at).getTime() > now) {
-    return buildPayload("not_started")
+    return buildPayload("not_started", locale)
   }
 
   if (promo.expires_at && new Date(promo.expires_at).getTime() <= now) {
-    return buildPayload("expired")
+    return buildPayload("expired", locale)
   }
 
   if (!isPlanEligible(promo, planId) || (promo.kind === "trial" && planId === "day-pass")) {
-    return buildPayload("incompatible_plan")
+    return buildPayload("incompatible_plan", locale)
   }
 
   if (promo.max_redemptions !== null && counts.totalCount >= promo.max_redemptions) {
-    return buildPayload("exhausted")
+    return buildPayload("exhausted", locale)
   }
 
   if (
     promo.max_redemptions_per_identity !== null &&
     counts.identityCount >= promo.max_redemptions_per_identity
   ) {
-    return buildPayload("already_used")
+    return buildPayload("already_used", locale)
   }
 
-  return buildPayload("valid", buildPromoQuote(promo, planId))
+  return buildPayload("valid", locale, buildPromoQuote(promo, planId, locale))
 }
 
 async function reservePromoCodeWithoutRpc(input: {
   anonymousId: string
+  locale: Locale
   planId: PremiumPlanId
   promo: PromoCodeRecord
   redeemerHash: string
@@ -252,6 +273,7 @@ async function reservePromoCodeWithoutRpc(input: {
   const counts = await getPromoRedemptionCounts(input.promo.id, input.redeemerHash)
   const payload = validatePromoRecord({
     counts,
+    locale: input.locale,
     planId: input.planId,
     promo: input.promo,
   })
@@ -291,12 +313,15 @@ async function reservePromoCodeWithoutRpc(input: {
 export async function validatePromoCodeForPlan(input: {
   anonymousId: string
   code: string
+  locale?: Locale
   planId: PremiumPlanId
   userId?: string | null
 }) {
+  const locale = input.locale ?? "fr"
+
   if (!isPromoStoreConfigured()) {
     return {
-      payload: buildPayload("not_configured"),
+      payload: buildPayload("not_configured", locale),
       promo: null,
     }
   }
@@ -305,7 +330,7 @@ export async function validatePromoCodeForPlan(input: {
 
   if (!code) {
     return {
-      payload: buildPayload("invalid"),
+      payload: buildPayload("invalid", locale),
       promo: null,
     }
   }
@@ -315,7 +340,7 @@ export async function validatePromoCodeForPlan(input: {
   } catch (error) {
     if (isMissingPromoStorageError(error as { code?: string; message?: string })) {
       return {
-        payload: buildPayload("not_configured"),
+        payload: buildPayload("not_configured", locale),
         promo: null,
       }
     }
@@ -335,7 +360,7 @@ export async function validatePromoCodeForPlan(input: {
   if (error) {
     if (isMissingPromoStorageError(error)) {
       return {
-        payload: buildPayload("not_configured"),
+        payload: buildPayload("not_configured", locale),
         promo: null,
       }
     }
@@ -345,7 +370,7 @@ export async function validatePromoCodeForPlan(input: {
 
   if (!promo) {
     return {
-      payload: buildPayload("invalid"),
+      payload: buildPayload("invalid", locale),
       promo: null,
     }
   }
@@ -359,7 +384,7 @@ export async function validatePromoCodeForPlan(input: {
   )
 
   return {
-    payload: validatePromoRecord({ counts, planId: input.planId, promo }),
+    payload: validatePromoRecord({ counts, locale, planId: input.planId, promo }),
     promo,
   }
 }
@@ -367,6 +392,7 @@ export async function validatePromoCodeForPlan(input: {
 export async function reservePromoCodeForCheckout(input: {
   anonymousId: string
   code: string
+  locale?: Locale
   planId: PremiumPlanId
   trialDays?: number | null
   userId?: string | null
@@ -401,6 +427,7 @@ export async function reservePromoCodeForCheckout(input: {
       })
       return reservePromoCodeWithoutRpc({
         anonymousId: input.anonymousId,
+        locale: input.locale ?? "fr",
         planId: input.planId,
         promo: validation.promo,
         redeemerHash,
@@ -414,7 +441,7 @@ export async function reservePromoCodeForCheckout(input: {
   const row = (Array.isArray(data) ? data[0] : data) as PromoReservationRow | null
 
   if (!row || row.status !== "valid" || !row.redemption_id) {
-    return buildPayload(row?.status ?? "invalid")
+    return buildPayload(row?.status ?? "invalid", input.locale ?? "fr")
   }
 
   return {

@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useEffect, useState, type FormEvent } from "react"
+import { localizePath, type Locale } from "@/lib/i18n"
 import { reportClientError } from "@/lib/client-monitoring"
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
 
@@ -10,22 +11,27 @@ const MIN_PASSWORD_LENGTH = 8
 const inputClass =
   "w-full rounded-[18px] border border-slate-200/80 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
 
-function getFriendlyResetError(error: unknown) {
+function getFriendlyResetError(error: unknown, locale: Locale) {
   const message = error instanceof Error ? error.message.toLowerCase() : ""
 
   if (message.includes("session") || message.includes("token") || message.includes("expired")) {
-    return "Lien de réinitialisation invalide ou expiré. Demandez un nouvel email."
+    return locale === "en"
+      ? "This reset link is invalid or expired. Request a new email."
+      : "Lien de réinitialisation invalide ou expiré. Demandez un nouvel email."
   }
 
   if (message.includes("password")) {
-    return "Le mot de passe ne respecte pas les règles de sécurité."
+    return locale === "en"
+      ? "The password does not meet the security requirements."
+      : "Le mot de passe ne respecte pas les règles de sécurité."
   }
 
-  return "Impossible de mettre à jour le mot de passe."
+  return locale === "en" ? "Unable to update the password." : "Impossible de mettre à jour le mot de passe."
 }
 
 interface PasswordResetCardProps {
   initialIsFirstLogin?: boolean
+  locale: Locale
   nextPath?: string
 }
 
@@ -35,7 +41,11 @@ function withPathStatus(path: string, status: string) {
   return `${url.pathname}${url.search}`
 }
 
-export function PasswordResetCard({ initialIsFirstLogin = false, nextPath = "/compte" }: PasswordResetCardProps) {
+export function PasswordResetCard({
+  initialIsFirstLogin = false,
+  locale,
+  nextPath = "/compte",
+}: PasswordResetCardProps) {
   const [password, setPassword] = useState("")
   const [passwordConfirmation, setPasswordConfirmation] = useState("")
   const [isFirstLogin, setIsFirstLogin] = useState(initialIsFirstLogin)
@@ -53,12 +63,16 @@ export function PasswordResetCard({ initialIsFirstLogin = false, nextPath = "/co
     setSuccess("")
 
     if (password.length < MIN_PASSWORD_LENGTH) {
-      setError(`Le mot de passe doit contenir au moins ${MIN_PASSWORD_LENGTH} caractères.`)
+      setError(
+        locale === "en"
+          ? `Your password must contain at least ${MIN_PASSWORD_LENGTH} characters.`
+          : `Le mot de passe doit contenir au moins ${MIN_PASSWORD_LENGTH} caractères.`,
+      )
       return
     }
 
     if (password !== passwordConfirmation) {
-      setError("Les deux mots de passe ne correspondent pas.")
+      setError(locale === "en" ? "The two passwords do not match." : "Les deux mots de passe ne correspondent pas.")
       return
     }
 
@@ -74,13 +88,21 @@ export function PasswordResetCard({ initialIsFirstLogin = false, nextPath = "/co
         throw authError
       }
 
-      setSuccess(isFirstLogin ? "Mot de passe créé." : "Mot de passe mis à jour.")
+      setSuccess(
+        isFirstLogin
+          ? locale === "en"
+            ? "Password created."
+            : "Mot de passe créé."
+          : locale === "en"
+            ? "Password updated."
+            : "Mot de passe mis à jour.",
+      )
       window.setTimeout(() => {
         window.location.assign(withPathStatus(nextPath, "password-created"))
       }, 900)
     } catch (caughtError) {
       reportClientError("account-auth-password-reset", caughtError)
-      setError(getFriendlyResetError(caughtError))
+      setError(getFriendlyResetError(caughtError, locale))
     } finally {
       setIsSubmitting(false)
     }
@@ -90,14 +112,16 @@ export function PasswordResetCard({ initialIsFirstLogin = false, nextPath = "/co
     <div className="space-y-4">
       {isFirstLogin && (
         <div className="rounded-[18px] border border-sky-100 bg-sky-50/80 p-4 text-sm leading-6 text-sky-950">
-          Votre email est valide. Créez maintenant votre mot de passe pour finaliser votre compte.
+          {locale === "en"
+            ? "Your email is valid. Create your password now to finish setting up your account."
+            : "Votre email est valide. Créez maintenant votre mot de passe pour finaliser votre compte."}
         </div>
       )}
 
       <form className="space-y-3" onSubmit={handleSubmit}>
         <div>
           <label htmlFor="new-password" className="mb-2 block text-sm font-medium text-slate-800">
-            Nouveau mot de passe
+            {locale === "en" ? "New password" : "Nouveau mot de passe"}
           </label>
           <input
             id="new-password"
@@ -107,12 +131,14 @@ export function PasswordResetCard({ initialIsFirstLogin = false, nextPath = "/co
             value={password}
             onChange={(event) => setPassword(event.currentTarget.value)}
           />
-          <p className="mt-2 text-xs leading-5 text-slate-500">{MIN_PASSWORD_LENGTH} caractères minimum.</p>
+          <p className="mt-2 text-xs leading-5 text-slate-500">
+            {MIN_PASSWORD_LENGTH} {locale === "en" ? "characters minimum." : "caractères minimum."}
+          </p>
         </div>
 
         <div>
           <label htmlFor="new-password-confirmation" className="mb-2 block text-sm font-medium text-slate-800">
-            Confirmer le nouveau mot de passe
+            {locale === "en" ? "Confirm new password" : "Confirmer le nouveau mot de passe"}
           </label>
           <input
             id="new-password-confirmation"
@@ -131,16 +157,24 @@ export function PasswordResetCard({ initialIsFirstLogin = false, nextPath = "/co
         >
           {isSubmitting
             ? isFirstLogin
-              ? "Création..."
-              : "Mise à jour..."
+              ? locale === "en"
+                ? "Creating..."
+                : "Création..."
+              : locale === "en"
+                ? "Updating..."
+                : "Mise à jour..."
             : isFirstLogin
-              ? "Créer mon mot de passe"
-              : "Mettre à jour le mot de passe"}
+              ? locale === "en"
+                ? "Create my password"
+                : "Créer mon mot de passe"
+              : locale === "en"
+                ? "Update password"
+                : "Mettre à jour le mot de passe"}
         </button>
       </form>
 
-      <Link href="/mot-de-passe-oublie" className="inline-flex text-sm font-medium text-sky-800 hover:underline">
-        Demander un nouvel email
+      <Link href={localizePath("/mot-de-passe-oublie", locale)} className="inline-flex text-sm font-medium text-sky-800 hover:underline">
+        {locale === "en" ? "Request a new email" : "Demander un nouvel email"}
       </Link>
 
       {error && <div className="text-sm text-red-600">{error}</div>}

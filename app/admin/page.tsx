@@ -41,7 +41,7 @@ export default async function AdminPage() {
 
   if (!isConfigured) {
     return (
-      <PageShell title="Admin" intro="Cette page est privée.">
+      <PageShell locale="fr" title="Admin" intro="Cette page est privée.">
         <section className={cardClass}>
           <h2 className="text-xl font-semibold text-slate-950">Configuration requise</h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">
@@ -55,6 +55,7 @@ export default async function AdminPage() {
   if (!isAuthenticated) {
     return (
       <PageShell
+        locale="fr"
         title="Admin"
         intro=""
       >
@@ -78,6 +79,7 @@ export default async function AdminPage() {
 
   return (
     <PageShell
+      locale="fr"
       title="Dashboard admin"
       intro="Vue rapide du trafic mesuré, des checkouts, des paiements et des abonnements actifs."
     >

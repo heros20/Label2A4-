@@ -1,25 +1,17 @@
-import type { Metadata } from "next"
 import { HomeTool } from "@/components/home-tool"
-import { siteConfig } from "@/lib/site-config"
+import { buildPageMetadata } from "@/lib/page-metadata"
+import { getSiteText } from "@/lib/site-copy"
 
-export const metadata: Metadata = {
-  title: "Étiquettes PDF en A4 x4 pour vos transporteurs",
-  description:
-    "Regroupez vos étiquettes PDF Chronopost, Colissimo, Mondial Relay et Happy Post sur des feuilles A4 x4 prêtes à imprimer.",
-  alternates: {
-    canonical: siteConfig.siteUrl,
-  },
-  openGraph: {
-    title: "Étiquettes PDF en A4 x4 pour vos transporteurs",
-    description: siteConfig.socialTagline,
-    url: siteConfig.siteUrl,
-  },
-  twitter: {
-    title: "Étiquettes PDF en A4 x4 pour vos transporteurs",
-    description: siteConfig.socialTagline,
-  },
-}
+const locale = "fr" as const
+const title = "Etiquettes PDF en A4 x4 pour vos transporteurs"
+
+export const metadata = buildPageMetadata({
+  title,
+  description: getSiteText(locale).description,
+  path: "/",
+  locale,
+})
 
 export default function HomePage() {
-  return <HomeTool />
+  return <HomeTool locale={locale} />
 }

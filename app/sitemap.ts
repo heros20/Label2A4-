@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next"
+import { LOCALES, localizePath } from "@/lib/i18n"
 import { seoPageList } from "@/lib/seo-pages"
 import { siteConfig } from "@/lib/site-config"
 
@@ -25,19 +26,23 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date()
 
   return [
-    ...staticRoutes.map((route) => ({
-      url: absoluteUrl(route.path),
-      lastModified,
-      changeFrequency: "monthly" as const,
-      priority: route.priority,
-    })),
-    ...seoPageList
-      .filter((page) => !staticRoutePaths.has(page.path))
-      .map((page) => ({
-        url: absoluteUrl(page.path),
+    ...LOCALES.flatMap((locale) =>
+      staticRoutes.map((route) => ({
+        url: absoluteUrl(localizePath(route.path, locale)),
         lastModified,
         changeFrequency: "monthly" as const,
-        priority: 0.85,
+        priority: route.priority,
       })),
+    ),
+    ...LOCALES.flatMap((locale) =>
+      seoPageList
+        .filter((page) => !staticRoutePaths.has(page.path))
+        .map((page) => ({
+          url: absoluteUrl(localizePath(page.path, locale)),
+          lastModified,
+          changeFrequency: "monthly" as const,
+          priority: 0.85,
+        })),
+    ),
   ]
 }

@@ -2,16 +2,18 @@
 
 import { Paperclip, X } from "lucide-react"
 import { useRef, useState, type ChangeEvent, type FormEvent } from "react"
+import type { Locale } from "@/lib/i18n"
 import { formatFileSize } from "@/lib/utils"
 
 interface ContactFormProps {
+  locale: Locale
   supportEmail: string
 }
 
 const MAX_ATTACHMENT_FILES = 3
 const MAX_ATTACHMENT_BYTES = 2 * 1024 * 1024
 const MAX_TOTAL_ATTACHMENT_BYTES = 4 * 1024 * 1024
-const ACCEPTED_ATTACHMENT_LABEL = "PNG, JPG, WebP, PDF, TXT ou CSV"
+const ACCEPTED_ATTACHMENT_LABEL = "PNG, JPG, WebP, PDF, TXT or CSV"
 const ACCEPTED_ATTACHMENT_INPUT =
   ".png,.jpg,.jpeg,.webp,.pdf,.txt,.log,.csv,image/png,image/jpeg,image/webp,application/pdf,text/plain,text/csv"
 
@@ -23,19 +25,23 @@ function getExtension(filename: string) {
   return extension === filename.toLowerCase() ? "" : extension
 }
 
-function getAttachmentValidationError(files: File[]) {
+function getAttachmentValidationError(files: File[], locale: Locale) {
   if (files.length > MAX_ATTACHMENT_FILES) {
-    return `${MAX_ATTACHMENT_FILES} fichiers maximum.`
+    return locale === "en" ? `Maximum ${MAX_ATTACHMENT_FILES} files.` : `${MAX_ATTACHMENT_FILES} fichiers maximum.`
   }
 
   const totalSize = files.reduce((total, file) => total + file.size, 0)
   if (totalSize > MAX_TOTAL_ATTACHMENT_BYTES) {
-    return `Les fichiers doivent faire ${formatFileSize(MAX_TOTAL_ATTACHMENT_BYTES)} maximum au total.`
+    return locale === "en"
+      ? `Files must stay under ${formatFileSize(MAX_TOTAL_ATTACHMENT_BYTES)} in total.`
+      : `Les fichiers doivent faire ${formatFileSize(MAX_TOTAL_ATTACHMENT_BYTES)} maximum au total.`
   }
 
   const oversizedFile = files.find((file) => file.size > MAX_ATTACHMENT_BYTES)
   if (oversizedFile) {
-    return `Chaque fichier doit faire ${formatFileSize(MAX_ATTACHMENT_BYTES)} maximum.`
+    return locale === "en"
+      ? `Each file must stay under ${formatFileSize(MAX_ATTACHMENT_BYTES)}.`
+      : `Chaque fichier doit faire ${formatFileSize(MAX_ATTACHMENT_BYTES)} maximum.`
   }
 
   const unsupportedFile = files.find((file) => {
@@ -44,13 +50,15 @@ function getAttachmentValidationError(files: File[]) {
   })
 
   if (unsupportedFile) {
-    return `Format refuse. Formats acceptes : ${ACCEPTED_ATTACHMENT_LABEL}.`
+    return locale === "en"
+      ? `Unsupported file format. Accepted formats: ${ACCEPTED_ATTACHMENT_LABEL}.`
+      : `Format refusé. Formats acceptés : ${ACCEPTED_ATTACHMENT_LABEL}.`
   }
 
   return ""
 }
 
-export function ContactForm({ supportEmail }: ContactFormProps) {
+export function ContactForm({ locale, supportEmail }: ContactFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
@@ -63,7 +71,7 @@ export function ContactForm({ supportEmail }: ContactFormProps) {
 
   const handleAttachmentChange = (event: ChangeEvent<HTMLInputElement>) => {
     const nextAttachments = Array.from(event.currentTarget.files ?? [])
-    const validationError = getAttachmentValidationError(nextAttachments)
+    const validationError = getAttachmentValidationError(nextAttachments, locale)
 
     if (validationError) {
       event.currentTarget.value = ""
@@ -99,6 +107,7 @@ export function ContactForm({ supportEmail }: ContactFormProps) {
       formData.append("name", name)
       formData.append("subject", subject)
       formData.append("website", website)
+      formData.append("locale", locale)
       attachments.forEach((file) => formData.append("attachments", file, file.name))
 
       const response = await fetch("/api/contact", {
@@ -108,7 +117,10 @@ export function ContactForm({ supportEmail }: ContactFormProps) {
       const payload = (await response.json()) as { error?: string; ok?: boolean }
 
       if (!response.ok || !payload.ok) {
-        throw new Error(payload.error ?? "Impossible d'envoyer le message.")
+        throw new Error(
+          payload.error ??
+            (locale === "en" ? "Unable to send your message." : "Impossible d'envoyer le message."),
+        )
       }
 
       setName("")
@@ -121,10 +133,20 @@ export function ContactForm({ supportEmail }: ContactFormProps) {
         fileInputRef.current.value = ""
       }
       setStatus("success")
-      setFeedback("Message envoye. Le support revient vers vous rapidement.")
+      setFeedback(
+        locale === "en"
+          ? "Message sent. Support will get back to you shortly."
+          : "Message envoyé. Le support revient vers vous rapidement.",
+      )
     } catch (error) {
       setStatus("error")
-      setFeedback(error instanceof Error ? error.message : "Impossible d'envoyer le message.")
+      setFeedback(
+        error instanceof Error
+          ? error.message
+          : locale === "en"
+            ? "Unable to send your message."
+            : "Impossible d'envoyer le message.",
+      )
     }
   }
 
@@ -136,7 +158,7 @@ export function ContactForm({ supportEmail }: ContactFormProps) {
     >
       <div className="grid gap-4 md:grid-cols-2">
         <label className="grid gap-2 text-sm font-medium text-slate-700">
-          Nom
+          {locale === "en" ? "Name" : "Nom"}
           <input
             value={name}
             onChange={(event) => setName(event.currentTarget.value)}
@@ -160,17 +182,21 @@ export function ContactForm({ supportEmail }: ContactFormProps) {
       </div>
 
       <label className="mt-4 grid gap-2 text-sm font-medium text-slate-700">
-        Sujet
+        {locale === "en" ? "Subject" : "Sujet"}
         <input
           value={subject}
           onChange={(event) => setSubject(event.currentTarget.value)}
           className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
-          placeholder="Question abonnement, bug PDF, remboursement..."
+          placeholder={
+            locale === "en"
+              ? "Subscription question, PDF issue, refund..."
+              : "Question abonnement, bug PDF, remboursement..."
+          }
         />
       </label>
 
       <label className="mt-4 grid gap-2 text-sm font-medium text-slate-700">
-        Message
+        {locale === "en" ? "Message" : "Message"}
         <textarea
           value={message}
           onChange={(event) => setMessage(event.currentTarget.value)}
@@ -180,10 +206,12 @@ export function ContactForm({ supportEmail }: ContactFormProps) {
       </label>
 
       <div className="mt-4 grid gap-2 text-sm font-medium text-slate-700">
-        <span>Pieces jointes</span>
+        <span>{locale === "en" ? "Attachments" : "Pièces jointes"}</span>
         <div className="rounded-2xl border border-slate-200 bg-white p-4">
           <p className="mb-3 text-sm font-normal leading-6 text-slate-600">
-            Pour une étiquette non reconnue, joignez de préférence le PDF source ou une capture du bordereau à analyser.
+            {locale === "en"
+              ? "If your label is not supported yet, please attach the original PDF or a screenshot of the label you want us to review."
+              : "Pour une étiquette non reconnue, joignez de préférence le PDF source ou une capture du bordereau à analyser."}
           </p>
           <input
             ref={fileInputRef}
@@ -201,11 +229,12 @@ export function ContactForm({ supportEmail }: ContactFormProps) {
               className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:border-slate-300 hover:bg-slate-50"
             >
               <Paperclip aria-hidden="true" className="h-4 w-4" />
-              Ajouter
+              {locale === "en" ? "Add file" : "Ajouter"}
             </label>
             <p className="text-xs leading-5 text-slate-500">
-              {ACCEPTED_ATTACHMENT_LABEL}. {MAX_ATTACHMENT_FILES} fichiers max, {formatFileSize(MAX_ATTACHMENT_BYTES)} chacun,{" "}
-              {formatFileSize(MAX_TOTAL_ATTACHMENT_BYTES)} au total.
+              {ACCEPTED_ATTACHMENT_LABEL}. {MAX_ATTACHMENT_FILES} {locale === "en" ? "files max" : "fichiers max"},{" "}
+              {formatFileSize(MAX_ATTACHMENT_BYTES)} {locale === "en" ? "each" : "chacun"},{" "}
+              {formatFileSize(MAX_TOTAL_ATTACHMENT_BYTES)} {locale === "en" ? "total" : "au total"}.
             </p>
           </div>
 
@@ -222,7 +251,7 @@ export function ContactForm({ supportEmail }: ContactFormProps) {
                   <button
                     type="button"
                     className="inline-flex h-8 w-8 flex-none items-center justify-center rounded-full text-slate-500 transition hover:bg-white hover:text-slate-900"
-                    aria-label={`Retirer ${file.name}`}
+                    aria-label={locale === "en" ? `Remove ${file.name}` : `Retirer ${file.name}`}
                     onClick={() => removeAttachment(index)}
                   >
                     <X aria-hidden="true" className="h-4 w-4" />
@@ -235,7 +264,7 @@ export function ContactForm({ supportEmail }: ContactFormProps) {
       </div>
 
       <label className="hidden">
-        Site web
+        Website
         <input value={website} onChange={(event) => setWebsite(event.currentTarget.value)} tabIndex={-1} />
       </label>
 
@@ -245,10 +274,10 @@ export function ContactForm({ supportEmail }: ContactFormProps) {
           disabled={status === "loading"}
           className="inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50"
         >
-          {status === "loading" ? "Envoi..." : "Envoyer"}
+          {status === "loading" ? (locale === "en" ? "Sending..." : "Envoi...") : locale === "en" ? "Send" : "Envoyer"}
         </button>
         <a href={`mailto:${supportEmail}`} className="text-sm font-medium text-sky-800 hover:underline">
-          Email direct
+          {locale === "en" ? "Direct email" : "Email direct"}
         </a>
       </div>
 

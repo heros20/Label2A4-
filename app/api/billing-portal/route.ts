@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getPlanCookiePayload, getRequestOrigin } from "@/lib/access-control"
 import { getBillingCustomerByUserId } from "@/lib/billing-store"
+import { localizePath } from "@/lib/i18n"
+import { getRequestLocaleFromRequest } from "@/lib/request-locale"
 import { trackServerEvent } from "@/lib/server-analytics"
 import { getStripe, isStripeConfigured } from "@/lib/stripe"
 import { getAuthenticatedUser } from "@/lib/supabase/auth"
@@ -10,10 +12,14 @@ export const runtime = "nodejs"
 
 export async function GET(request: NextRequest) {
   const cookieDraft = new NextResponse()
+  const locale = getRequestLocaleFromRequest(request)
 
   try {
     if (!isStripeConfigured()) {
-      return NextResponse.json({ error: "Portail de facturation indisponible." }, { status: 503 })
+      return NextResponse.json(
+        { error: locale === "en" ? "Billing portal unavailable." : "Portail de facturation indisponible." },
+        { status: 503 },
+      )
     }
 
     let customerId: string | undefined
@@ -23,7 +29,12 @@ export async function GET(request: NextRequest) {
 
       if (!authenticatedUser) {
         return NextResponse.json(
-          { error: "Connectez-vous à votre compte pour ouvrir le portail de facturation." },
+          {
+            error:
+              locale === "en"
+                ? "Sign in to your account to open the billing portal."
+                : "Connectez-vous à votre compte pour ouvrir le portail de facturation.",
+          },
           { status: 401 },
         )
       }
@@ -32,7 +43,12 @@ export async function GET(request: NextRequest) {
 
       if (!customerId) {
         return NextResponse.json(
-          { error: "Aucun portail de facturation n'est encore rattaché à ce compte." },
+          {
+            error:
+              locale === "en"
+                ? "No billing portal is attached to this account yet."
+                : "Aucun portail de facturation n'est encore rattaché à ce compte.",
+          },
           { status: 400 },
         )
       }
@@ -41,7 +57,12 @@ export async function GET(request: NextRequest) {
 
       if (!customerId) {
         return NextResponse.json(
-          { error: "Aucun abonnement facturable n'est associé à ce navigateur." },
+          {
+            error:
+              locale === "en"
+                ? "No billable subscription is linked to this browser."
+                : "Aucun abonnement facturable n'est associé à ce navigateur.",
+          },
           { status: 400 },
         )
       }
@@ -55,7 +76,7 @@ export async function GET(request: NextRequest) {
             configuration: process.env.STRIPE_BILLING_PORTAL_CONFIGURATION,
           }
         : {}),
-      return_url: `${getRequestOrigin(request)}/compte`,
+      return_url: `${getRequestOrigin(request)}${localizePath("/compte", locale)}`,
     })
 
     const response = NextResponse.json({ url: session.url })
@@ -68,6 +89,9 @@ export async function GET(request: NextRequest) {
     return response
   } catch (error) {
     console.error("[label2a4-billing-portal]", error)
-    return NextResponse.json({ error: "Portail de facturation indisponible." }, { status: 500 })
+    return NextResponse.json(
+      { error: locale === "en" ? "Billing portal unavailable." : "Portail de facturation indisponible." },
+      { status: 500 },
+    )
   }
 }

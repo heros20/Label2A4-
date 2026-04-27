@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { ensureAnonymousId } from "@/lib/access-control"
 import type { PremiumPlanId } from "@/lib/monetization-types"
 import { consumeRateLimit } from "@/lib/rate-limit"
+import { getRequestLocaleFromRequest } from "@/lib/request-locale"
 import { validatePromoCodeForPlan } from "@/lib/promo-codes"
 import { getAuthenticatedUser } from "@/lib/supabase/auth"
 
@@ -13,6 +14,7 @@ function isPremiumPlanId(value: unknown): value is PremiumPlanId {
 
 export async function POST(request: NextRequest) {
   const cookieDraft = new NextResponse()
+  const locale = getRequestLocaleFromRequest(request)
 
   try {
     const rateLimit = await consumeRateLimit(request, {
@@ -23,7 +25,14 @@ export async function POST(request: NextRequest) {
 
     if (!rateLimit.allowed) {
       return NextResponse.json(
-        { message: "Trop de tentatives de codes promo. Réessayez dans quelques minutes.", status: "exhausted", valid: false },
+        {
+          message:
+            locale === "en"
+              ? "Too many promo code attempts. Please try again in a few minutes."
+              : "Trop de tentatives de codes promo. Réessayez dans quelques minutes.",
+          status: "exhausted",
+          valid: false,
+        },
         { status: 429 },
       )
     }
@@ -35,7 +44,11 @@ export async function POST(request: NextRequest) {
 
     if (!isPremiumPlanId(payload.planId)) {
       return NextResponse.json(
-        { message: "Offre premium inconnue.", status: "incompatible_plan", valid: false },
+        {
+          message: locale === "en" ? "Unknown premium plan." : "Offre premium inconnue.",
+          status: "incompatible_plan",
+          valid: false,
+        },
         { status: 400 },
       )
     }
@@ -45,6 +58,7 @@ export async function POST(request: NextRequest) {
     const validation = await validatePromoCodeForPlan({
       anonymousId,
       code: payload.code ?? "",
+      locale,
       planId: payload.planId,
       userId: authenticatedUser?.id,
     })
@@ -55,9 +69,12 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("[label2a4-promo-validate]", error)
     return NextResponse.json(
-      { message: "Impossible de vérifier ce code promo.", status: "invalid", valid: false },
+      {
+        message: locale === "en" ? "Unable to validate this promo code." : "Impossible de vérifier ce code promo.",
+        status: "invalid",
+        valid: false,
+      },
       { status: 500 },
     )
   }
 }
-

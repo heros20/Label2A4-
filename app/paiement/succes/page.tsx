@@ -1,32 +1,15 @@
-import Link from "next/link"
-import { AnalyticsEventOnMount } from "@/components/analytics-event-on-mount"
-import { PageShell } from "@/components/page-shell"
+import { PaymentSuccessPageContent } from "@/components/pages/public-pages"
+import { buildPageMetadata } from "@/lib/page-metadata"
 
-export const metadata = {
-  title: "Paiement confirmé",
-}
+const locale = "fr" as const
+
+export const metadata = buildPageMetadata({
+  title: "Paiement confirme",
+  description: "Votre paiement Label2A4 a ete confirme. Retrouvez votre acces premium depuis votre compte.",
+  path: "/paiement/succes",
+  locale,
+})
 
 export default function PaiementSuccesPage() {
-  return (
-    <PageShell
-      title="Paiement confirmé"
-      intro="Votre paiement a bien été confirmé. Votre accès premium sera rattaché à votre compte et visible depuis l'espace client."
-    >
-      <AnalyticsEventOnMount eventName="payment_success_page_view" />
-      <div className="flex flex-wrap gap-3">
-        <Link
-          href="/"
-          className="inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white"
-        >
-          Revenir à l'outil
-        </Link>
-        <Link
-          href="/compte"
-          className="inline-flex items-center rounded-full border border-slate-200/80 bg-white px-5 py-3 text-sm font-semibold text-slate-800"
-        >
-          Ouvrir mon compte
-        </Link>
-      </div>
-    </PageShell>
-  )
+  return <PaymentSuccessPageContent locale={locale} />
 }

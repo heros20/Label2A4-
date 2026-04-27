@@ -1,17 +1,20 @@
 "use client"
 
 import { useState } from "react"
+import type { Locale } from "@/lib/i18n"
 import { trackClientEvent } from "@/lib/client-analytics"
 import { reportClientError } from "@/lib/client-monitoring"
 
 interface BillingPortalButtonProps {
   className?: string
   label?: string
+  locale: Locale
 }
 
 export function BillingPortalButton({
   className,
-  label = "Gérer mon abonnement",
+  label,
+  locale,
 }: BillingPortalButtonProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
@@ -28,14 +31,25 @@ export function BillingPortalButton({
       const payload = (await response.json()) as { error?: string; url?: string }
 
       if (!response.ok || !payload.url) {
-        throw new Error(payload.error ?? "Impossible d'ouvrir le portail de résiliation.")
+        throw new Error(
+          payload.error ??
+            (locale === "en"
+              ? "Unable to open the billing portal."
+              : "Impossible d'ouvrir le portail de résiliation."),
+        )
       }
 
       trackClientEvent("billing_portal_redirected")
       window.location.href = payload.url
     } catch (caughtError) {
       reportClientError("billing-portal-button", caughtError)
-      setError(caughtError instanceof Error ? caughtError.message : "Portail de résiliation indisponible.")
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : locale === "en"
+            ? "Billing portal unavailable."
+            : "Portail de résiliation indisponible.",
+      )
     } finally {
       setIsLoading(false)
     }
@@ -44,7 +58,11 @@ export function BillingPortalButton({
   return (
     <div className="space-y-2">
       <button type="button" className={className} onClick={handleClick} disabled={isLoading}>
-        {isLoading ? "Ouverture..." : label}
+        {isLoading
+          ? locale === "en"
+            ? "Opening..."
+            : "Ouverture..."
+          : label ?? (locale === "en" ? "Manage my subscription" : "Gérer mon abonnement")}
       </button>
       {error && <div className="text-sm text-red-600">{error}</div>}
     </div>

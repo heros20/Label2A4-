@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useState } from "react"
+import { localizePath, type Locale } from "@/lib/i18n"
 import { trackClientEvent } from "@/lib/client-analytics"
 import { reportClientError } from "@/lib/client-monitoring"
 import type { PremiumPlanId } from "@/lib/monetization-types"
@@ -12,6 +13,7 @@ import { cn } from "@/lib/utils"
 interface CheckoutButtonProps {
   className?: string
   label: string
+  locale: Locale
   planId: PremiumPlanId
 }
 
@@ -23,21 +25,21 @@ type CheckoutResponsePayload = {
   url?: string
 }
 
-const dynamicPaymentMethods = ["Carte bancaire", "PayPal", "Apple Pay", "Google Pay"] as const
+const dynamicPaymentMethods = ["Card", "PayPal", "Apple Pay", "Google Pay"] as const
 
 function normalizePromoCode(value: string) {
   return value.trim().toUpperCase().replace(/\s+/g, "")
 }
 
-function getDueTodayLabel(quote: PromoQuote) {
+function getDueTodayLabel(quote: PromoQuote, locale: Locale) {
   if (quote.trialDays) {
-    return "0,00 € aujourd'hui"
+    return locale === "en" ? "€0.00 today" : "0,00 € aujourd'hui"
   }
 
-  return formatEuroFromCents(quote.amountDueNowCents)
+  return formatEuroFromCents(quote.amountDueNowCents, locale)
 }
 
-export function CheckoutButton({ className, label, planId }: CheckoutButtonProps) {
+export function CheckoutButton({ className, label, locale, planId }: CheckoutButtonProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [isValidatingPromo, setIsValidatingPromo] = useState(false)
   const [error, setError] = useState("")
@@ -66,13 +68,14 @@ export function CheckoutButton({ className, label, planId }: CheckoutButtonProps
         },
         body: JSON.stringify({
           code: normalizedCode,
+          locale,
           planId,
         }),
       })
       const payload = (await response.json()) as PromoValidationPayload
 
       if (!response.ok || !payload.valid || !payload.quote) {
-        throw new Error(payload.message || "Code promo invalide.")
+        throw new Error(payload.message || (locale === "en" ? "Invalid promo code." : "Code promo invalide."))
       }
 
       setPromoQuote(payload.quote)
@@ -85,7 +88,13 @@ export function CheckoutButton({ className, label, planId }: CheckoutButtonProps
     } catch (caughtError) {
       reportClientError("promo-validation", caughtError, { planId })
       setPromoQuote(null)
-      setPromoError(caughtError instanceof Error ? caughtError.message : "Code promo invalide.")
+      setPromoError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : locale === "en"
+            ? "Invalid promo code."
+            : "Code promo invalide.",
+      )
       return null
     } finally {
       setIsValidatingPromo(false)
@@ -95,7 +104,9 @@ export function CheckoutButton({ className, label, planId }: CheckoutButtonProps
   const handleCheckout = async () => {
     if (!hasImmediateAccessConsent) {
       setError(
-        "Vous devez confirmer l'activation immédiate du service et votre renonciation au droit de rétractation.",
+        locale === "en"
+          ? "You must confirm the immediate activation of the service and waive the withdrawal right."
+          : "Vous devez confirmer l'activation immédiate du service et votre renonciation au droit de rétractation.",
       )
       return
     }
@@ -126,9 +137,10 @@ export function CheckoutButton({ className, label, planId }: CheckoutButtonProps
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          immediateAccessConsent: hasImmediateAccessConsent,
+          locale,
           planId,
           promoCode: activePromoQuote?.code,
-          immediateAccessConsent: hasImmediateAccessConsent,
           withdrawalWaiver: hasImmediateAccessConsent,
         }),
       })
@@ -138,7 +150,7 @@ export function CheckoutButton({ className, label, planId }: CheckoutButtonProps
       if (response.status === 401 && payload.code === "auth_required") {
         const redirectTo = payload.redirectTo?.startsWith("/")
           ? payload.redirectTo
-          : `/compte?checkoutPlan=${encodeURIComponent(planId)}`
+          : localizePath(`/compte?checkoutPlan=${encodeURIComponent(planId)}`, locale)
 
         trackClientEvent("checkout_auth_required", { planId })
         window.location.href = redirectTo
@@ -146,12 +158,12 @@ export function CheckoutButton({ className, label, planId }: CheckoutButtonProps
       }
 
       if (response.status === 400 && payload.code === "promo_invalid") {
-        setPromoError(payload.promo?.message ?? payload.error ?? "Code promo invalide.")
+        setPromoError(payload.promo?.message ?? payload.error ?? (locale === "en" ? "Invalid promo code." : "Code promo invalide."))
         return
       }
 
       if (!response.ok || !payload.url) {
-        throw new Error(payload.error ?? "Paiement indisponible pour le moment.")
+        throw new Error(payload.error ?? (locale === "en" ? "Payment is unavailable right now." : "Paiement indisponible pour le moment."))
       }
 
       trackClientEvent("checkout_redirected", {
@@ -162,7 +174,13 @@ export function CheckoutButton({ className, label, planId }: CheckoutButtonProps
       window.location.href = payload.url
     } catch (caughtError) {
       reportClientError("checkout-button", caughtError, { planId })
-      setError(caughtError instanceof Error ? caughtError.message : "Impossible de démarrer le paiement.")
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : locale === "en"
+            ? "Unable to start checkout."
+            : "Impossible de démarrer le paiement.",
+      )
     } finally {
       setIsLoading(false)
     }
@@ -171,7 +189,9 @@ export function CheckoutButton({ className, label, planId }: CheckoutButtonProps
   return (
     <div className="space-y-3">
       <div className="rounded-[20px] border border-slate-200/80 bg-white/80 p-3">
-        <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Paiement sécurisé</div>
+        <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+          {locale === "en" ? "Secure checkout" : "Paiement sécurisé"}
+        </div>
         <div className="mt-2 flex flex-wrap gap-2">
           {dynamicPaymentMethods.map((method) => (
             <span
@@ -183,14 +203,15 @@ export function CheckoutButton({ className, label, planId }: CheckoutButtonProps
           ))}
         </div>
         <p className="mt-2 text-xs leading-5 text-slate-500">
-          Les moyens de paiement disponibles s’affichent automatiquement selon votre appareil, votre navigateur et votre
-          pays. Si un portefeuille numérique n’est pas disponible, la carte bancaire reste proposée.
+          {locale === "en"
+            ? "Available payment methods are shown automatically depending on your device, browser and country. If a digital wallet is not available, card payment remains available."
+            : "Les moyens de paiement disponibles s’affichent automatiquement selon votre appareil, votre navigateur et votre pays. Si un portefeuille numérique n’est pas disponible, la carte bancaire reste proposée."}
         </p>
       </div>
 
       <div className="rounded-[20px] border border-slate-200/80 bg-slate-50/80 p-3">
         <label htmlFor={`promo-${planId}`} className="text-sm font-semibold text-slate-800">
-          Code promo
+          {locale === "en" ? "Promo code" : "Code promo"}
         </label>
         <div className="mt-2 flex flex-col gap-2">
           <input
@@ -212,15 +233,16 @@ export function CheckoutButton({ className, label, planId }: CheckoutButtonProps
             onClick={validatePromoCode}
             disabled={!promoCode.trim() || isLoading || isValidatingPromo}
           >
-            {isValidatingPromo ? "Vérification..." : "Appliquer"}
+            {isValidatingPromo ? (locale === "en" ? "Checking..." : "Vérification...") : locale === "en" ? "Apply" : "Appliquer"}
           </button>
         </div>
         {promoQuote && (
           <div className="mt-3 rounded-[18px] border border-emerald-200 bg-emerald-50 p-3 text-sm leading-6 text-emerald-950">
             <div className="font-semibold">{promoQuote.message}</div>
             <div className="mt-1 text-xs text-emerald-800">
-              Prix initial : {formatEuroFromCents(promoQuote.baseAmountCents)} · Réduction :{" "}
-              {formatEuroFromCents(promoQuote.discountAmountCents)} · À payer : {getDueTodayLabel(promoQuote)}
+              {locale === "en" ? "Original price" : "Prix initial"}: {formatEuroFromCents(promoQuote.baseAmountCents, locale)} ·{" "}
+              {locale === "en" ? "Discount" : "Réduction"}: {formatEuroFromCents(promoQuote.discountAmountCents, locale)} ·{" "}
+              {locale === "en" ? "Due today" : "À payer"}: {getDueTodayLabel(promoQuote, locale)}
             </div>
           </div>
         )}
@@ -236,9 +258,11 @@ export function CheckoutButton({ className, label, planId }: CheckoutButtonProps
           suppressHydrationWarning
         />
         <span>
-          J'accepte l'activation immédiate du service premium et je renonce à mon droit de rétractation une fois l'accès
-          activé. Voir les{" "}
-          <Link href="/cgv" className="font-medium text-sky-800 hover:underline">
+          {locale === "en"
+            ? "I agree to the immediate activation of the premium service and waive my withdrawal right once access has been activated."
+            : "J'accepte l'activation immédiate du service premium et je renonce à mon droit de rétractation une fois l'accès activé."}{" "}
+          {locale === "en" ? "See the" : "Voir les"}{" "}
+          <Link href={localizePath("/cgv", locale)} className="font-medium text-sky-800 hover:underline">
             CGV
           </Link>
           .
@@ -253,12 +277,20 @@ export function CheckoutButton({ className, label, planId }: CheckoutButtonProps
         onClick={handleCheckout}
         disabled={isLoading || isValidatingPromo}
       >
-        {isLoading ? "Redirection..." : promoQuote?.trialDays ? "Activer l'essai gratuit" : label}
+        {isLoading
+          ? locale === "en"
+            ? "Redirecting..."
+            : "Redirection..."
+          : promoQuote?.trialDays
+            ? locale === "en"
+              ? "Start free trial"
+              : "Activer l'essai gratuit"
+            : label}
       </button>
       {error && <div className="text-sm text-red-600">{error}</div>}
       {!siteConfig.launch.stripeEnabled && (
         <div className="text-xs text-slate-500">
-          Le paiement reste à finaliser avant lancement public.
+          {locale === "en" ? "Checkout still needs to be finalized before public launch." : "Le paiement reste à finaliser avant lancement public."}
         </div>
       )}
     </div>

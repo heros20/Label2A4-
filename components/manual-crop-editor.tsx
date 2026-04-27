@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef } from "react"
+import type { Locale } from "@/lib/i18n"
 import type { ManualCropRect } from "@/lib/label-profiles"
 
 const MIN_RECT_SIZE = 0.04
@@ -25,6 +26,7 @@ interface ManualCropEditorProps {
   imageHeight: number
   imageUrl: string
   imageWidth: number
+  locale: Locale
   onChange: (nextRect: ManualCropRect) => void
   value: ManualCropRect
 }
@@ -55,6 +57,7 @@ export function ManualCropEditor({
   imageHeight,
   imageUrl,
   imageWidth,
+  locale,
   onChange,
   value,
 }: ManualCropEditorProps) {
@@ -307,7 +310,12 @@ export function ManualCropEditor({
         onContextMenu={(event) => event.preventDefault()}
         onPointerDown={beginCreate}
       >
-        <img src={imageUrl} alt="Aperçu du PDF source" className="block h-full w-full object-contain" draggable={false} />
+        <img
+          src={imageUrl}
+          alt={locale === "en" ? "Source PDF preview" : "Aperçu du PDF source"}
+          className="block h-full w-full object-contain"
+          draggable={false}
+        />
 
         <div
           className="absolute border-2 border-sky-500 bg-sky-400/10 shadow-[0_0_0_9999px_rgba(12,18,32,0.5)]"
@@ -315,7 +323,7 @@ export function ManualCropEditor({
           onPointerDown={beginMove}
         >
           <div className="absolute left-2 top-2 rounded-full bg-sky-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
-            Zone conservée
+            {locale === "en" ? "Kept area" : "Zone conservée"}
           </div>
 
           <div

@@ -28,6 +28,12 @@ import { ManualCropEditor } from "@/components/manual-crop-editor"
 import { SiteLogo } from "@/components/site-logo"
 import { trackClientEvent } from "@/lib/client-analytics"
 import { downloadBlob, printBlob } from "@/lib/download"
+import { localizePath, type Locale } from "@/lib/i18n"
+import {
+  getChronopostVariantDisplay,
+  getMondialRelayVariantDisplay,
+  getProfileDisplay,
+} from "@/lib/label-profile-copy"
 import {
   CHRONOPOST_VARIANTS,
   DEFAULT_CHRONOPOST_VARIANT_ID,
@@ -46,6 +52,7 @@ import {
   buildLabelA4Pdf,
   buildLabelPdfName,
   getPdfPageCount,
+  PDF_TOOL_ERROR_MESSAGES,
   normalizeManualCropRect,
   normalizePdfRotation,
   type PdfRotation,
@@ -89,6 +96,13 @@ const SINGLE_LABEL_PLACEMENTS: Array<{ id: SingleLabelSlot; label: string }> = [
 const FREE_MAX_PDF_FILES_PER_BATCH = siteConfig.pricing.freeMaxPdfFilesPerBatch
 const FREE_MAX_A4_SHEETS_PER_EXPORT = siteConfig.pricing.freeMaxA4SheetsPerExport
 
+const SINGLE_LABEL_PLACEMENTS_EN: Array<{ id: SingleLabelSlot; label: string }> = [
+  { id: "top-left", label: "Top left" },
+  { id: "top-right", label: "Top right" },
+  { id: "bottom-left", label: "Bottom left" },
+  { id: "bottom-right", label: "Bottom right" },
+]
+
 function isDefaultManualCrop(crop?: ManualCropRect | null) {
   if (!crop) {
     return true
@@ -104,8 +118,32 @@ function isDefaultManualCrop(crop?: ManualCropRect | null) {
   )
 }
 
-function formatInteger(value: number) {
-  return new Intl.NumberFormat("fr-FR").format(value)
+function formatInteger(value: number, locale: Locale = "fr") {
+  return new Intl.NumberFormat(locale === "en" ? "en-US" : "fr-FR").format(value)
+}
+
+function translatePdfToolError(message: string, locale: Locale) {
+  if (message === PDF_TOOL_ERROR_MESSAGES.emptyCrop) {
+    return locale === "en" ? "The selected area produces an empty page." : "La zone sélectionnée produit une page vide."
+  }
+
+  if (message === PDF_TOOL_ERROR_MESSAGES.noPdf) {
+    return locale === "en" ? "Add at least one PDF." : "Ajoutez au moins un PDF."
+  }
+
+  if (message === PDF_TOOL_ERROR_MESSAGES.noLabelPage) {
+    return locale === "en"
+      ? "Select at least one label page."
+      : "Sélectionnez au moins une page d'étiquette."
+  }
+
+  if (message === PDF_TOOL_ERROR_MESSAGES.incompleteProfile) {
+    return locale === "en"
+      ? "The selected carrier profile is incomplete."
+      : "Le profil de rognage est incomplet."
+  }
+
+  return message
 }
 
 function getAllPageIndices(pageCount: number) {
@@ -126,7 +164,7 @@ function normalizePageSelection(pageCount: number, selectedPageIndices?: number[
   ).sort((first, second) => first - second)
 }
 
-export function HomeTool() {
+export function HomeTool({ locale }: { locale: Locale }) {
   const [files, setFiles] = useState<FileWithId[]>([])
   const [focusedFileId, setFocusedFileId] = useState<string | null>(null)
   const [profileId, setProfileId] = useState<LabelProfileId>(LABEL_PROFILES[0].id)
@@ -165,6 +203,7 @@ export function HomeTool() {
   const [activeExportAction, setActiveExportAction] = useState<"download" | "print" | null>(null)
   const workspaceRef = useRef<HTMLElement | null>(null)
   const appendFilesInputRef = useRef<HTMLInputElement | null>(null)
+  const singleLabelPlacements = locale === "en" ? SINGLE_LABEL_PLACEMENTS_EN : SINGLE_LABEL_PLACEMENTS
 
   const baseSelectedProfile = LABEL_PROFILES.find((profile) => profile.id === profileId) ?? LABEL_PROFILES[0]
   const selectedProfile = getResolvedLabelProfile(profileId, { chronopostVariantId, mondialRelayVariantId })
@@ -231,15 +270,27 @@ export function HomeTool() {
       ),
     [files, rotationsByFileId, selectedDefaultRotation],
   )
-  const premiumPlanLabel = accessSnapshot?.plan && accessSnapshot.plan !== "free" ? getPlanLabel(accessSnapshot.plan) : null
+  const premiumPlanLabel =
+    accessSnapshot?.plan && accessSnapshot.plan !== "free" ? getPlanLabel(accessSnapshot.plan, locale) : null
+  const selectedProfileDisplay = getProfileDisplay(locale, baseSelectedProfile.id)
+  const selectedProfileShortLabel =
+    baseSelectedProfile.id === "chronopost"
+      ? `${selectedProfileDisplay.shortLabel} ${getChronopostVariantDisplay(locale, chronopostVariantId).shortLabel}`
+      : baseSelectedProfile.id === "mondial-relay"
+        ? `${selectedProfileDisplay.shortLabel} ${getMondialRelayVariantDisplay(locale, mondialRelayVariantId).shortLabel}`
+        : selectedProfileDisplay.shortLabel
   const hasPremiumAccess = accessSnapshot?.isPremium === true
   const shouldApplyFreeBatchLimits = accessSnapshot ? !accessSnapshot.isPremium : false
   const exceedsFreeFileLimit = shouldApplyFreeBatchLimits && files.length > FREE_MAX_PDF_FILES_PER_BATCH
   const exceedsFreeSheetLimit = shouldApplyFreeBatchLimits && totalSheets > FREE_MAX_A4_SHEETS_PER_EXPORT
   const freeBatchLimitError = exceedsFreeFileLimit
-    ? `La version gratuite accepte jusqu'a ${FREE_MAX_PDF_FILES_PER_BATCH} PDF par lot. Passez en premium pour les gros lots.`
+    ? locale === "en"
+      ? `The free plan accepts up to ${FREE_MAX_PDF_FILES_PER_BATCH} PDFs per batch. Upgrade to premium for larger batches.`
+      : `La version gratuite accepte jusqu'a ${FREE_MAX_PDF_FILES_PER_BATCH} PDF par lot. Passez en premium pour les gros lots.`
     : exceedsFreeSheetLimit
-      ? `La version gratuite genere une seule planche A4 par lot. Passez en premium pour exporter ${totalSheets} planches.`
+      ? locale === "en"
+        ? `The free plan generates one A4 sheet per batch. Upgrade to premium to export ${totalSheets} sheets.`
+        : `La version gratuite genere une seule planche A4 par lot. Passez en premium pour exporter ${totalSheets} planches.`
       : ""
 
   useEffect(() => {
@@ -266,7 +317,12 @@ export function HomeTool() {
         const payload = (await response.json()) as ImpactResponsePayload
 
         if (!response.ok || !payload.impact) {
-          throw new Error(payload.error ?? "Impossible de charger le compteur écologique.")
+          throw new Error(
+            payload.error ??
+              (locale === "en"
+                ? "Unable to load the environmental counter."
+                : "Impossible de charger le compteur écologique."),
+          )
         }
 
         if (active) {
@@ -282,7 +338,11 @@ export function HomeTool() {
         reportClientError("impact-fetch", error)
 
         if (active) {
-          setImpactError("Le compteur écologique sera mis à jour après votre prochain export.")
+          setImpactError(
+            locale === "en"
+              ? "The environmental counter will update after your next export."
+              : "Le compteur écologique sera mis à jour après votre prochain export.",
+          )
         }
       })
 
@@ -300,7 +360,9 @@ export function HomeTool() {
     const payload = (await response.json()) as AccessResponsePayload
 
     if (!response.ok || !payload.access) {
-      throw new Error(payload.error ?? "Impossible de charger votre quota.")
+      throw new Error(
+        payload.error ?? (locale === "en" ? "Unable to load your quota." : "Impossible de charger votre quota."),
+      )
     }
 
     setAccessSnapshot(payload.access)
@@ -323,7 +385,9 @@ export function HomeTool() {
 
         if (active) {
           setAccessError(
-            "Le statut gratuit/premium n'a pas pu être chargé. Les exports resteront revérifiés au moment du téléchargement.",
+            locale === "en"
+              ? "Free and premium access could not be loaded. Exports will be checked again when you download them."
+              : "Le statut gratuit/premium n'a pas pu être chargé. Les exports resteront revérifiés au moment du téléchargement.",
           )
         }
       })
@@ -425,7 +489,13 @@ export function HomeTool() {
         if (active) {
           reportClientError("result-preview", error, { page: resultPreviewPage })
           setResultPreview(null)
-          setResultPreviewError(error instanceof Error ? error.message : "Impossible de générer l’aperçu du résultat.")
+          setResultPreviewError(
+            error instanceof Error
+              ? error.message
+              : locale === "en"
+                ? "Unable to generate the result preview."
+                : "Impossible de générer l’aperçu du résultat.",
+          )
         }
       })
       .finally(() => {
@@ -535,7 +605,13 @@ export function HomeTool() {
             fileName: focusedFile.name,
           })
           setManualPreview(null)
-          setManualPreviewError(error instanceof Error ? error.message : "Impossible de générer l’aperçu du PDF.")
+          setManualPreviewError(
+            error instanceof Error
+              ? error.message
+              : locale === "en"
+                ? "Unable to generate the PDF preview."
+                : "Impossible de générer l’aperçu du PDF.",
+          )
         }
       })
       .finally(() => {
@@ -598,7 +674,13 @@ export function HomeTool() {
             profileId,
           })
           setResult(null)
-          setResultError(error instanceof Error ? error.message : "Impossible de générer le PDF.")
+          setResultError(
+            error instanceof Error
+              ? translatePdfToolError(error.message, locale)
+              : locale === "en"
+                ? "Unable to generate the PDF."
+                : "Impossible de générer le PDF.",
+          )
         }
       })
       .finally(() => {
@@ -646,7 +728,7 @@ export function HomeTool() {
       await loadAccessSnapshot()
     } catch (error) {
       reportClientError("home-auth-sign-out", error)
-      setAccessError("Déconnexion impossible pour le moment.")
+      setAccessError(locale === "en" ? "Unable to sign out right now." : "Déconnexion impossible pour le moment.")
     } finally {
       setIsSigningOutFromHome(false)
     }
@@ -686,33 +768,47 @@ export function HomeTool() {
       if (!response.ok || !payload.allowed) {
         if (payload.reason === "free-file-limit") {
           throw new Error(
-            `La version gratuite accepte jusqu'a ${FREE_MAX_PDF_FILES_PER_BATCH} PDF par lot. Passez en premium pour exporter des lots plus volumineux.`,
+            locale === "en"
+              ? `The free plan accepts up to ${FREE_MAX_PDF_FILES_PER_BATCH} PDFs per batch. Upgrade to premium to export larger batches.`
+              : `La version gratuite accepte jusqu'a ${FREE_MAX_PDF_FILES_PER_BATCH} PDF par lot. Passez en premium pour exporter des lots plus volumineux.`,
           )
         }
 
         if (payload.reason === "free-sheet-limit") {
           throw new Error(
-            `La version gratuite permet une seule planche A4 par lot. Passez en premium pour exporter ${estimatedSheetCountForExport || 1} planche(s).`,
+            locale === "en"
+              ? `The free plan allows one A4 sheet per batch. Upgrade to premium to export ${estimatedSheetCountForExport || 1} sheet(s).`
+              : `La version gratuite permet une seule planche A4 par lot. Passez en premium pour exporter ${estimatedSheetCountForExport || 1} planche(s).`,
           )
         }
 
         if (payload.reason === "quota-exceeded") {
           throw new Error(
-            `Votre quota gratuit du jour est atteint. Passez en illimité pour exporter ${estimatedSheetCountForExport || 1} planche(s) A4 supplémentaire(s).`,
+            locale === "en"
+              ? `Your free daily quota has been reached. Upgrade to unlimited access to export ${estimatedSheetCountForExport || 1} additional A4 sheet(s).`
+              : `Votre quota gratuit du jour est atteint. Passez en illimité pour exporter ${estimatedSheetCountForExport || 1} planche(s) A4 supplémentaire(s).`,
           )
         }
 
         if (payload.reason === "abuse-limit") {
           throw new Error(
-            "Le quota invité de sécurité est atteint sur cette connexion. Connectez-vous pour retrouver un quota lié à votre compte.",
+            locale === "en"
+              ? "The guest security quota has been reached on this connection. Sign in to restore a quota linked to your account."
+              : "Le quota invité de sécurité est atteint sur cette connexion. Connectez-vous pour retrouver un quota lié à votre compte.",
           )
         }
 
         if (payload.reason === "invalid-export-id") {
-          throw new Error("Le PDF doit etre regenere avant export. Modifiez le lot ou rechargez la page, puis reessayez.")
+          throw new Error(
+            locale === "en"
+              ? "The PDF must be generated again before export. Modify the batch or reload the page, then try again."
+              : "Le PDF doit etre regenere avant export. Modifiez le lot ou rechargez la page, puis reessayez.",
+          )
         }
 
-        throw new Error(payload.error ?? "Impossible de valider cet export.")
+        throw new Error(
+          payload.error ?? (locale === "en" ? "Unable to validate this export." : "Impossible de valider cet export."),
+        )
       }
 
       if (action === "download") {
@@ -730,7 +826,13 @@ export function HomeTool() {
         sheetCount: estimatedSheetCountForExport || 1,
       })
 
-      setExportError(error instanceof Error ? error.message : "Impossible de lancer cet export.")
+      setExportError(
+        error instanceof Error
+          ? error.message
+          : locale === "en"
+            ? "Unable to start this export."
+            : "Impossible de lancer cet export.",
+      )
     } finally {
       setActiveExportAction(null)
     }
@@ -775,7 +877,7 @@ export function HomeTool() {
       .map((file) => Object.assign(file, { id: crypto.randomUUID() }) as FileWithId)
 
     if (pdfFiles.length === 0) {
-      setUploadError("Ajoutez uniquement des fichiers PDF.")
+      setUploadError(locale === "en" ? "Add PDF files only." : "Ajoutez uniquement des fichiers PDF.")
       return
     }
 
@@ -784,7 +886,9 @@ export function HomeTool() {
 
       if (availableSlots <= 0) {
         setUploadError(
-          `La version gratuite accepte jusqu'a ${FREE_MAX_PDF_FILES_PER_BATCH} PDF par lot. Passez en premium pour en ajouter davantage.`,
+          locale === "en"
+            ? `The free plan accepts up to ${FREE_MAX_PDF_FILES_PER_BATCH} PDFs per batch. Upgrade to premium to add more.`
+            : `La version gratuite accepte jusqu'a ${FREE_MAX_PDF_FILES_PER_BATCH} PDF par lot. Passez en premium pour en ajouter davantage.`,
         )
         return
       }
@@ -793,7 +897,9 @@ export function HomeTool() {
 
       if (acceptedFiles.length < pdfFiles.length) {
         setUploadError(
-          `Seuls ${FREE_MAX_PDF_FILES_PER_BATCH} PDF peuvent etre ajoutes en version gratuite. Le surplus a ete ignore.`,
+          locale === "en"
+            ? `Only ${FREE_MAX_PDF_FILES_PER_BATCH} PDFs can be added on the free plan. Extra files were ignored.`
+            : `Seuls ${FREE_MAX_PDF_FILES_PER_BATCH} PDF peuvent etre ajoutes en version gratuite. Le surplus a ete ignore.`,
         )
       }
 
@@ -971,13 +1077,17 @@ export function HomeTool() {
   const renderSingleLabelPlacementPanel = (className?: string) =>
     isSingleLabelBatch ? (
       <div className={cn(panelClass, className)}>
-        <h2 className="text-xl font-semibold text-slate-950">Placement de l’étiquette unique</h2>
+        <h2 className="text-xl font-semibold text-slate-950">
+          {locale === "en" ? "Single label placement" : "Placement de l’étiquette unique"}
+        </h2>
         <p className="mt-2 text-slate-600">
-          Avec une seule page incluse, choisissez le quart de feuille A4 à utiliser.
+          {locale === "en"
+            ? "When only one page is included, choose which quarter of the A4 sheet to use."
+            : "Avec une seule page incluse, choisissez le quart de feuille A4 à utiliser."}
         </p>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {SINGLE_LABEL_PLACEMENTS.map((placement) => (
+          {singleLabelPlacements.map((placement) => (
             <button
               key={placement.id}
               type="button"
@@ -1010,16 +1120,16 @@ export function HomeTool() {
           <div className="flex flex-wrap items-center gap-2">
             {isLoadingAccess && !accessSnapshot ? (
               <span className="rounded-full border border-slate-200/80 bg-white/70 px-4 py-2 text-sm font-semibold text-slate-500">
-                Compte...
+                {locale === "en" ? "Account..." : "Compte..."}
               </span>
             ) : accessSnapshot?.isAuthenticated ? (
               <>
                 <Link
-                  href="/compte"
+                  href={localizePath("/compte", locale)}
                   className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-sky-300 hover:text-sky-800"
                 >
                   <UserRound className="h-4 w-4" />
-                  Mon espace
+                  {locale === "en" ? "My account" : "Mon espace"}
                 </Link>
                 <button
                   type="button"
@@ -1028,22 +1138,28 @@ export function HomeTool() {
                   onClick={handleHomeSignOut}
                 >
                   <LogOut className="h-4 w-4" />
-                  {isSigningOutFromHome ? "Déconnexion..." : "Se déconnecter"}
+                  {isSigningOutFromHome
+                    ? locale === "en"
+                      ? "Signing out..."
+                      : "Déconnexion..."
+                    : locale === "en"
+                      ? "Sign out"
+                      : "Se déconnecter"}
                 </button>
               </>
             ) : (
               <>
                 <Link
-                  href="/connexion"
+                  href={localizePath("/connexion", locale)}
                   className="inline-flex items-center rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-sky-300 hover:text-sky-800"
                 >
-                  Se connecter
+                  {locale === "en" ? "Sign in" : "Se connecter"}
                 </Link>
                 <Link
-                  href="/inscription"
+                  href={localizePath("/inscription", locale)}
                   className="inline-flex items-center rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
                 >
-                  Créer un compte
+                  {locale === "en" ? "Create account" : "Créer un compte"}
                 </Link>
               </>
             )}
@@ -1053,14 +1169,17 @@ export function HomeTool() {
         <div className="relative grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
           <div className="max-w-4xl">
             <span className="inline-flex items-center rounded-full border border-sky-200/80 bg-sky-100/80 px-4 py-1 text-sm font-medium text-sky-950 shadow-sm">
-              Préparation d’étiquettes PDF
+              {locale === "en" ? "PDF shipping label preparation" : "Préparation d’étiquettes PDF"}
             </span>
             <h1 className="mt-5 max-w-3xl text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl lg:text-[3.55rem] lg:leading-[1.02]">
-              Étiquettes PDF vers A4 x4, avec un rendu propre et prêt à imprimer
+              {locale === "en"
+                ? "Turn shipping label PDFs into clean A4 x4 sheets ready to print"
+                : "Étiquettes PDF vers A4 x4, avec un rendu propre et prêt à imprimer"}
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-              Importez vos PDF, choisissez le bon rognage puis récupérez une planche A4 nette, adaptée aux formats
-              transporteurs et aux cas manuels.
+              {locale === "en"
+                ? "Upload your PDFs, choose the right carrier layout, then export a clean A4 sheet adapted to carrier formats and manual adjustments."
+                : "Importez vos PDF, choisissez le bon rognage puis récupérez une planche A4 nette, adaptée aux formats transporteurs et aux cas manuels."}
             </p>
 
             <div className="mt-6 flex flex-wrap gap-3 text-sm text-slate-700">
@@ -1068,10 +1187,10 @@ export function HomeTool() {
                 Chronopost, Colissimo, Mondial Relay, Happy Post
               </span>
               <span className="rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 shadow-sm">
-                Rognage manuel sur aperçu
+                {locale === "en" ? "Manual adjustment on preview" : "Rognage manuel sur aperçu"}
               </span>
               <span className="rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 shadow-sm">
-                Placement A4 x4 automatique
+                {locale === "en" ? "Automatic A4 x4 layout" : "Placement A4 x4 automatique"}
               </span>
             </div>
 
@@ -1079,23 +1198,34 @@ export function HomeTool() {
               <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div className="space-y-1.5">
                   <div className="text-sm font-semibold uppercase tracking-[0.16em] text-sky-800">
-                    Gratuit et premium
+                    {locale === "en" ? "Free and premium" : "Gratuit et premium"}
                   </div>
                   <div className="text-base font-medium text-slate-900">
                     {isLoadingAccess
-                      ? "Chargement de votre quota..."
+                      ? locale === "en"
+                        ? "Loading your quota..."
+                        : "Chargement de votre quota..."
                       : accessSnapshot?.isPremium
-                        ? `${premiumPlanLabel ?? "Accès premium"} actif`
-                        : `${accessSnapshot?.remainingSheetsToday ?? siteConfig.pricing.guestDailyA4Sheets} planche(s) A4 restante(s) aujourd'hui sur ${accessSnapshot?.dailyLimit ?? siteConfig.pricing.guestDailyA4Sheets}`}
+                        ? locale === "en"
+                          ? `${premiumPlanLabel ?? "Premium access"} active`
+                          : `${premiumPlanLabel ?? "Accès premium"} actif`
+                        : locale === "en"
+                          ? `${accessSnapshot?.remainingSheetsToday ?? siteConfig.pricing.guestDailyA4Sheets} A4 sheet(s) left today out of ${accessSnapshot?.dailyLimit ?? siteConfig.pricing.guestDailyA4Sheets}`
+                          : `${accessSnapshot?.remainingSheetsToday ?? siteConfig.pricing.guestDailyA4Sheets} planche(s) A4 restante(s) aujourd'hui sur ${accessSnapshot?.dailyLimit ?? siteConfig.pricing.guestDailyA4Sheets}`}
                   </div>
                   <p className="max-w-2xl text-sm leading-6 text-slate-600">
                     {accessSnapshot?.isPremium
-                      ? "Les exports sont illimités tant que votre accès premium reste actif."
-                      : `Passez en illimité dès ${formatEuroFromCents(siteConfig.pricing.monthlyPriceCents)} / mois ou prenez un pass 24h pour les gros lots ponctuels.`}
+                      ? locale === "en"
+                        ? "Exports stay unlimited while your premium access remains active."
+                        : "Les exports sont illimités tant que votre accès premium reste actif."
+                      : locale === "en"
+                        ? `Upgrade to unlimited access from ${formatEuroFromCents(siteConfig.pricing.monthlyPriceCents, locale)} / month or use a 24-hour pass for larger one-off batches.`
+                        : `Passez en illimité dès ${formatEuroFromCents(siteConfig.pricing.monthlyPriceCents)} / mois ou prenez un pass 24h pour les gros lots ponctuels.`}
                   </p>
                   {accessSnapshot?.expiresAt && (
                     <p className="text-sm text-slate-500">
-                      Accès actif jusqu'au {new Date(accessSnapshot.expiresAt).toLocaleString("fr-FR")}.
+                      {locale === "en" ? "Access active until " : "Accès actif jusqu'au "}
+                      {new Date(accessSnapshot.expiresAt).toLocaleString(locale === "en" ? "en-US" : "fr-FR")}.
                     </p>
                   )}
                   {accessError && <p className="text-sm text-amber-700">{accessError}</p>}
@@ -1103,17 +1233,23 @@ export function HomeTool() {
 
                 <div className="flex flex-wrap gap-3">
                   <Link
-                    href="/tarifs"
+                    href={localizePath("/tarifs", locale)}
                     className="inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white shadow-[0_18px_40px_-30px_rgba(15,23,42,0.45)]"
                     onClick={() => trackClientEvent("home_pricing_link_clicked", { path: window.location.pathname })}
                   >
-                    Voir les tarifs
+                    {locale === "en" ? "View pricing" : "Voir les tarifs"}
                   </Link>
                   <Link
-                    href={accessSnapshot?.isPremium ? "/compte" : "/faq"}
+                    href={localizePath(accessSnapshot?.isPremium ? "/compte" : "/faq", locale)}
                     className="inline-flex items-center rounded-full border border-slate-200/80 bg-white px-5 py-3 text-sm font-semibold text-slate-800 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.2)]"
                   >
-                    {accessSnapshot?.isPremium ? "Ouvrir mon compte" : "Questions fréquentes"}
+                    {accessSnapshot?.isPremium
+                      ? locale === "en"
+                        ? "Open my account"
+                        : "Ouvrir mon compte"
+                      : locale === "en"
+                        ? "Frequently asked questions"
+                        : "Questions fréquentes"}
                   </Link>
                 </div>
               </div>
@@ -1123,31 +1259,42 @@ export function HomeTool() {
               <div className="rounded-[22px] border border-emerald-200/80 bg-emerald-50/80 p-4 text-emerald-950">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
                   <Leaf className="h-4 w-4" />
-                  Plateforme
+                  {locale === "en" ? "Platform" : "Plateforme"}
                 </div>
                 <div className="mt-2 text-2xl font-semibold">
                   {formatInteger(impactSnapshot?.platform.sheetsSaved ?? 0)}
                 </div>
-                <p className="mt-1 text-sm leading-5 text-emerald-900">feuilles A4 déjà économisées</p>
+                <p className="mt-1 text-sm leading-5 text-emerald-900">
+                  {locale === "en" ? "A4 sheets already saved" : "feuilles A4 déjà économisées"}
+                </p>
               </div>
               <div className="rounded-[22px] border border-slate-200/80 bg-white/86 p-4 text-slate-900">
-                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Votre compteur</div>
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                  {locale === "en" ? "Your counter" : "Votre compteur"}
+                </div>
                 <div className="mt-2 text-2xl font-semibold">
                   {formatInteger(impactSnapshot?.individual.labelsOptimized ?? 0)}
                 </div>
-                <p className="mt-1 text-sm leading-5 text-slate-600">étiquettes optimisées et comptabilisées</p>
+                <p className="mt-1 text-sm leading-5 text-slate-600">
+                  {locale === "en" ? "optimized labels counted so far" : "étiquettes optimisées et comptabilisées"}
+                </p>
               </div>
               <div className="rounded-[22px] border border-slate-200/80 bg-white/86 p-4 text-slate-900">
-                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Lot actuel</div>
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                  {locale === "en" ? "Current batch" : "Lot actuel"}
+                </div>
                 <div className="mt-2 text-2xl font-semibold">{formatInteger(currentImpact.sheetsSaved)}</div>
                 <p className="mt-1 text-sm leading-5 text-slate-600">
-                  feuilles économisées si vous exportez ce lot
+                  {locale === "en"
+                    ? "sheets saved if you export this batch"
+                    : "feuilles économisées si vous exportez ce lot"}
                 </p>
               </div>
             </div>
             <p className="mt-3 text-sm leading-6 text-slate-600">
-              Moins de papier gaspillé, plus d'efficacité. Le calcul compare une étiquette seule par feuille avec une
-              planche A4 x4.
+              {locale === "en"
+                ? "Less wasted paper, more efficiency. The estimate compares one label per sheet with an A4 x4 layout."
+                : "Moins de papier gaspillé, plus d'efficacité. Le calcul compare une étiquette seule par feuille avec une planche A4 x4."}
             </p>
             {impactError && <p className="mt-2 text-sm text-amber-700">{impactError}</p>}
           </div>
@@ -1175,15 +1322,21 @@ export function HomeTool() {
             <div className="flex h-20 w-20 items-center justify-center rounded-[26px] bg-[linear-gradient(180deg,#0f172a,#0369a1)] text-white shadow-[0_24px_60px_-34px_rgba(3,105,161,0.75)]">
               <Upload className="h-10 w-10" />
             </div>
-            <h2 className="mt-6 text-[1.75rem] font-semibold tracking-tight text-slate-950">Déposez vos PDF</h2>
+            <h2 className="mt-6 text-[1.75rem] font-semibold tracking-tight text-slate-950">
+              {locale === "en" ? "Drop your PDFs" : "Déposez vos PDF"}
+            </h2>
             <p className="mt-3 max-w-sm text-slate-600">
-              L’ordre du lot est conservé, puis la sortie est recomposée sur feuille A4.
+              {locale === "en"
+                ? "The batch order is preserved, then the result is rebuilt on A4 sheets."
+                : "L’ordre du lot est conservé, puis la sortie est recomposée sur feuille A4."}
             </p>
 
             <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-sm text-slate-500">
-              <span className="rounded-full border border-slate-200/80 bg-white/90 px-3 py-1.5">PDF uniquement</span>
               <span className="rounded-full border border-slate-200/80 bg-white/90 px-3 py-1.5">
-                Sélection multiple
+                {locale === "en" ? "PDF only" : "PDF uniquement"}
+              </span>
+              <span className="rounded-full border border-slate-200/80 bg-white/90 px-3 py-1.5">
+                {locale === "en" ? "Multi-select" : "Sélection multiple"}
               </span>
             </div>
             {uploadError && (
@@ -1193,81 +1346,95 @@ export function HomeTool() {
         </div>
 
         <div className="relative mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {LABEL_PROFILES.map((profile) => (
-            <button
-              key={profile.id}
-              type="button"
-              className={cn(
-                "rounded-[26px] border px-5 py-5 text-left transition duration-200",
-                profileId === profile.id
-                  ? "border-sky-400 bg-[linear-gradient(180deg,rgba(240,249,255,0.98),rgba(255,255,255,0.98))] shadow-[0_22px_48px_-34px_rgba(2,132,199,0.4)]"
-                  : "border-slate-200/80 bg-white/82 hover:border-slate-300 hover:bg-white",
-              )}
-              onClick={() => setProfileId(profile.id)}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-xl font-semibold text-slate-950">{profile.title}</div>
-                <span
-                  className={cn(
-                    "rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em]",
-                    profile.mode === "manual" ? "bg-amber-100 text-amber-800" : "bg-sky-100 text-sky-800",
-                  )}
-                >
-                  {profile.mode === "manual" ? "Manuel" : "Auto"}
-                </span>
-              </div>
-              <p className="mt-3 text-sm leading-6 text-slate-600">
-                {profile.mode === "manual"
-                  ? "Sélection directe sur l’aperçu du PDF."
-                  : "Format optimisé automatiquement."}
-              </p>
-            </button>
-          ))}
+          {LABEL_PROFILES.map((profile) => {
+            const profileDisplay = getProfileDisplay(locale, profile.id)
+
+            return (
+              <button
+                key={profile.id}
+                type="button"
+                className={cn(
+                  "rounded-[26px] border px-5 py-5 text-left transition duration-200",
+                  profileId === profile.id
+                    ? "border-sky-400 bg-[linear-gradient(180deg,rgba(240,249,255,0.98),rgba(255,255,255,0.98))] shadow-[0_22px_48px_-34px_rgba(2,132,199,0.4)]"
+                    : "border-slate-200/80 bg-white/82 hover:border-slate-300 hover:bg-white",
+                )}
+                onClick={() => setProfileId(profile.id)}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-xl font-semibold text-slate-950">{profileDisplay.title}</div>
+                  <span
+                    className={cn(
+                      "rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em]",
+                      profile.mode === "manual" ? "bg-amber-100 text-amber-800" : "bg-sky-100 text-sky-800",
+                    )}
+                  >
+                    {profile.mode === "manual"
+                      ? locale === "en"
+                        ? "Manual"
+                        : "Manuel"
+                      : "Auto"}
+                  </span>
+                </div>
+                <p className="mt-3 text-sm leading-6 text-slate-600">{profileDisplay.description}</p>
+              </button>
+            )
+          })}
         </div>
 
         {isChronopostProfile && (
           <div className="relative mt-4 rounded-[28px] border border-slate-200/80 bg-white/82 p-4 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.2)]">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h3 className="text-base font-semibold text-slate-950">Variantes Chronopost</h3>
+                <h3 className="text-base font-semibold text-slate-950">
+                  {locale === "en" ? "Chronopost variants" : "Variantes Chronopost"}
+                </h3>
                 <p className="mt-1 text-sm text-slate-600">
-                  Choisissez le rognage Chronopost a appliquer au lot.
+                  {locale === "en"
+                    ? "Choose the Chronopost layout to apply to the batch."
+                    : "Choisissez le rognage Chronopost a appliquer au lot."}
                 </p>
               </div>
               <div className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
-                Variante active :{" "}
-                {CHRONOPOST_VARIANTS.find((variant) => variant.id === chronopostVariantId)?.title}
+                {locale === "en" ? "Active variant:" : "Variante active :"}{" "}
+                {getChronopostVariantDisplay(locale, chronopostVariantId).title}
               </div>
             </div>
 
             <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {CHRONOPOST_VARIANTS.map((variant) => (
-                <button
-                  key={variant.id}
-                  type="button"
-                  className={cn(
-                    "rounded-[22px] border px-4 py-4 text-left transition duration-200",
-                    chronopostVariantId === variant.id
-                      ? "border-sky-400 bg-[linear-gradient(135deg,rgba(240,249,255,0.95),rgba(255,255,255,0.96))] shadow-[0_18px_40px_-34px_rgba(2,132,199,0.36)]"
-                      : "border-slate-200/80 bg-slate-50/80 hover:border-slate-300 hover:bg-white",
-                  )}
-                  onClick={() => setChronopostVariantId(variant.id)}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="font-medium text-slate-950">{variant.title}</div>
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
-                      {variant.shortLabel}
-                    </span>
-                  </div>
-                  <div className="mt-2 text-sm text-slate-600">{variant.description}</div>
-                  {"defaultRotation" in variant && variant.defaultRotation !== undefined && (
-                    <div className="mt-3 inline-flex rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-800">
-                      Rotation par defaut {variant.defaultRotation}
-                      {"\u00B0"}
+              {CHRONOPOST_VARIANTS.map((variant) => {
+                const variantDisplay = getChronopostVariantDisplay(locale, variant.id)
+
+                return (
+                  <button
+                    key={variant.id}
+                    type="button"
+                    className={cn(
+                      "rounded-[22px] border px-4 py-4 text-left transition duration-200",
+                      chronopostVariantId === variant.id
+                        ? "border-sky-400 bg-[linear-gradient(135deg,rgba(240,249,255,0.95),rgba(255,255,255,0.96))] shadow-[0_18px_40px_-34px_rgba(2,132,199,0.36)]"
+                        : "border-slate-200/80 bg-slate-50/80 hover:border-slate-300 hover:bg-white",
+                    )}
+                    onClick={() => setChronopostVariantId(variant.id)}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="font-medium text-slate-950">{variantDisplay.title}</div>
+                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                        {variantDisplay.shortLabel}
+                      </span>
                     </div>
-                  )}
-                </button>
-              ))}
+                    {variantDisplay.description ? (
+                      <div className="mt-2 text-sm text-slate-600">{variantDisplay.description}</div>
+                    ) : null}
+                    {"defaultRotation" in variant && variant.defaultRotation !== undefined && (
+                      <div className="mt-3 inline-flex rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-800">
+                        {locale === "en" ? "Default rotation" : "Rotation par défaut"} {variant.defaultRotation}
+                        {"\u00B0"}
+                      </div>
+                    )}
+                  </button>
+                )
+              })}
             </div>
           </div>
         )}
@@ -1276,51 +1443,66 @@ export function HomeTool() {
           <div className="relative mt-4 rounded-[28px] border border-slate-200/80 bg-white/82 p-4 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.2)]">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h3 className="text-base font-semibold text-slate-950">Variantes Mondial Relay</h3>
+                <h3 className="text-base font-semibold text-slate-950">
+                  {locale === "en" ? "Mondial Relay variants" : "Variantes Mondial Relay"}
+                </h3>
                 <p className="mt-1 text-sm text-slate-600">
-                  Choisissez la variante de rognage à appliquer au lot.
+                  {locale === "en"
+                    ? "Choose the Mondial Relay variant to apply to the batch."
+                    : "Choisissez la variante de rognage à appliquer au lot."}
                 </p>
               </div>
               <div className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
-                Variante active :{" "}
-                {MONDIAL_RELAY_VARIANTS.find((variant) => variant.id === mondialRelayVariantId)?.title}
+                {locale === "en" ? "Active variant:" : "Variante active :"}{" "}
+                {getMondialRelayVariantDisplay(locale, mondialRelayVariantId).title}
               </div>
             </div>
 
             <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {MONDIAL_RELAY_VARIANTS.map((variant) => (
-                <button
-                  key={variant.id}
-                  type="button"
-                  className={cn(
-                    "rounded-[22px] border px-4 py-4 text-left transition duration-200",
-                    mondialRelayVariantId === variant.id
-                      ? "border-sky-400 bg-[linear-gradient(135deg,rgba(240,249,255,0.95),rgba(255,255,255,0.96))] shadow-[0_18px_40px_-34px_rgba(2,132,199,0.36)]"
-                      : "border-slate-200/80 bg-slate-50/80 hover:border-slate-300 hover:bg-white",
-                  )}
-                  onClick={() => setMondialRelayVariantId(variant.id)}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="font-medium text-slate-950">{variant.title}</div>
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
-                      {variant.shortLabel}
-                    </span>
-                  </div>
-                  <div className="mt-2 text-sm text-slate-600">{variant.description}</div>
-                </button>
-              ))}
+              {MONDIAL_RELAY_VARIANTS.map((variant) => {
+                const variantDisplay = getMondialRelayVariantDisplay(locale, variant.id)
+
+                return (
+                  <button
+                    key={variant.id}
+                    type="button"
+                    className={cn(
+                      "rounded-[22px] border px-4 py-4 text-left transition duration-200",
+                      mondialRelayVariantId === variant.id
+                        ? "border-sky-400 bg-[linear-gradient(135deg,rgba(240,249,255,0.95),rgba(255,255,255,0.96))] shadow-[0_18px_40px_-34px_rgba(2,132,199,0.36)]"
+                        : "border-slate-200/80 bg-slate-50/80 hover:border-slate-300 hover:bg-white",
+                    )}
+                    onClick={() => setMondialRelayVariantId(variant.id)}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="font-medium text-slate-950">{variantDisplay.title}</div>
+                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                        {variantDisplay.shortLabel}
+                      </span>
+                    </div>
+                    <div className="mt-2 text-sm text-slate-600">{variantDisplay.description}</div>
+                  </button>
+                )
+              })}
             </div>
           </div>
         )}
 
         <div className="mt-4 rounded-[24px] border border-emerald-200/80 bg-emerald-50/80 p-4 text-sm leading-6 text-emerald-950 shadow-[0_18px_40px_-34px_rgba(34,197,94,0.18)]">
-          <p className="font-semibold">Votre étiquette n&apos;est pas présente ?</p>
+          <p className="font-semibold">
+            {locale === "en" ? "Your label is not listed yet?" : "Votre étiquette n&apos;est pas présente ?"}
+          </p>
           <p className="mt-1">
-            Envoyez-nous votre PDF via le{" "}
-            <Link href="/contact#contact-form" className="font-semibold underline underline-offset-2 hover:text-emerald-800">
-              formulaire de contact avec pièce jointe
+            {locale === "en" ? "Send us your PDF through the " : "Envoyez-nous votre PDF via le "}
+            <Link
+              href={localizePath("/contact#contact-form", locale)}
+              className="font-semibold underline underline-offset-2 hover:text-emerald-800"
+            >
+              {locale === "en" ? "contact form with attachment" : "formulaire de contact avec pièce jointe"}
             </Link>
-            . Cela nous permet de vérifier le format et d&apos;ajouter une prise en charge adaptée si possible.
+            {locale === "en"
+              ? ". It helps us verify the exact format and add a matching layout when possible."
+              : ". Cela nous permet de vérifier le format et d&apos;ajouter une prise en charge adaptée si possible."}
           </p>
         </div>
       </section>
@@ -1331,9 +1513,13 @@ export function HomeTool() {
             <div className={panelClass}>
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-semibold text-slate-950">Lot source</h2>
+                  <h2 className="text-xl font-semibold text-slate-950">
+                    {locale === "en" ? "Source batch" : "Lot source"}
+                  </h2>
                   <p className="mt-2 text-slate-600">
-                    {files.length} fichier(s) · {totalLabels || "?"} étiquette(s) · {totalSheets || 0} feuille(s) A4
+                    {locale === "en"
+                      ? `${files.length} file(s) · ${totalLabels || "?"} label(s) · ${totalSheets || 0} A4 sheet(s)`
+                      : `${files.length} fichier(s) · ${totalLabels || "?"} étiquette(s) · ${totalSheets || 0} feuille(s) A4`}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
@@ -1354,7 +1540,7 @@ export function HomeTool() {
                     onClick={() => appendFilesInputRef.current?.click()}
                   >
                     <Upload className="mr-2 inline h-4 w-4" />
-                    Ajouter des PDF
+                    {locale === "en" ? "Add PDFs" : "Ajouter des PDF"}
                   </button>
                   <button
                     type="button"
@@ -1364,7 +1550,7 @@ export function HomeTool() {
                       updateFiles([])
                     }}
                   >
-                    Vider
+                    {locale === "en" ? "Clear" : "Vider"}
                   </button>
                 </div>
               </div>
@@ -1377,13 +1563,19 @@ export function HomeTool() {
               <div className="mt-5 rounded-[24px] border border-slate-200/80 bg-slate-50/80 p-4">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <div className="text-sm font-medium text-slate-900">Rotation du lot</div>
+                    <div className="text-sm font-medium text-slate-900">
+                      {locale === "en" ? "Batch rotation" : "Rotation du lot"}
+                    </div>
                     <div className="mt-1 text-sm text-slate-500">
-                      Appliquez un angle commun après le rognage, puis ajustez fichier par fichier si besoin.
+                      {locale === "en"
+                        ? "Apply a common angle after layout processing, then adjust each file if needed."
+                        : "Appliquez un angle commun après le rognage, puis ajustez fichier par fichier si besoin."}
                     </div>
                   </div>
                   <div className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">
-                    {rotatedFileCount}/{files.length} fichier(s) pivotes
+                    {locale === "en"
+                      ? `${rotatedFileCount}/${files.length} rotated file(s)`
+                      : `${rotatedFileCount}/${files.length} fichier(s) pivotes`}
                   </div>
                 </div>
 
@@ -1408,7 +1600,7 @@ export function HomeTool() {
                         )}
                         onClick={() => applyRotationToAllFiles(rotationPreset.value)}
                       >
-                        Tout en {rotationPreset.label}
+                        {locale === "en" ? "Set all to" : "Tout en"} {rotationPreset.label}
                       </button>
                     )
                   })}
@@ -1440,7 +1632,7 @@ export function HomeTool() {
                           type="button"
                           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] bg-sky-100 text-sky-800 transition hover:bg-sky-200"
                           onClick={() => setFocusedFileId(file.id)}
-                          aria-label={`Sélectionner ${file.name}`}
+                          aria-label={locale === "en" ? `Select ${file.name}` : `Sélectionner ${file.name}`}
                         >
                           <FileText className="h-5 w-5" />
                         </button>
@@ -1462,7 +1654,7 @@ export function HomeTool() {
                                 fileRotation === 0 ? "bg-slate-100 text-slate-600" : "bg-amber-100 text-amber-800",
                               )}
                             >
-                              Rotation {fileRotation}
+                              {locale === "en" ? "Rotation" : "Rotation"} {fileRotation}
                               {"\u00B0"}
                             </span>
                           </div>
@@ -1474,11 +1666,17 @@ export function HomeTool() {
                                   hasCustomManualCrop ? "bg-sky-100 text-sky-800" : "bg-slate-100 text-slate-600",
                                 )}
                               >
-                                {hasCustomManualCrop ? "Zone personnalisée" : "Page entière"}
+                                {hasCustomManualCrop
+                                  ? locale === "en"
+                                    ? "Custom area"
+                                    : "Zone personnalisée"
+                                  : locale === "en"
+                                    ? "Full page"
+                                    : "Page entière"}
                               </span>
                               {focusedFile?.id === file.id && (
                                 <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-medium text-amber-700">
-                                  Aperçu actif
+                                  {locale === "en" ? "Active preview" : "Aperçu actif"}
                                 </span>
                               )}
                             </div>
@@ -1487,7 +1685,7 @@ export function HomeTool() {
                             <div className="mt-3 rounded-2xl border border-slate-200/80 bg-slate-50/80 p-3">
                               <div className="flex flex-wrap items-center justify-between gap-2">
                                 <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                                  Pages incluses
+                                  {locale === "en" ? "Included pages" : "Pages incluses"}
                                 </span>
                                 <div className="flex items-center gap-2">
                                   <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-600">
@@ -1501,7 +1699,7 @@ export function HomeTool() {
                                       selectAllPagesForFile(file.id)
                                     }}
                                   >
-                                    Tout garder
+                                    {locale === "en" ? "Keep all" : "Tout garder"}
                                   </button>
                                 </div>
                               </div>
@@ -1589,11 +1787,13 @@ export function HomeTool() {
               <div className={panelClass}>
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <h2 className="text-xl font-semibold text-slate-950">Rognage manuel par fichier</h2>
+                    <h2 className="text-xl font-semibold text-slate-950">
+                      {locale === "en" ? "Manual adjustment per file" : "Rognage manuel par fichier"}
+                    </h2>
                     <p className="mt-2 max-w-2xl text-slate-600">
-                      Chaque PDF garde sa propre zone. Sélectionnez un fichier dans le lot, ajustez sa zone, puis
-                      passez au suivant. Si plusieurs PDF partagent le même format, vous pouvez recopier la zone active
-                      sur tout le lot en un clic.
+                      {locale === "en"
+                        ? "Each PDF keeps its own area. Select a file in the batch, adjust its area, then move to the next one. If several PDFs share the same format, you can copy the active area to the whole batch in one click."
+                        : "Chaque PDF garde sa propre zone. Sélectionnez un fichier dans le lot, ajustez sa zone, puis passez au suivant. Si plusieurs PDF partagent le même format, vous pouvez recopier la zone active sur tout le lot en un clic."}
                     </p>
                   </div>
 
@@ -1606,7 +1806,7 @@ export function HomeTool() {
                           disabled={focusedFileIndex <= 0}
                           onClick={() => focusAdjacentFile(-1)}
                         >
-                          Précédent
+                          {locale === "en" ? "Previous" : "Précédent"}
                         </button>
                         <button
                           type="button"
@@ -1614,7 +1814,7 @@ export function HomeTool() {
                           disabled={focusedFileIndex < 0 || focusedFileIndex >= files.length - 1}
                           onClick={() => focusAdjacentFile(1)}
                         >
-                          Suivant
+                          {locale === "en" ? "Next" : "Suivant"}
                         </button>
                       </>
                     )}
@@ -1633,7 +1833,7 @@ export function HomeTool() {
                       disabled={!focusedFile}
                       onClick={() => focusedFile && setRotationForFile(focusedFile.id, 0)}
                     >
-                      Rotation {focusedRotation}
+                      {locale === "en" ? "Rotation" : "Rotation"} {focusedRotation}
                       {"\u00B0"}
                     </button>
                     <button
@@ -1651,7 +1851,7 @@ export function HomeTool() {
                       disabled={files.length === 0}
                       onClick={applyFocusedCropToAllFiles}
                     >
-                      Appliquer cette zone à tout le lot
+                      {locale === "en" ? "Apply this area to the whole batch" : "Appliquer cette zone à tout le lot"}
                     </button>
                     <button
                       type="button"
@@ -1659,14 +1859,15 @@ export function HomeTool() {
                       disabled={!focusedFile}
                       onClick={resetFocusedManualCrop}
                     >
-                      Réinitialiser ce fichier
+                      {locale === "en" ? "Reset this file" : "Réinitialiser ce fichier"}
                     </button>
                   </div>
                 </div>
 
                 {focusedFile && (
                   <p className="mt-4 text-sm text-slate-500">
-                    Fichier actif : <span className="font-medium text-slate-700">{focusedFile.name}</span>
+                    {locale === "en" ? "Active file:" : "Fichier actif :"}{" "}
+                    <span className="font-medium text-slate-700">{focusedFile.name}</span>
                     {files.length > 1 && focusedFileIndex >= 0 && (
                       <span> · {focusedFileIndex + 1}/{files.length}</span>
                     )}
@@ -1679,24 +1880,29 @@ export function HomeTool() {
                       imageHeight={manualPreview.height}
                       imageUrl={manualPreview.url}
                       imageWidth={manualPreview.width}
+                      locale={locale}
                       onChange={handleManualCropChange}
                       value={focusedManualCrop}
                     />
                   ) : (
                     <div className="flex min-h-[320px] items-center justify-center rounded-[26px] border border-dashed border-slate-300 bg-slate-50/90 px-6 text-center text-slate-500">
                       {isLoadingManualPreview
-                        ? "Chargement de l’aperçu du PDF…"
-                        : manualPreviewError || "Aucun aperçu disponible pour le moment."}
+                        ? locale === "en"
+                          ? "Loading the PDF preview..."
+                          : "Chargement de l’aperçu du PDF…"
+                        : manualPreviewError ||
+                          (locale === "en" ? "No preview available right now." : "Aucun aperçu disponible pour le moment.")}
                     </div>
                   )}
                 </div>
 
                 {manualPreviewError && (
                   <div className="mt-4 rounded-[24px] border border-amber-200 bg-amber-50/90 p-4 text-sm leading-6 text-amber-900">
-                    L'aperçu du PDF a échoué. Vérifiez que le fichier n'est pas corrompu, puis réessayez. Si le
-                    problème persiste, utilisez la page{" "}
-                    <Link href="/contact" className="font-medium underline">
-                      Support
+                    {locale === "en"
+                      ? "The PDF preview failed. Check that the file is not corrupted, then try again. If the problem continues, use the "
+                      : "L'aperçu du PDF a échoué. Vérifiez que le fichier n'est pas corrompu, puis réessayez. Si le problème persiste, utilisez la page "}
+                    <Link href={localizePath("/contact", locale)} className="font-medium underline">
+                      {locale === "en" ? "Support" : "Support"}
                     </Link>
                     .
                   </div>
@@ -1704,9 +1910,15 @@ export function HomeTool() {
 
                 <div className="mt-5 grid gap-3 sm:max-w-xs">
                   <div className={metricClass}>
-                    <div className="text-sm text-slate-500">État</div>
+                    <div className="text-sm text-slate-500">{locale === "en" ? "Status" : "État"}</div>
                     <div className="mt-1 font-medium text-slate-900">
-                      {isDefaultManualCrop(focusedManualCrop) ? "Page entière" : "Zone personnalisée"}
+                      {isDefaultManualCrop(focusedManualCrop)
+                        ? locale === "en"
+                          ? "Full page"
+                          : "Page entière"
+                        : locale === "en"
+                          ? "Custom area"
+                          : "Zone personnalisée"}
                     </div>
                   </div>
                 </div>
@@ -1716,23 +1928,41 @@ export function HomeTool() {
             {renderSingleLabelPlacementPanel("hidden xl:block")}
 
             <div className={panelClass}>
-              <h2 className="text-xl font-semibold text-slate-950">Traitement appliqué</h2>
+              <h2 className="text-xl font-semibold text-slate-950">
+                {locale === "en" ? "Processing applied" : "Traitement appliqué"}
+              </h2>
               <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
                 <div className={metricClass}>
-                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">Étape 1</div>
-                  <div className="mt-2 text-sm font-medium text-slate-800">Fusion</div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">
+                    {locale === "en" ? "Step 1" : "Étape 1"}
+                  </div>
+                  <div className="mt-2 text-sm font-medium text-slate-800">
+                    {locale === "en" ? "Merge" : "Fusion"}
+                  </div>
                 </div>
                 <div className={metricClass}>
-                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">Étape 2</div>
-                  <div className="mt-2 text-sm font-medium text-slate-800">Rognage {selectedProfile.shortLabel}</div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">
+                    {locale === "en" ? "Step 2" : "Étape 2"}
+                  </div>
+                  <div className="mt-2 text-sm font-medium text-slate-800">
+                    {locale === "en" ? "Carrier layout" : "Rognage"} {selectedProfileShortLabel}
+                  </div>
                 </div>
                 <div className={metricClass}>
-                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">Étape 3</div>
-                  <div className="mt-2 text-sm font-medium text-slate-800">Mise à l’échelle auto</div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">
+                    {locale === "en" ? "Step 3" : "Étape 3"}
+                  </div>
+                  <div className="mt-2 text-sm font-medium text-slate-800">
+                    {locale === "en" ? "Automatic scaling" : "Mise à l’échelle auto"}
+                  </div>
                 </div>
                 <div className={metricClass}>
-                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">Étape 4</div>
-                  <div className="mt-2 text-sm font-medium text-slate-800">Placement A4 x4</div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">
+                    {locale === "en" ? "Step 4" : "Étape 4"}
+                  </div>
+                  <div className="mt-2 text-sm font-medium text-slate-800">
+                    {locale === "en" ? "A4 x4 placement" : "Placement A4 x4"}
+                  </div>
                 </div>
               </div>
             </div>
@@ -1740,47 +1970,65 @@ export function HomeTool() {
 
           <div className="space-y-6 xl:sticky xl:top-8 xl:self-start">
             <div className={panelClass}>
-              <h2 className="text-xl font-semibold text-slate-950">Résultat final</h2>
+              <h2 className="text-xl font-semibold text-slate-950">
+                {locale === "en" ? "Final output" : "Résultat final"}
+              </h2>
               <p className="mt-2 text-slate-600">
                 {isSingleLabelBatch
-                  ? "Sortie sur le quart de feuille A4 choisi."
-                  : "Sortie composée par 4 sur feuille A4."}
+                  ? locale === "en"
+                    ? "Output placed on the selected quarter of the A4 sheet."
+                    : "Sortie sur le quart de feuille A4 choisi."
+                  : locale === "en"
+                    ? "Output grouped four-up on an A4 sheet."
+                    : "Sortie composée par 4 sur feuille A4."}
               </p>
 
               <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
                 <div className={metricClass}>
-                  <div className="text-sm text-slate-500">Profil</div>
-                  <div className="mt-1 font-medium text-slate-900">{selectedProfile.shortLabel}</div>
+                  <div className="text-sm text-slate-500">{locale === "en" ? "Profile" : "Profil"}</div>
+                  <div className="mt-1 font-medium text-slate-900">{selectedProfileShortLabel}</div>
                 </div>
                 <div className={metricClass}>
-                  <div className="text-sm text-slate-500">Étiquettes</div>
+                  <div className="text-sm text-slate-500">{locale === "en" ? "Labels" : "Étiquettes"}</div>
                   <div className="mt-1 font-medium text-slate-900">{totalLabels || 0}</div>
                 </div>
                 <div className={metricClass}>
-                  <div className="text-sm text-slate-500">Feuilles A4</div>
+                  <div className="text-sm text-slate-500">{locale === "en" ? "A4 sheets" : "Feuilles A4"}</div>
                   <div className="mt-1 font-medium text-slate-900">{totalSheets || 0}</div>
                 </div>
               </div>
 
               {rotatedFileCount > 0 && (
                 <div className={cn("mt-3", metricClass)}>
-                  <div className="text-sm text-slate-500">Rotation</div>
+                  <div className="text-sm text-slate-500">{locale === "en" ? "Rotation" : "Rotation"}</div>
                   <div className="mt-1 font-medium text-slate-900">
-                    {rotatedFileCount}/{files.length} fichier(s) avec une orientation adaptee
+                    {locale === "en"
+                      ? `${rotatedFileCount}/${files.length} file(s) with an adjusted orientation`
+                      : `${rotatedFileCount}/${files.length} fichier(s) avec une orientation adaptee`}
                   </div>
                 </div>
               )}
 
               {isManualProfile && (
                 <div className={cn("mt-3", metricClass)}>
-                  <div className="text-sm text-slate-500">Rognages manuels</div>
+                  <div className="text-sm text-slate-500">
+                    {locale === "en" ? "Manual adjustments" : "Rognages manuels"}
+                  </div>
                   <div className="mt-1 font-medium text-slate-900">
-                    {customManualCropCount}/{files.length} fichier(s) avec une zone personnalisée
+                    {locale === "en"
+                      ? `${customManualCropCount}/${files.length} file(s) with a custom area`
+                      : `${customManualCropCount}/${files.length} fichier(s) avec une zone personnalisée`}
                   </div>
                   {focusedFile && (
                     <div className="mt-2 text-sm text-slate-600">
                       {focusedFile.name} :{" "}
-                      {isDefaultManualCrop(manualCropsByFileId[focusedFile.id]) ? "page entière" : "zone personnalisée"}
+                      {isDefaultManualCrop(manualCropsByFileId[focusedFile.id])
+                        ? locale === "en"
+                          ? "full page"
+                          : "page entière"
+                        : locale === "en"
+                          ? "custom area"
+                          : "zone personnalisée"}
                     </div>
                   )}
                 </div>
@@ -1788,9 +2036,9 @@ export function HomeTool() {
 
               {isSingleLabelBatch && (
                 <div className={cn("mt-3", metricClass)}>
-                  <div className="text-sm text-slate-500">Position</div>
+                  <div className="text-sm text-slate-500">{locale === "en" ? "Position" : "Position"}</div>
                   <div className="mt-1 font-medium text-slate-900">
-                    {SINGLE_LABEL_PLACEMENTS.find((placement) => placement.id === singleLabelSlot)?.label}
+                    {singleLabelPlacements.find((placement) => placement.id === singleLabelSlot)?.label}
                   </div>
                 </div>
               )}
@@ -1806,10 +2054,10 @@ export function HomeTool() {
                           disabled={resultPreviewPage <= 1}
                           onClick={() => changeResultPreviewPage(-1)}
                         >
-                          Feuille précédente
+                          {locale === "en" ? "Previous sheet" : "Feuille précédente"}
                         </button>
                         <div className="text-sm font-medium text-slate-600">
-                          Feuille {resultPreviewPage}/{resultPreviewPageCount}
+                          {locale === "en" ? "Sheet" : "Feuille"} {resultPreviewPage}/{resultPreviewPageCount}
                         </div>
                         <button
                           type="button"
@@ -1817,7 +2065,7 @@ export function HomeTool() {
                           disabled={resultPreviewPage >= resultPreviewPageCount}
                           onClick={() => changeResultPreviewPage(1)}
                         >
-                          Feuille suivante
+                          {locale === "en" ? "Next sheet" : "Feuille suivante"}
                         </button>
                       </div>
                     )}
@@ -1826,45 +2074,61 @@ export function HomeTool() {
                       {resultPreview ? (
                         <img
                           src={resultPreview.url}
-                          alt={`Aperçu de la feuille ${resultPreviewPage}`}
+                          alt={
+                            locale === "en"
+                              ? `Preview of sheet ${resultPreviewPage}`
+                              : `Aperçu de la feuille ${resultPreviewPage}`
+                          }
                           className="block h-auto w-full"
                         />
                       ) : (
                         <div className="flex min-h-[360px] items-center justify-center px-6 text-center text-slate-500">
                           {isLoadingResultPreview
-                            ? "Prévisualisation du résultat..."
-                            : resultPreviewError || resultError || "Aucun résultat pour le moment."}
+                            ? locale === "en"
+                              ? "Rendering result preview..."
+                              : "Prévisualisation du résultat..."
+                            : resultPreviewError ||
+                              resultError ||
+                              (locale === "en" ? "No result available yet." : "Aucun résultat pour le moment.")}
                         </div>
                       )}
                     </div>
 
                     <p className="mt-4 text-sm text-slate-500">
-                      Sur mobile, l’aperçu est rendu en image à partir du PDF final pour refléter fidèlement la sortie.
+                      {locale === "en"
+                        ? "On mobile, the preview is rendered as an image from the final PDF to reflect the output more faithfully."
+                        : "Sur mobile, l’aperçu est rendu en image à partir du PDF final pour refléter fidèlement la sortie."}
                     </p>
                   </div>
                 ) : resultUrl ? (
                   <iframe
-                    title="Aperçu du PDF généré"
+                    title={locale === "en" ? "Preview of the generated PDF" : "Aperçu du PDF généré"}
                     src={`${resultUrl}#toolbar=0&navpanes=0&view=FitH`}
                     className="h-[780px] w-full border-0"
                   />
                 ) : (
                   <div className="flex h-[780px] items-center justify-center px-6 text-center text-slate-500">
-                    {isGenerating ? "Génération du PDF..." : resultError || "Aucun résultat pour le moment."}
+                    {isGenerating
+                      ? locale === "en"
+                        ? "Generating the PDF..."
+                        : "Génération du PDF..."
+                      : resultError || (locale === "en" ? "No result available yet." : "Aucun résultat pour le moment.")}
                   </div>
                 )}
               </div>
 
               {(resultError || exportError) && (
                 <div className="mt-4 rounded-[24px] border border-amber-200 bg-amber-50/90 p-4 text-sm leading-6 text-amber-900">
-                  <div className="font-semibold">Export ou génération interrompu</div>
+                  <div className="font-semibold">
+                    {locale === "en" ? "Export or generation interrupted" : "Export ou génération interrompu"}
+                  </div>
                   <p className="mt-1">{exportError || resultError}</p>
                   <p className="mt-2">
-                    Vous pouvez retenter avec un autre PDF, consulter les{" "}
-                    <Link href="/faq" className="font-medium underline">
-                      questions fréquentes
+                    {locale === "en" ? "Try again with another PDF, read the " : "Vous pouvez retenter avec un autre PDF, consulter les "}
+                    <Link href={localizePath("/faq", locale)} className="font-medium underline">
+                      {locale === "en" ? "FAQ" : "questions fréquentes"}
                     </Link>
-                    {" "}ou contacter{" "}
+                    {locale === "en" ? " or contact " : " ou contacter "}
                     <a href={`mailto:${siteConfig.supportEmail}`} className="font-medium underline">
                       {siteConfig.supportEmail}
                     </a>
@@ -1875,12 +2139,13 @@ export function HomeTool() {
 
               {result && currentImpact.labelsOptimized > 0 && (
                 <div className="mt-4 rounded-[24px] border border-emerald-200 bg-emerald-50/90 p-4 text-sm leading-6 text-emerald-950">
-                  <div className="font-semibold">Impact du PDF prêt à exporter</div>
+                  <div className="font-semibold">
+                    {locale === "en" ? "Impact of the ready-to-export PDF" : "Impact du PDF prêt à exporter"}
+                  </div>
                   <p className="mt-1">
-                    {formatInteger(currentImpact.labelsOptimized)} étiquette(s) sur{" "}
-                    {formatInteger(currentImpact.optimizedSheets)} feuille(s) A4, soit{" "}
-                    {formatInteger(currentImpact.sheetsSaved)} feuille(s) économisée(s) par rapport à une impression
-                    une étiquette par feuille.
+                    {locale === "en"
+                      ? `${formatInteger(currentImpact.labelsOptimized)} label(s) on ${formatInteger(currentImpact.optimizedSheets)} A4 sheet(s), which saves ${formatInteger(currentImpact.sheetsSaved)} sheet(s) compared with printing one label per sheet.`
+                      : `${formatInteger(currentImpact.labelsOptimized)} étiquette(s) sur ${formatInteger(currentImpact.optimizedSheets)} feuille(s) A4, soit ${formatInteger(currentImpact.sheetsSaved)} feuille(s) économisée(s) par rapport à une impression une étiquette par feuille.`}
                   </p>
                 </div>
               )}
@@ -1893,7 +2158,13 @@ export function HomeTool() {
                   onClick={() => handleExportAction("download")}
                 >
                   <Download className="mr-2 h-4 w-4" />
-                  {activeExportAction === "download" ? "Validation..." : "Télécharger le PDF A4"}
+                  {activeExportAction === "download"
+                    ? locale === "en"
+                      ? "Validating..."
+                      : "Validation..."
+                    : locale === "en"
+                      ? "Download the A4 PDF"
+                      : "Télécharger le PDF A4"}
                 </button>
                 <button
                   type="button"
@@ -1902,13 +2173,24 @@ export function HomeTool() {
                   onClick={() => handleExportAction("print")}
                 >
                   <Printer className="mr-2 h-4 w-4" />
-                  {activeExportAction === "print" ? "Validation..." : "Imprimer"}
+                  {activeExportAction === "print"
+                    ? locale === "en"
+                      ? "Validating..."
+                      : "Validation..."
+                    : locale === "en"
+                      ? "Print"
+                      : "Imprimer"}
                 </button>
                 <div className="text-sm text-slate-500">
-                  {isGenerating ? "Recalcul en cours..." : result?.name ?? "En attente de génération"}
+                  {isGenerating
+                    ? locale === "en"
+                      ? "Rebuilding..."
+                      : "Recalcul en cours..."
+                    : result?.name ?? (locale === "en" ? "Waiting for generation" : "En attente de génération")}
                   {accessSnapshot && !accessSnapshot.isPremium && (
                     <span className="block text-xs text-slate-400">
-                      Quota restant aujourd'hui : {accessSnapshot.remainingSheetsToday}/{accessSnapshot.dailyLimit}
+                      {locale === "en" ? "Quota left today:" : "Quota restant aujourd'hui :"}{" "}
+                      {accessSnapshot.remainingSheetsToday}/{accessSnapshot.dailyLimit}
                     </span>
                   )}
                 </div>
@@ -1924,26 +2206,28 @@ export function HomeTool() {
         <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight text-slate-950">
-              Imprimer plusieurs étiquettes colis sur une feuille A4
+              {locale === "en"
+                ? "Print multiple shipping labels on one A4 sheet"
+                : "Imprimer plusieurs étiquettes colis sur une feuille A4"}
             </h2>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">
-              Label2A4 transforme vos étiquettes PDF Chronopost, Colissimo, Mondial Relay et Happy Post en planches A4 x4.
-              Pratique pour les ventes Vinted, Leboncoin et les expéditions régulières, sans modifier votre workflow
-              d&apos;upload, de rognage et d&apos;impression.
+              {locale === "en"
+                ? "Label2A4 turns your Chronopost, Colissimo, Mondial Relay and Happy Post PDF labels into compact A4 x4 sheets. It is useful for Vinted, Leboncoin and recurring shipping batches without changing your upload and print workflow."
+                : "Label2A4 transforme vos étiquettes PDF Chronopost, Colissimo, Mondial Relay et Happy Post en planches A4 x4. Pratique pour les ventes Vinted, Leboncoin et les expéditions régulières, sans modifier votre workflow d&apos;upload, de rognage et d&apos;impression."}
             </p>
           </div>
           <div className="flex flex-wrap gap-3 lg:justify-end">
             <Link
-              href="/landing"
+              href={localizePath("/landing", locale)}
               className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-5 py-3 text-sm font-semibold text-sky-900 transition hover:border-sky-300 hover:bg-white"
             >
-              Lire le guide A4
+              {locale === "en" ? "Read the A4 guide" : "Lire le guide A4"}
             </Link>
             <Link
-              href="/mondial-relay"
+              href={localizePath("/mondial-relay", locale)}
               className="inline-flex items-center rounded-full border border-slate-200/80 bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-sky-300 hover:text-sky-800"
             >
-              Guide Mondial Relay
+              {locale === "en" ? "Mondial Relay guide" : "Guide Mondial Relay"}
             </Link>
           </div>
         </div>
@@ -1955,10 +2239,16 @@ export function HomeTool() {
             <div className="flex items-center gap-3">
               <div className="min-w-0 flex-1">
                 <div className="text-xs uppercase tracking-[0.16em] text-sky-200">
-                  {isGenerating ? "Génération en cours" : `${totalSheets || 0} feuille(s) A4`}
+                  {isGenerating
+                    ? locale === "en"
+                      ? "Generating"
+                      : "Génération en cours"
+                    : locale === "en"
+                      ? `${totalSheets || 0} A4 sheet(s)`
+                      : `${totalSheets || 0} feuille(s) A4`}
                 </div>
                 <div className="truncate text-sm font-medium text-white/90">
-                  {result?.name ?? "Préparation du PDF..."}
+                  {result?.name ?? (locale === "en" ? "Preparing the PDF..." : "Préparation du PDF...")}
                 </div>
               </div>
               <button
@@ -1968,7 +2258,13 @@ export function HomeTool() {
                 onClick={() => handleExportAction("download")}
               >
                 <Download className="mr-2 h-4 w-4" />
-                {activeExportAction === "download" ? "Validation..." : "Télécharger"}
+                {activeExportAction === "download"
+                  ? locale === "en"
+                    ? "Validating..."
+                    : "Validation..."
+                  : locale === "en"
+                    ? "Download"
+                    : "Télécharger"}
               </button>
             </div>
           </div>

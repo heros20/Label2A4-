@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { ensureAnonymousId, getRequestOrigin } from "@/lib/access-control"
 import { getOrCreateStripeCustomerForUser } from "@/lib/billing-service"
+import { localizePath } from "@/lib/i18n"
 import type { PremiumPlanId } from "@/lib/monetization-types"
 import {
   attachPromoRedemptionToCheckout,
@@ -10,6 +11,7 @@ import {
   voidPromoRedemption,
 } from "@/lib/promo-codes"
 import { consumeRateLimit } from "@/lib/rate-limit"
+import { getRequestLocaleFromRequest } from "@/lib/request-locale"
 import { trackServerEvent } from "@/lib/server-analytics"
 import { getStripe, getStripePriceId, isStripeConfigured } from "@/lib/stripe"
 import { getAuthenticatedUser } from "@/lib/supabase/auth"
@@ -39,12 +41,13 @@ function buildStripeMetadata(input: {
 
 export async function POST(request: NextRequest) {
   const cookieDraft = new NextResponse()
+  const locale = getRequestLocaleFromRequest(request)
   let pendingPromoRedemptionId: string | null = null
 
   try {
     if (!isStripeConfigured()) {
       return NextResponse.json(
-        { error: "Paiement indisponible pour le moment." },
+        { error: locale === "en" ? "Payment is currently unavailable." : "Paiement indisponible pour le moment." },
         { status: 503 },
       )
     }
@@ -57,7 +60,12 @@ export async function POST(request: NextRequest) {
 
     if (!rateLimit.allowed) {
       return NextResponse.json(
-        { error: "Trop de tentatives de paiement. Réessayez dans quelques minutes." },
+        {
+          error:
+            locale === "en"
+              ? "Too many payment attempts. Please try again in a few minutes."
+              : "Trop de tentatives de paiement. Réessayez dans quelques minutes.",
+        },
         { status: 429 },
       )
     }
@@ -70,14 +78,19 @@ export async function POST(request: NextRequest) {
     }
 
     if (!isPremiumPlanId(payload.planId)) {
-      return NextResponse.json({ error: "Offre premium inconnue." }, { status: 400 })
+      return NextResponse.json(
+        { error: locale === "en" ? "Unknown premium plan." : "Offre premium inconnue." },
+        { status: 400 },
+      )
     }
 
     if (!payload.immediateAccessConsent || !payload.withdrawalWaiver) {
       return NextResponse.json(
         {
           error:
-            "Vous devez confirmer l'activation immédiate du service et votre renonciation au droit de rétractation avant paiement.",
+            locale === "en"
+              ? "You must confirm immediate service activation and waive your withdrawal right before payment."
+              : "Vous devez confirmer l'activation immédiate du service et votre renonciation au droit de rétractation avant paiement.",
         },
         { status: 400 },
       )
@@ -94,15 +107,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           code: "auth_required",
-          error: "Connectez-vous pour continuer votre achat premium.",
-          redirectTo: `/compte?checkoutPlan=${encodeURIComponent(payload.planId)}`,
+          error: locale === "en" ? "Sign in to continue your premium purchase." : "Connectez-vous pour continuer votre achat premium.",
+          redirectTo: localizePath(`/compte?checkoutPlan=${encodeURIComponent(payload.planId)}`, locale),
         },
         { status: 401 },
       )
     }
 
     if (!priceId) {
-      return NextResponse.json({ error: "Paiement indisponible pour cette offre." }, { status: 503 })
+      return NextResponse.json(
+        {
+          error:
+            locale === "en" ? "Payment is unavailable for this plan." : "Paiement indisponible pour cette offre.",
+        },
+        { status: 503 },
+      )
     }
 
     let promoReservation: PromoReservation | null = null
@@ -112,6 +131,7 @@ export async function POST(request: NextRequest) {
       const reservedPromo = await reservePromoCodeForCheckout({
         anonymousId,
         code: payload.promoCode,
+        locale,
         planId: payload.planId,
         userId: authenticatedUser?.id,
       })
@@ -161,18 +181,20 @@ export async function POST(request: NextRequest) {
 
     const session = await stripe.checkout.sessions.create({
       billing_address_collection: "auto",
-      cancel_url: `${origin}/paiement/annule`,
+      cancel_url: `${origin}${localizePath("/paiement/annule", locale)}`,
       client_reference_id: authenticatedUser?.id ?? anonymousId,
       ...(stripeCustomerId ? { customer: stripeCustomerId } : {}),
       custom_text: {
         submit: {
           message:
-            "En payant, vous demandez l'activation immédiate du service premium et renoncez à votre droit de rétractation une fois l'accès activé.",
+            locale === "en"
+              ? "By paying, you request immediate premium activation and waive your withdrawal right once access is activated."
+              : "En payant, vous demandez l'activation immédiate du service premium et renoncez à votre droit de rétractation une fois l'accès activé.",
         },
       },
       ...(stripeCouponId ? { discounts: [{ coupon: stripeCouponId }] } : {}),
       line_items: [{ price: priceId, quantity: 1 }],
-      locale: "fr",
+      locale,
       metadata: sessionMetadata,
       mode: payload.planId === "day-pass" ? "payment" : "subscription",
       success_url: `${origin}/api/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
@@ -230,6 +252,9 @@ export async function POST(request: NextRequest) {
       console.error("[label2a4-promo-void]", voidError)
     })
     console.error("[label2a4-checkout]", error)
-    return NextResponse.json({ error: "Impossible de démarrer le paiement." }, { status: 500 })
+    return NextResponse.json(
+      { error: locale === "en" ? "Unable to start the payment." : "Impossible de démarrer le paiement." },
+      { status: 500 },
+    )
   }
 }

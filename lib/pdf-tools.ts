@@ -9,6 +9,13 @@ import {
   type MondialRelayVariantId,
 } from "@/lib/label-profiles"
 
+export const PDF_TOOL_ERROR_MESSAGES = {
+  emptyCrop: "pdf-tool/empty-crop",
+  incompleteProfile: "pdf-tool/incomplete-profile",
+  noLabelPage: "pdf-tool/no-label-page",
+  noPdf: "pdf-tool/no-pdf",
+} as const
+
 const A4_PORTRAIT = { width: 595.28, height: 841.89 }
 const PAGE_MARGIN = 18
 const GRID_GAP = 12
@@ -85,7 +92,7 @@ function applyCropBox(
   height: number,
 ) {
   if (width <= 0 || height <= 0) {
-    throw new Error("Le rognage produit une page vide.")
+    throw new Error(PDF_TOOL_ERROR_MESSAGES.emptyCrop)
   }
 
   page.translateContent(-x0, -y0)
@@ -241,7 +248,7 @@ export async function buildLabelA4Pdf(
   options: BuildLabelOptions = {},
 ) {
   if (files.length === 0) {
-    throw new Error("Ajoutez au moins un PDF.")
+    throw new Error(PDF_TOOL_ERROR_MESSAGES.noPdf)
   }
 
   const profile = getResolvedLabelProfile(profileId, {
@@ -271,7 +278,7 @@ export async function buildLabelA4Pdf(
   const totalSelectedPageCount = preparedSources.reduce((sum, item) => sum + item.pageIndices.length, 0)
 
   if (totalSelectedPageCount === 0) {
-    throw new Error("Sélectionnez au moins une page d'étiquette.")
+    throw new Error(PDF_TOOL_ERROR_MESSAGES.noLabelPage)
   }
 
   const shouldUseSingleLabelSlot = totalSelectedPageCount === 1 && Boolean(options.singleLabelSlot)
@@ -298,7 +305,7 @@ export async function buildLabelA4Pdf(
       } else if ("crop" in profile && profile.crop) {
         croppedSize = cropPageToRule(copiedPage, profile.crop)
       } else {
-        throw new Error("Le profil de rognage est incomplet.")
+        throw new Error(PDF_TOOL_ERROR_MESSAGES.incompleteProfile)
       }
 
       const embeddedPage = await output.embedPage(copiedPage)

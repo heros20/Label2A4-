@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useEffect, useState, type FormEvent } from "react"
+import { localizePath, type Locale } from "@/lib/i18n"
 import { reportClientError } from "@/lib/client-monitoring"
 import { siteConfig } from "@/lib/site-config"
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
@@ -13,6 +14,7 @@ interface AccountAuthCardProps {
   email?: string | null
   initialMode?: AccountAuthMode
   isAuthenticated: boolean
+  locale: Locale
   onSessionChanged?: () => Promise<void> | void
   redirectAfterSignOut?: string | null
 }
@@ -52,23 +54,27 @@ function getResetPasswordRedirectUrl() {
   return getCurrentAuthRedirectUrl("/auth/reset-password")
 }
 
-function getFriendlyAuthError(error: unknown, fallback: string) {
+function getFriendlyAuthError(error: unknown, fallback: string, locale: Locale) {
   const message = error instanceof Error ? error.message.toLowerCase() : ""
 
   if (message.includes("invalid login") || message.includes("invalid credentials")) {
-    return "Email ou mot de passe incorrect."
+    return locale === "en" ? "Incorrect email or password." : "Email ou mot de passe incorrect."
   }
 
   if (message.includes("email not confirmed")) {
-    return "Vérifiez votre email avant de vous connecter."
+    return locale === "en" ? "Check your email before signing in." : "Vérifiez votre email avant de vous connecter."
   }
 
   if (message.includes("already registered") || message.includes("already exists")) {
-    return "Un compte existe déjà pour cet email. Connectez-vous ou utilisez « Mot de passe oublié ? »."
+    return locale === "en"
+      ? "An account already exists for this email. Sign in or use “Forgot password?”."
+      : "Un compte existe déjà pour cet email. Connectez-vous ou utilisez « Mot de passe oublié ? »."
   }
 
   if (message.includes("password")) {
-    return "Le mot de passe ne respecte pas les règles de sécurité."
+    return locale === "en"
+      ? "The password does not meet the security requirements."
+      : "Le mot de passe ne respecte pas les règles de sécurité."
   }
 
   return fallback
@@ -105,8 +111,9 @@ export function AccountAuthCard({
   email,
   initialMode = "sign-in",
   isAuthenticated,
+  locale,
   onSessionChanged,
-  redirectAfterSignOut = "/connexion?status=signed-out",
+  redirectAfterSignOut,
 }: AccountAuthCardProps) {
   const [mode] = useState<AccountAuthMode>(initialMode)
   const [emailInput, setEmailInput] = useState(email ?? "")
@@ -126,22 +133,25 @@ export function AccountAuthCard({
   const isSignInMode = mode === "sign-in"
   const isSignUpMode = mode === "sign-up"
   const isForgotPasswordMode = mode === "forgot-password"
+  const signOutRedirect = redirectAfterSignOut ?? localizePath("/connexion?status=signed-out", locale)
 
   useEffect(() => {
     const status = new URLSearchParams(window.location.search).get("status")
     setNextPath(getNextPathFromLocation())
 
     if (status === "signed-out") {
-      setSuccess("Vous êtes déconnecté.")
+      setSuccess(locale === "en" ? "You are signed out." : "Vous êtes déconnecté.")
     }
-  }, [])
+  }, [locale])
 
   const getAuthHref = (path: "/connexion" | "/inscription" | "/mot-de-passe-oublie") => {
+    const localizedPath = localizePath(path, locale)
+
     if (nextPath === "/compte") {
-      return path
+      return localizedPath
     }
 
-    return `${path}?next=${encodeURIComponent(nextPath)}`
+    return `${localizedPath}?next=${encodeURIComponent(nextPath)}`
   }
 
   const handlePasswordSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -150,22 +160,26 @@ export function AccountAuthCard({
     setSuccess("")
 
     if (!cleanEmail) {
-      setError("Saisissez votre email.")
+      setError(locale === "en" ? "Enter your email." : "Saisissez votre email.")
       return
     }
 
     if (!isForgotPasswordMode && !passwordInput) {
-      setError("Saisissez votre mot de passe.")
+      setError(locale === "en" ? "Enter your password." : "Saisissez votre mot de passe.")
       return
     }
 
     if (isSignUpMode && !isValidPassword(passwordInput)) {
-      setError(`Le mot de passe doit contenir au moins ${MIN_PASSWORD_LENGTH} caractères.`)
+      setError(
+        locale === "en"
+          ? `Your password must contain at least ${MIN_PASSWORD_LENGTH} characters.`
+          : `Le mot de passe doit contenir au moins ${MIN_PASSWORD_LENGTH} caractères.`,
+      )
       return
     }
 
     if (isSignUpMode && passwordInput !== passwordConfirmation) {
-      setError("Les deux mots de passe ne correspondent pas.")
+      setError(locale === "en" ? "The two passwords do not match." : "Les deux mots de passe ne correspondent pas.")
       return
     }
 
@@ -183,7 +197,7 @@ export function AccountAuthCard({
           throw authError
         }
 
-        setSuccess("Email de réinitialisation envoyé.")
+        setSuccess(locale === "en" ? "Password reset email sent." : "Email de réinitialisation envoyé.")
         return
       }
 
@@ -201,13 +215,15 @@ export function AccountAuthCard({
         }
 
         if (data.session) {
-          setSuccess("Compte créé. Vous êtes connecté.")
+          setSuccess(locale === "en" ? "Account created. You are now signed in." : "Compte créé. Vous êtes connecté.")
           window.location.assign(getNextPathFromLocation())
           return
         }
 
         setSuccess(
-          "Si cette adresse est valide, vous recevrez un email. Ouvrez-le pour valider votre compte. (Pensez à vérifier vos spams)",
+          locale === "en"
+            ? "If this address is valid, you will receive an email. Open it to validate your account. (Check your spam folder)"
+            : "Si cette adresse est valide, vous recevrez un email. Ouvrez-le pour valider votre compte. (Pensez à vérifier vos spams)",
         )
         return
       }
@@ -221,7 +237,7 @@ export function AccountAuthCard({
         throw authError
       }
 
-      setSuccess("Vous êtes connecté.")
+      setSuccess(locale === "en" ? "You are signed in." : "Vous êtes connecté.")
       window.location.assign(getNextPathFromLocation())
     } catch (caughtError) {
       reportClientError("account-auth-password", caughtError)
@@ -229,10 +245,17 @@ export function AccountAuthCard({
         getFriendlyAuthError(
           caughtError,
           isForgotPasswordMode
-            ? "Impossible d'envoyer l'email de réinitialisation."
+            ? locale === "en"
+              ? "Unable to send the password reset email."
+              : "Impossible d'envoyer l'email de réinitialisation."
             : isSignUpMode
-              ? "Impossible de créer ce compte."
-              : "Email ou mot de passe incorrect.",
+              ? locale === "en"
+                ? "Unable to create this account."
+                : "Impossible de créer ce compte."
+              : locale === "en"
+                ? "Incorrect email or password."
+                : "Email ou mot de passe incorrect.",
+          locale,
         ),
       )
     } finally {
@@ -244,7 +267,11 @@ export function AccountAuthCard({
     event.preventDefault()
 
     if (!cleanMagicLinkEmail) {
-      setError("Saisissez votre email pour recevoir un lien de connexion.")
+      setError(
+        locale === "en"
+          ? "Enter your email to receive a secure sign-in link."
+          : "Saisissez votre email pour recevoir un lien de connexion.",
+      )
       return
     }
 
@@ -260,6 +287,7 @@ export function AccountAuthCard({
         },
         body: JSON.stringify({
           email: cleanMagicLinkEmail,
+          locale,
           mode,
           redirectTo: getCurrentAuthRedirectUrl(isSignUpMode ? "/auth/reset-password" : getNextPathFromLocation()),
         }),
@@ -267,17 +295,24 @@ export function AccountAuthCard({
       const payload = (await response.json()) as { error?: string; ok?: boolean }
 
       if (!response.ok || !payload.ok) {
-        throw new Error(payload.error ?? "Impossible d'envoyer le lien de connexion.")
+        throw new Error(
+          payload.error ??
+            (locale === "en" ? "Unable to send the sign-in link." : "Impossible d'envoyer le lien de connexion."),
+        )
       }
 
       setSuccess(
         isSignUpMode
-          ? "Email envoyé. Cliquez sur le lien reçu pour définir votre mot de passe."
-          : "Email envoyé. Cliquez sur le lien reçu pour terminer la connexion.",
+          ? locale === "en"
+            ? "Email sent. Open the link you received to set your password."
+            : "Email envoyé. Cliquez sur le lien reçu pour définir votre mot de passe."
+          : locale === "en"
+            ? "Email sent. Open the link you received to finish signing in."
+            : "Email envoyé. Cliquez sur le lien reçu pour terminer la connexion.",
       )
     } catch (caughtError) {
       reportClientError("account-auth-magic-link", caughtError)
-      setError("Impossible d'envoyer le lien de connexion.")
+      setError(locale === "en" ? "Unable to send the sign-in link." : "Impossible d'envoyer le lien de connexion.")
     } finally {
       setIsSendingMagicLink(false)
     }
@@ -302,7 +337,7 @@ export function AccountAuthCard({
       }
     } catch (caughtError) {
       reportClientError("account-auth-google-sign-in", caughtError)
-      setError("Connexion Google impossible pour le moment.")
+      setError(locale === "en" ? "Google sign-in is unavailable right now." : "Connexion Google impossible pour le moment.")
       setIsSigningInWithGoogle(false)
     }
   }
@@ -321,14 +356,14 @@ export function AccountAuthCard({
       }
 
       await onSessionChanged?.()
-      setSuccess("Vous êtes déconnecté.")
+      setSuccess(locale === "en" ? "You are signed out." : "Vous êtes déconnecté.")
 
-      if (redirectAfterSignOut) {
-        window.location.assign(redirectAfterSignOut)
+      if (signOutRedirect) {
+        window.location.assign(signOutRedirect)
       }
     } catch (caughtError) {
       reportClientError("account-auth-sign-out", caughtError)
-      setError("Déconnexion impossible pour le moment.")
+      setError(locale === "en" ? "Unable to sign out right now." : "Déconnexion impossible pour le moment.")
     } finally {
       setIsSigningOut(false)
     }
@@ -338,8 +373,8 @@ export function AccountAuthCard({
     return (
       <div className="space-y-3">
         <div className="rounded-[20px] border border-emerald-200/80 bg-emerald-50/80 p-4 text-sm leading-6 text-emerald-950">
-          <div className="font-semibold">Compte connecté</div>
-          <div className="mt-1">{email ?? "Email indisponible"}</div>
+          <div className="font-semibold">{locale === "en" ? "Signed-in account" : "Compte connecté"}</div>
+          <div className="mt-1">{email ?? (locale === "en" ? "Email unavailable" : "Email indisponible")}</div>
         </div>
         <button
           type="button"
@@ -349,7 +384,7 @@ export function AccountAuthCard({
           disabled={isSigningOut}
           onClick={handleSignOut}
         >
-          {isSigningOut ? "Déconnexion..." : "Se déconnecter"}
+          {isSigningOut ? (locale === "en" ? "Signing out..." : "Déconnexion...") : locale === "en" ? "Sign out" : "Se déconnecter"}
         </button>
         {error && <div className="text-sm text-red-600">{error}</div>}
         {success && <div className="text-sm text-emerald-700">{success}</div>}
@@ -367,7 +402,13 @@ export function AccountAuthCard({
           onClick={handleGoogleSignIn}
         >
           <GoogleIcon />
-          {isSigningInWithGoogle ? "Connexion..." : "Continuer avec Google"}
+          {isSigningInWithGoogle
+            ? locale === "en"
+              ? "Signing in..."
+              : "Connexion..."
+            : locale === "en"
+              ? "Continue with Google"
+              : "Continuer avec Google"}
         </button>
       )}
 
@@ -381,7 +422,7 @@ export function AccountAuthCard({
             type="email"
             autoComplete="email"
             className={inputClass}
-            placeholder="vous@exemple.fr"
+            placeholder={locale === "en" ? "you@example.com" : "vous@exemple.fr"}
             value={emailInput}
             onChange={(event) => {
               setEmailInput(event.currentTarget.value)
@@ -393,7 +434,7 @@ export function AccountAuthCard({
         {!isForgotPasswordMode && (
           <div>
             <label htmlFor="account-password" className="mb-2 block text-sm font-medium text-slate-800">
-              Mot de passe
+              {locale === "en" ? "Password" : "Mot de passe"}
             </label>
             <input
               id="account-password"
@@ -405,7 +446,7 @@ export function AccountAuthCard({
             />
             {isSignUpMode && (
               <p className="mt-2 text-xs leading-5 text-slate-500">
-                {MIN_PASSWORD_LENGTH} caractères minimum.
+                {MIN_PASSWORD_LENGTH} {locale === "en" ? "characters minimum." : "caractères minimum."}
               </p>
             )}
           </div>
@@ -414,7 +455,7 @@ export function AccountAuthCard({
         {isSignUpMode && (
           <div>
             <label htmlFor="account-password-confirmation" className="mb-2 block text-sm font-medium text-slate-800">
-              Confirmer le mot de passe
+              {locale === "en" ? "Confirm password" : "Confirmer le mot de passe"}
             </label>
             <input
               id="account-password-confirmation"
@@ -434,15 +475,27 @@ export function AccountAuthCard({
         >
           {isSubmitting
             ? isForgotPasswordMode
-              ? "Envoi..."
+              ? locale === "en"
+                ? "Sending..."
+                : "Envoi..."
               : isSignUpMode
-                ? "Création..."
-                : "Connexion..."
+                ? locale === "en"
+                  ? "Creating..."
+                  : "Création..."
+                : locale === "en"
+                  ? "Signing in..."
+                  : "Connexion..."
             : isForgotPasswordMode
-              ? "Envoyer l'email"
+              ? locale === "en"
+                ? "Send email"
+                : "Envoyer l'email"
               : isSignUpMode
-                ? "Créer un compte"
-                : "Se connecter"}
+                ? locale === "en"
+                  ? "Create account"
+                  : "Créer un compte"
+                : locale === "en"
+                  ? "Sign in"
+                  : "Se connecter"}
         </button>
         {error && <div className="text-sm text-red-600">{error}</div>}
         {success && <div className="text-sm text-emerald-700">{success}</div>}
@@ -451,17 +504,17 @@ export function AccountAuthCard({
       <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
         {!isSignInMode && (
           <Link href={getAuthHref("/connexion")} className="font-medium text-sky-800 hover:underline">
-            Se connecter
+            {locale === "en" ? "Sign in" : "Se connecter"}
           </Link>
         )}
         {!isSignUpMode && (
           <Link href={getAuthHref("/inscription")} className="font-medium text-sky-800 hover:underline">
-            Créer un compte
+            {locale === "en" ? "Create account" : "Créer un compte"}
           </Link>
         )}
         {!isForgotPasswordMode && (
           <Link href={getAuthHref("/mot-de-passe-oublie")} className="font-medium text-sky-800 hover:underline">
-            Mot de passe oublié ?
+            {locale === "en" ? "Forgot password?" : "Mot de passe oublié ?"}
           </Link>
         )}
       </div>
@@ -469,7 +522,7 @@ export function AccountAuthCard({
       {!isForgotPasswordMode && (
         <details className="rounded-[18px] border border-slate-200/80 bg-slate-50/70 p-4">
           <summary className="cursor-pointer text-sm font-semibold text-slate-800">
-            Recevoir un lien de connexion par email
+            {locale === "en" ? "Receive a secure sign-in link by email" : "Recevoir un lien de connexion par email"}
           </summary>
           <form className="mt-4 space-y-3" onSubmit={handleMagicLinkSubmit}>
             <div>
@@ -481,7 +534,7 @@ export function AccountAuthCard({
                 type="email"
                 autoComplete="email"
                 className={inputClass}
-                placeholder="vous@exemple.fr"
+                placeholder={locale === "en" ? "you@example.com" : "vous@exemple.fr"}
                 value={magicLinkEmailInput}
                 onChange={(event) => setMagicLinkEmailInput(event.currentTarget.value)}
               />
@@ -491,12 +544,17 @@ export function AccountAuthCard({
               className="inline-flex items-center rounded-full border border-slate-200/80 bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50"
               disabled={isSendingMagicLink || isSubmitting}
             >
-              {isSendingMagicLink ? "Envoi du lien..." : "Envoyer un lien sécurisé"}
+              {isSendingMagicLink
+                ? locale === "en"
+                  ? "Sending link..."
+                  : "Envoi du lien..."
+                : locale === "en"
+                  ? "Send secure link"
+                  : "Envoyer un lien sécurisé"}
             </button>
           </form>
         </details>
       )}
-
     </div>
   )
 }

@@ -1,4 +1,6 @@
 import type { PremiumPlanId } from "@/lib/monetization-types"
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n"
+import { getSiteText } from "@/lib/site-copy"
 
 function readNumber(value: string | undefined, fallback: number) {
   const parsed = Number(value)
@@ -38,13 +40,11 @@ const configuredFreeMaxPdfFilesPerBatch = readNumber(
 export const siteConfig = {
   siteName: process.env.NEXT_PUBLIC_SITE_NAME ?? "Label2A4",
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "https://label2a4.vercel.app",
-  description:
-    process.env.NEXT_PUBLIC_SITE_DESCRIPTION ??
-    "Regroupez vos étiquettes PDF Chronopost, Colissimo, Mondial Relay et Happy Post sur des feuilles A4 x4 prêtes à imprimer.",
-  socialTagline: "Fini le gaspillage. Imprime 4 étiquettes sur une seule feuille A4.",
+  description: process.env.NEXT_PUBLIC_SITE_DESCRIPTION ?? getSiteText(DEFAULT_LOCALE).description,
+  socialTagline: getSiteText(DEFAULT_LOCALE).socialTagline,
   supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "support@label2a4.local",
   supportResponseDelay:
-    process.env.NEXT_PUBLIC_SUPPORT_RESPONSE_DELAY ?? "Réponse sous 2 jours ouvrés.",
+    process.env.NEXT_PUBLIC_SUPPORT_RESPONSE_DELAY ?? getSiteText(DEFAULT_LOCALE).supportResponseDelay,
   business: {
     ownerName: process.env.NEXT_PUBLIC_OWNER_NAME ?? "À compléter",
     businessName: process.env.NEXT_PUBLIC_BUSINESS_NAME ?? "À compléter",
@@ -60,9 +60,7 @@ export const siteConfig = {
   },
   host: {
     name: process.env.NEXT_PUBLIC_HOST_NAME ?? "Vercel Inc.",
-    address:
-      process.env.NEXT_PUBLIC_HOST_ADDRESS ??
-      "440 N Barranca Ave #4133, Covina, CA 91723, États-Unis",
+    address: process.env.NEXT_PUBLIC_HOST_ADDRESS ?? "440 N Barranca Ave #4133, Covina, CA 91723, États-Unis",
     website: process.env.NEXT_PUBLIC_HOST_WEBSITE ?? "https://vercel.com",
   },
   mediator: {
@@ -118,35 +116,35 @@ export const requiredBusinessFields = [
   siteConfig.business.publicationDirector,
 ] as const
 
-export function formatEuroFromCents(amount: number) {
-  return new Intl.NumberFormat("fr-FR", {
+export function formatEuroFromCents(amount: number, locale: Locale = DEFAULT_LOCALE) {
+  return new Intl.NumberFormat(locale === "en" ? "en-US" : "fr-FR", {
     style: "currency",
     currency: siteConfig.pricing.currency,
   }).format(amount / 100)
 }
 
-export function getPlanLabel(planId: PremiumPlanId) {
+export function getPlanLabel(planId: PremiumPlanId, locale: Locale = DEFAULT_LOCALE) {
   if (planId === "monthly") {
-    return "Abonnement mensuel"
+    return locale === "en" ? "Monthly plan" : "Abonnement mensuel"
   }
 
   if (planId === "annual") {
-    return "Abonnement annuel"
+    return locale === "en" ? "Annual plan" : "Abonnement annuel"
   }
 
-  return "Pass 24h"
+  return locale === "en" ? "24-hour pass" : "Pass 24h"
 }
 
-export function getPlanPriceLabel(planId: PremiumPlanId) {
+export function getPlanPriceLabel(planId: PremiumPlanId, locale: Locale = DEFAULT_LOCALE) {
   if (planId === "monthly") {
-    return formatEuroFromCents(siteConfig.pricing.monthlyPriceCents)
+    return formatEuroFromCents(siteConfig.pricing.monthlyPriceCents, locale)
   }
 
   if (planId === "annual") {
-    return formatEuroFromCents(siteConfig.pricing.annualPriceCents)
+    return formatEuroFromCents(siteConfig.pricing.annualPriceCents, locale)
   }
 
-  return formatEuroFromCents(siteConfig.pricing.dayPassPriceCents)
+  return formatEuroFromCents(siteConfig.pricing.dayPassPriceCents, locale)
 }
 
 export function getBusinessReadinessItems() {
@@ -161,20 +159,20 @@ export function getBusinessReadinessItems() {
   }
 }
 
-export function getMissingPublicConfigurationItems() {
+export function getMissingPublicConfigurationItems(locale: Locale = DEFAULT_LOCALE) {
   const missing: string[] = []
   const readiness = getBusinessReadinessItems()
 
   if (!readiness.businessIdentityReady) {
-    missing.push("coordonnées légales de l’entreprise")
+    missing.push(locale === "en" ? "business legal details" : "coordonnées légales de l’entreprise")
   }
 
   if (!readiness.mediatorReady) {
-    missing.push("médiateur de la consommation")
+    missing.push(locale === "en" ? "consumer mediator details" : "médiateur de la consommation")
   }
 
   if (!readiness.supportReady) {
-    missing.push("email de support")
+    missing.push(locale === "en" ? "support email" : "email de support")
   }
 
   return missing
