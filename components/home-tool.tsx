@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
 import {
   startTransition,
@@ -9,6 +10,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ChangeEvent,
 } from "react"
 import {
   Download,
@@ -88,6 +90,68 @@ const SINGLE_LABEL_PLACEMENTS: Array<{ id: SingleLabelSlot; label: string }> = [
 ]
 const FREE_MAX_PDF_FILES_PER_BATCH = siteConfig.pricing.freeMaxPdfFilesPerBatch
 const FREE_MAX_A4_SHEETS_PER_EXPORT = siteConfig.pricing.freeMaxA4SheetsPerExport
+const TRANSPORTER_LOGOS: Record<string, { src: string; alt: string }> = {
+  chronopost: {
+    src: "/images/logo/chronopost.png",
+    alt: "Logo Chronopost",
+  },
+  colissimo: {
+    src: "/images/logo/colissimo.png",
+    alt: "Logo Colissimo",
+  },
+  "happy-post": {
+    src: "/images/logo/happy-post.png",
+    alt: "Logo Happy Post",
+  },
+  "mondial-relay": {
+    src: "/images/logo/mondial-relais.png",
+    alt: "Logo Mondial Relay",
+  },
+}
+const HOME_COMPARISON_SLIDES = [
+  {
+    id: "chronopost",
+    label: "Chronopost",
+    before: {
+      src: "/images/chronopost/leboncoinx1.pdf.jpg",
+      alt: "Bordereau Chronopost imprimé seul sur une feuille A4",
+      frameClassName: "w-full max-w-full aspect-[1755/1240] rotate-270 scale-80",
+    },
+    after: {
+      src: "/images/chronopost/leboncoinx4.pdf.jpg",
+      alt: "Quatre bordereaux Chronopost regroupés sur une feuille A4",
+      frameClassName: "h-full max-h-full aspect-[1241/1754]",
+    },
+  },
+  {
+    id: "mondial-relay",
+    label: "Mondial Relay",
+    before: {
+      src: "/images/mondial-relais/mondialx1.jpg",
+      alt: "Bordereau Mondial Relay imprimé seul sur une feuille A4",
+      frameClassName: "h-full max-h-full aspect-[1241/1754] scale-100",
+    },
+    after: {
+      src: "/images/mondial-relais/mondialx4.jpg",
+      alt: "Quatre bordereaux Mondial Relay regroupés sur une feuille A4",
+      frameClassName: "h-full max-h-full aspect-[1241/1754]",
+    },
+  },
+  {
+    id: "colissimo",
+    label: "Colissimo",
+    before: {
+      src: "/images/colissimo/colissimox1.jpg",
+      alt: "Bordereau Colissimo imprimé seul sur une feuille A4",
+      frameClassName: "w-full max-w-full aspect-[1755/1240] rotate-270 scale-80",
+    },
+    after: {
+      src: "/images/colissimo/colissimox4.jpg",
+      alt: "Quatre bordereaux Colissimo regroupés sur une feuille A4",
+      frameClassName: "h-full max-h-full aspect-[1241/1754]",
+    },
+  },
+] as const
 
 function isDefaultManualCrop(crop?: ManualCropRect | null) {
   if (!crop) {
@@ -102,6 +166,23 @@ function isDefaultManualCrop(crop?: ManualCropRect | null) {
     normalized.width === DEFAULT_MANUAL_CROP_RECT.width &&
     normalized.height === DEFAULT_MANUAL_CROP_RECT.height
   )
+}
+
+function formatCropPercent(value: number) {
+  return `${Math.round(value * 100)}%`
+}
+
+function formatCropInputValue(value: number) {
+  return Math.round(value * 100)
+}
+
+function formatManualCropSummary(crop?: ManualCropRect | null) {
+  if (!crop || isDefaultManualCrop(crop)) {
+    return "Page entière"
+  }
+
+  const normalized = normalizeManualCropRect(crop)
+  return `X ${formatCropPercent(normalized.x)} · Y ${formatCropPercent(normalized.y)} · L ${formatCropPercent(normalized.width)} · H ${formatCropPercent(normalized.height)}`
 }
 
 function formatInteger(value: number) {
@@ -124,6 +205,147 @@ function normalizePageSelection(pageCount: number, selectedPageIndices?: number[
       ),
     ),
   ).sort((first, second) => first - second)
+}
+
+function HomeComparisonSlider() {
+  const [activeSlideIndex, setActiveSlideIndex] = useState(0)
+  const [isSlideChanging, setIsSlideChanging] = useState(false)
+  const [sequenceKey, setSequenceKey] = useState(0)
+  const slideChangeTimeoutRef = useRef<number | null>(null)
+  const activeSlide = HOME_COMPARISON_SLIDES[activeSlideIndex]
+
+  const handleSlideChange = (nextIndex: number) => {
+    if (nextIndex === activeSlideIndex) {
+      return
+    }
+
+    if (slideChangeTimeoutRef.current) {
+      window.clearTimeout(slideChangeTimeoutRef.current)
+    }
+
+    setIsSlideChanging(true)
+    slideChangeTimeoutRef.current = window.setTimeout(() => {
+      setActiveSlideIndex(nextIndex)
+      setSequenceKey((currentKey) => currentKey + 1)
+      window.setTimeout(() => {
+        setIsSlideChanging(false)
+      }, 120)
+    }, 220)
+  }
+
+  useEffect(() => {
+    setIsSlideChanging(false)
+
+    const timeouts = [
+      window.setTimeout(() => {
+        setIsSlideChanging(true)
+      }, 11700),
+      window.setTimeout(() => {
+        setActiveSlideIndex((currentIndex) => (currentIndex + 1) % HOME_COMPARISON_SLIDES.length)
+        setSequenceKey((currentKey) => currentKey + 1)
+      }, 12200),
+    ]
+
+    return () => {
+      timeouts.forEach((timeout) => window.clearTimeout(timeout))
+      if (slideChangeTimeoutRef.current) {
+        window.clearTimeout(slideChangeTimeoutRef.current)
+      }
+    }
+  }, [sequenceKey])
+
+  return (
+    <section className="rounded-[32px] border border-white/75 bg-white/88 p-4 shadow-[0_30px_82px_-58px_rgba(15,23,42,0.55)] backdrop-blur-xl sm:p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-800">Avant / après</div>
+          <h2 className="mt-1 text-lg font-semibold tracking-tight text-slate-950">
+            4 étiquettes sur 1 feuille A4
+          </h2>
+        </div>
+        <div className="flex rounded-full border border-slate-200/80 bg-slate-50 p-1">
+          {HOME_COMPARISON_SLIDES.map((slide, index) => (
+            <button
+              key={slide.id}
+              type="button"
+              className={cn(
+                "rounded-full px-3 py-1.5 text-xs font-semibold transition",
+                activeSlideIndex === index
+                  ? "bg-slate-950 text-white shadow-sm"
+                  : "text-slate-600 hover:bg-white hover:text-slate-950",
+              )}
+              onClick={() => handleSlideChange(index)}
+            >
+              {slide.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div
+        className="relative mt-4 aspect-[1.12/1] overflow-hidden rounded-[26px] border border-slate-200/80 bg-slate-100"
+      >
+        <div
+          key={`${activeSlide.id}-${sequenceKey}`}
+          className={cn(
+            "absolute inset-0 transition-opacity duration-500 ease-out",
+            isSlideChanging ? "opacity-0" : "opacity-100",
+          )}
+        >
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-50 p-4">
+            <div className={cn("relative shrink-0", activeSlide.before.frameClassName)}>
+              <Image
+                src={activeSlide.before.src}
+                alt={activeSlide.before.alt}
+                fill
+                sizes="(min-width: 1024px) 430px, 90vw"
+                className="object-contain object-center"
+                priority
+              />
+            </div>
+          </div>
+
+          <div
+            className="label2a4-comparison-reveal absolute inset-0 flex items-center justify-center bg-sky-50 p-4"
+          >
+            <div className={cn("relative shrink-0", activeSlide.after.frameClassName)}>
+              <Image
+                src={activeSlide.after.src}
+                alt={activeSlide.after.alt}
+                fill
+                sizes="(min-width: 1024px) 430px, 90vw"
+                className="object-contain object-center"
+                priority
+              />
+            </div>
+          </div>
+        </div>
+
+        <div
+          className={cn(
+            "label2a4-comparison-divider pointer-events-none absolute inset-y-0 w-px bg-white/95 shadow-[0_0_0_1px_rgba(15,23,42,0.08),0_0_34px_rgba(14,165,233,0.45)] transition-opacity duration-500 ease-out",
+            isSlideChanging ? "opacity-0" : "opacity-100",
+          )}
+        />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),transparent)]" />
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(248,250,252,0.98),rgba(240,249,255,0.98))] transition-opacity duration-300 ease-out",
+            isSlideChanging ? "opacity-100" : "opacity-0",
+          )}
+        />
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+        <div className="rounded-[18px] border border-slate-200/80 bg-slate-50 px-4 py-3 text-slate-600">
+          Avant : une étiquette seule
+        </div>
+        <div className="rounded-[18px] border border-sky-200/80 bg-sky-50 px-4 py-3 font-medium text-sky-900">
+          Après : une planche prête à imprimer
+        </div>
+      </div>
+    </section>
+  )
 }
 
 export function HomeTool() {
@@ -947,6 +1169,23 @@ export function HomeTool() {
     })
   }
 
+  const updateFocusedManualCropFromPercent =
+    (field: keyof ManualCropRect) => (event: ChangeEvent<HTMLInputElement>) => {
+      if (!focusedFile) {
+        return
+      }
+
+      const numericValue = event.currentTarget.valueAsNumber
+      if (Number.isNaN(numericValue)) {
+        return
+      }
+
+      setManualCropForFile(focusedFile.id, {
+        ...focusedManualCrop,
+        [field]: numericValue / 100,
+      })
+    }
+
   const focusAdjacentFile = (direction: -1 | 1) => {
     const nextIndex = focusedFileIndex + direction
     if (nextIndex < 0 || nextIndex >= files.length) {
@@ -1152,84 +1391,116 @@ export function HomeTool() {
             {impactError && <p className="mt-2 text-sm text-amber-700">{impactError}</p>}
           </div>
 
-          <label
-            className={cn(
-              "group relative flex min-h-[280px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[32px] border border-dashed border-sky-300/80 bg-[linear-gradient(165deg,rgba(255,255,255,0.95),rgba(241,245,249,0.94))] px-6 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_28px_80px_-56px_rgba(3,105,161,0.55)] transition duration-200",
-              "hover:border-sky-500 hover:bg-white",
-            )}
-            onDragOver={(event) => event.preventDefault()}
-            onDrop={(event) => {
-              event.preventDefault()
-              addFiles(Array.from(event.dataTransfer.files))
-            }}
-          >
-            <div className="pointer-events-none absolute inset-x-6 top-0 h-28 rounded-b-[30px] bg-[linear-gradient(180deg,rgba(14,165,233,0.12),transparent)]" />
-            <input
-              type="file"
-              accept=".pdf,application/pdf"
-              multiple
-              className="hidden"
-              onChange={(event) => addFiles(Array.from(event.target.files ?? []))}
-            />
+          <div className="space-y-5">
+            <HomeComparisonSlider />
 
-            <div className="flex h-20 w-20 items-center justify-center rounded-[26px] bg-[linear-gradient(180deg,#0f172a,#0369a1)] text-white shadow-[0_24px_60px_-34px_rgba(3,105,161,0.75)]">
-              <Upload className="h-10 w-10" />
-            </div>
-            <h2 className="mt-6 text-[1.75rem] font-semibold tracking-tight text-slate-950">Déposez vos PDF</h2>
-            <p className="mt-3 max-w-sm text-slate-600">
-              L’ordre du lot est conservé, puis la sortie est recomposée sur feuille A4.
-            </p>
+            <label
+              className={cn(
+                "group relative flex min-h-[280px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[32px] border border-dashed border-sky-300/80 bg-[linear-gradient(165deg,rgba(255,255,255,0.95),rgba(241,245,249,0.94))] px-6 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_28px_80px_-56px_rgba(3,105,161,0.55)] transition duration-200",
+                "hover:border-sky-500 hover:bg-white",
+              )}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => {
+                event.preventDefault()
+                addFiles(Array.from(event.dataTransfer.files))
+              }}
+            >
+              <div className="pointer-events-none absolute inset-x-6 top-0 h-28 rounded-b-[30px] bg-[linear-gradient(180deg,rgba(14,165,233,0.12),transparent)]" />
+              <input
+                type="file"
+                accept=".pdf,application/pdf"
+                multiple
+                className="hidden"
+                onChange={(event) => addFiles(Array.from(event.target.files ?? []))}
+              />
 
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-sm text-slate-500">
-              <span className="rounded-full border border-slate-200/80 bg-white/90 px-3 py-1.5">PDF uniquement</span>
-              <span className="rounded-full border border-slate-200/80 bg-white/90 px-3 py-1.5">
-                Sélection multiple
-              </span>
-            </div>
-            {uploadError && (
-              <p className="mt-4 max-w-sm text-sm font-medium text-amber-700">{uploadError}</p>
-            )}
-          </label>
+              <div className="flex h-20 w-20 items-center justify-center rounded-[26px] bg-[linear-gradient(180deg,#0f172a,#0369a1)] text-white shadow-[0_24px_60px_-34px_rgba(3,105,161,0.75)]">
+                <Upload className="h-10 w-10" />
+              </div>
+              <h2 className="mt-6 text-[1.75rem] font-semibold tracking-tight text-slate-950">Déposez vos PDF</h2>
+              <p className="mt-3 max-w-sm text-slate-600">
+                L’ordre du lot est conservé, puis la sortie est recomposée sur feuille A4.
+              </p>
+
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-sm text-slate-500">
+                <span className="rounded-full border border-slate-200/80 bg-white/90 px-3 py-1.5">PDF uniquement</span>
+                <span className="rounded-full border border-slate-200/80 bg-white/90 px-3 py-1.5">
+                  Sélection multiple
+                </span>
+              </div>
+              {uploadError && (
+                <p className="mt-4 max-w-sm text-sm font-medium text-amber-700">{uploadError}</p>
+              )}
+            </label>
+          </div>
         </div>
 
         <div className="relative mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {LABEL_PROFILES.map((profile) => (
-            <button
-              key={profile.id}
-              type="button"
-              className={cn(
-                "rounded-[26px] border px-5 py-5 text-left transition duration-200",
-                profileId === profile.id
-                  ? "border-sky-400 bg-[linear-gradient(180deg,rgba(240,249,255,0.98),rgba(255,255,255,0.98))] shadow-[0_22px_48px_-34px_rgba(2,132,199,0.4)]"
-                  : "border-slate-200/80 bg-white/82 hover:border-slate-300 hover:bg-white",
-              )}
-              onClick={() => setProfileId(profile.id)}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-xl font-semibold text-slate-950">{profile.title}</div>
-                <span
-                  className={cn(
-                    "rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em]",
-                    profile.mode === "manual" ? "bg-amber-100 text-amber-800" : "bg-sky-100 text-sky-800",
-                  )}
-                >
-                  {profile.mode === "manual" ? "Manuel" : "Auto"}
-                </span>
-              </div>
-              <p className="mt-3 text-sm leading-6 text-slate-600">
-                {profile.mode === "manual"
-                  ? "Sélection directe sur l’aperçu du PDF."
-                  : "Format optimisé automatiquement."}
-              </p>
-            </button>
-          ))}
+          {LABEL_PROFILES.map((profile) => {
+            const logo = TRANSPORTER_LOGOS[profile.id]
+
+            return (
+              <button
+                key={profile.id}
+                type="button"
+                className={cn(
+                  "rounded-[26px] border px-5 py-5 text-left transition duration-200",
+                  profileId === profile.id
+                    ? "border-sky-400 bg-[linear-gradient(180deg,rgba(240,249,255,0.98),rgba(255,255,255,0.98))] shadow-[0_22px_48px_-34px_rgba(2,132,199,0.4)]"
+                    : "border-slate-200/80 bg-white/82 hover:border-slate-300 hover:bg-white",
+                )}
+                onClick={() => setProfileId(profile.id)}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    {logo && (
+                      <div className="mb-3 flex h-10 w-24 items-center justify-start">
+                        <Image
+                          src={logo.src}
+                          alt={logo.alt}
+                          width={120}
+                          height={40}
+                          unoptimized
+                          className="max-h-9 w-auto object-contain"
+                        />
+                      </div>
+                    )}
+                    <div className="text-xl font-semibold text-slate-950">{profile.title}</div>
+                  </div>
+                  <span
+                    className={cn(
+                      "rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em]",
+                      profile.mode === "manual" ? "bg-amber-100 text-amber-800" : "bg-sky-100 text-sky-800",
+                    )}
+                  >
+                    {profile.mode === "manual" ? "Manuel" : "Auto"}
+                  </span>
+                </div>
+                <p className="mt-3 text-sm leading-6 text-slate-600">
+                  {profile.mode === "manual"
+                    ? "Sélection directe sur l’aperçu du PDF."
+                    : "Format optimisé automatiquement."}
+                </p>
+              </button>
+            )
+          })}
         </div>
 
         {isChronopostProfile && (
           <div className="relative mt-4 rounded-[28px] border border-slate-200/80 bg-white/82 p-4 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.2)]">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h3 className="text-base font-semibold text-slate-950">Variantes Chronopost</h3>
+                <div className="flex items-center gap-3">
+                  <Image
+                    src={TRANSPORTER_LOGOS.chronopost.src}
+                    alt={TRANSPORTER_LOGOS.chronopost.alt}
+                    width={112}
+                    height={36}
+                    unoptimized
+                    className="max-h-8 w-auto object-contain"
+                  />
+                  <h3 className="text-base font-semibold text-slate-950">Variantes Chronopost</h3>
+                </div>
                 <p className="mt-1 text-sm text-slate-600">
                   Choisissez le rognage Chronopost a appliquer au lot.
                 </p>
@@ -1260,12 +1531,6 @@ export function HomeTool() {
                     </span>
                   </div>
                   <div className="mt-2 text-sm text-slate-600">{variant.description}</div>
-                  {"defaultRotation" in variant && variant.defaultRotation !== undefined && (
-                    <div className="mt-3 inline-flex rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-800">
-                      Rotation par defaut {variant.defaultRotation}
-                      {"\u00B0"}
-                    </div>
-                  )}
                 </button>
               ))}
             </div>
@@ -1276,7 +1541,17 @@ export function HomeTool() {
           <div className="relative mt-4 rounded-[28px] border border-slate-200/80 bg-white/82 p-4 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.2)]">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h3 className="text-base font-semibold text-slate-950">Variantes Mondial Relay</h3>
+                <div className="flex items-center gap-3">
+                  <Image
+                    src={TRANSPORTER_LOGOS["mondial-relay"].src}
+                    alt={TRANSPORTER_LOGOS["mondial-relay"].alt}
+                    width={112}
+                    height={36}
+                    unoptimized
+                    className="max-h-8 w-auto object-contain"
+                  />
+                  <h3 className="text-base font-semibold text-slate-950">Variantes Mondial Relay</h3>
+                </div>
                 <p className="mt-1 text-sm text-slate-600">
                   Choisissez la variante de rognage à appliquer au lot.
                 </p>
@@ -1702,12 +1977,68 @@ export function HomeTool() {
                   </div>
                 )}
 
-                <div className="mt-5 grid gap-3 sm:max-w-xs">
-                  <div className={metricClass}>
+                <p className="mt-4 text-sm text-slate-500">
+                  Sur mobile, affinez aussi la zone avec les champs ci-dessous pour éviter les manipulations trop fines
+                  au doigt.
+                </p>
+                <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-5">
+                  <div className={cn(metricClass, "col-span-2 lg:col-span-1")}>
                     <div className="text-sm text-slate-500">État</div>
                     <div className="mt-1 font-medium text-slate-900">
                       {isDefaultManualCrop(focusedManualCrop) ? "Page entière" : "Zone personnalisée"}
                     </div>
+                  </div>
+                  <div className={metricClass}>
+                    <div className="text-sm text-slate-500">X</div>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      max={100}
+                      step={1}
+                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-base font-medium text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                      value={formatCropInputValue(focusedManualCrop.x)}
+                      onChange={updateFocusedManualCropFromPercent("x")}
+                    />
+                  </div>
+                  <div className={metricClass}>
+                    <div className="text-sm text-slate-500">Y</div>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      max={100}
+                      step={1}
+                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-base font-medium text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                      value={formatCropInputValue(focusedManualCrop.y)}
+                      onChange={updateFocusedManualCropFromPercent("y")}
+                    />
+                  </div>
+                  <div className={metricClass}>
+                    <div className="text-sm text-slate-500">Largeur</div>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min={1}
+                      max={100}
+                      step={1}
+                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-base font-medium text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                      value={formatCropInputValue(focusedManualCrop.width)}
+                      onChange={updateFocusedManualCropFromPercent("width")}
+                    />
+                  </div>
+                  <div className={metricClass}>
+                    <div className="text-sm text-slate-500">Hauteur</div>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min={1}
+                      max={100}
+                      step={1}
+                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-base font-medium text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                      value={formatCropInputValue(focusedManualCrop.height)}
+                      onChange={updateFocusedManualCropFromPercent("height")}
+                    />
                   </div>
                 </div>
               </div>
@@ -1779,8 +2110,7 @@ export function HomeTool() {
                   </div>
                   {focusedFile && (
                     <div className="mt-2 text-sm text-slate-600">
-                      {focusedFile.name} :{" "}
-                      {isDefaultManualCrop(manualCropsByFileId[focusedFile.id]) ? "page entière" : "zone personnalisée"}
+                      {focusedFile.name} : {formatManualCropSummary(manualCropsByFileId[focusedFile.id])}
                     </div>
                   )}
                 </div>

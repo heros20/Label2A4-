@@ -24,10 +24,10 @@ export default async function Image() {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          justifyContent: "center",
+          justifyContent: "flex-start",
           background: "#f8fbfd",
           gap: "22px",
-          padding: "64px",
+          padding: "44px 64px 64px",
         }}
       >
         <img

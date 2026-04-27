@@ -68,3 +68,68 @@ input {
   background: #bae6fd;
   color: #082f49;
 }
+
+@keyframes label2a4-slider-pulse {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  50% {
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+}
+
+@keyframes label2a4-comparison-reveal {
+  0%,
+  6% {
+    clip-path: polygon(0 0, 0% 0, 0% 100%, 0 100%);
+  }
+
+  34%,
+  42% {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  }
+
+  62%,
+  68% {
+    clip-path: polygon(0 0, 0% 0, 0% 100%, 0 100%);
+  }
+
+  96%,
+  100% {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  }
+}
+
+@keyframes label2a4-comparison-position {
+  0%,
+  6% {
+    left: 0%;
+  }
+
+  34%,
+  42% {
+    left: 100%;
+  }
+
+  62%,
+  68% {
+    left: 0%;
+  }
+
+  96%,
+  100% {
+    left: 100%;
+  }
+}
+
+.label2a4-comparison-reveal {
+  clip-path: polygon(0 0, 0% 0, 0% 100%, 0 100%);
+  animation: label2a4-comparison-reveal 11.4s ease-in-out forwards;
+}
+
+.label2a4-comparison-divider {
+  left: 0%;
+  animation: label2a4-comparison-position 11.4s ease-in-out forwards;
+}

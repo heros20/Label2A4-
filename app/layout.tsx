@@ -88,6 +88,7 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
+      { url: siteConfig.brand.logoMarkPng, sizes: "256x256", type: "image/png" },
       { url: "/favicon.ico", sizes: "any" },
       { url: siteConfig.brand.faviconIco, sizes: "any", type: "image/x-icon" },
       { url: siteConfig.brand.logoSvg, type: "image/svg+xml" },
