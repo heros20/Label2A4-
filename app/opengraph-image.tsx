@@ -26,26 +26,27 @@ export default async function Image() {
           alignItems: "center",
           justifyContent: "flex-start",
           background: "#f8fbfd",
-          gap: "22px",
-          padding: "44px 64px 64px",
+          gap: "10px",
+          padding: "28px 72px 72px",
         }}
       >
         <img
           src={logoSrc}
           alt={siteConfig.siteName}
           style={{
-            width: 820,
-            height: 446,
+            width: 720,
+            height: 392,
             objectFit: "contain",
           }}
         />
         <div
           style={{
             color: "#0f172a",
-            fontSize: 50,
+            fontSize: 44,
             fontWeight: 800,
             letterSpacing: 0,
-            lineHeight: 1.12,
+            lineHeight: 1.08,
+            maxWidth: 1040,
             textAlign: "center",
           }}
         >
