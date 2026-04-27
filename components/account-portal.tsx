@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { AccountAuthCard } from "@/components/account-auth-card"
 import { BillingPortalButton } from "@/components/billing-portal-button"
 import { CheckoutButton } from "@/components/checkout-button"
@@ -37,7 +37,7 @@ export function AccountPortal({ locale }: { locale: Locale }) {
   const [isLoading, setIsLoading] = useState(true)
   const accountsEnabled = isSupabaseAuthConfigured()
 
-  const loadAccessSnapshot = async () => {
+  const loadAccessSnapshot = useCallback(async () => {
     setIsLoading(true)
 
     try {
@@ -67,11 +67,11 @@ export function AccountPortal({ locale }: { locale: Locale }) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [locale])
 
   useEffect(() => {
     void loadAccessSnapshot()
-  }, [])
+  }, [loadAccessSnapshot])
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search)
@@ -97,7 +97,7 @@ export function AccountPortal({ locale }: { locale: Locale }) {
     return () => {
       subscription.unsubscribe()
     }
-  }, [accountsEnabled])
+  }, [accountsEnabled, loadAccessSnapshot])
 
   const planLabel =
     accessSnapshot?.plan && accessSnapshot.plan !== "free"

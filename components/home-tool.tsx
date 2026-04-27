@@ -572,24 +572,27 @@ export function HomeTool({ locale }: { locale: Locale }) {
       active = false
       controller.abort()
     }
-  }, [])
+  }, [locale])
 
-  const loadAccessSnapshot = useCallback(async (signal?: AbortSignal) => {
-    const response = await fetch("/api/access", {
-      cache: "no-store",
-      signal,
-    })
-    const payload = (await response.json()) as AccessResponsePayload
+  const loadAccessSnapshot = useCallback(
+    async (signal?: AbortSignal) => {
+      const response = await fetch("/api/access", {
+        cache: "no-store",
+        signal,
+      })
+      const payload = (await response.json()) as AccessResponsePayload
 
-    if (!response.ok || !payload.access) {
-      throw new Error(
-        payload.error ?? (locale === "en" ? "Unable to load your quota." : "Impossible de charger votre quota."),
-      )
-    }
+      if (!response.ok || !payload.access) {
+        throw new Error(
+          payload.error ?? (locale === "en" ? "Unable to load your quota." : "Impossible de charger votre quota."),
+        )
+      }
 
-    setAccessSnapshot(payload.access)
-    setAccessError("")
-  }, [])
+      setAccessSnapshot(payload.access)
+      setAccessError("")
+    },
+    [locale],
+  )
 
   useEffect(() => {
     const controller = new AbortController()
@@ -623,7 +626,7 @@ export function HomeTool({ locale }: { locale: Locale }) {
       active = false
       controller.abort()
     }
-  }, [loadAccessSnapshot])
+  }, [loadAccessSnapshot, locale])
 
   useEffect(() => {
     const mediaQuery = window.matchMedia(MOBILE_MEDIA_QUERY)
@@ -733,7 +736,7 @@ export function HomeTool({ locale }: { locale: Locale }) {
         URL.revokeObjectURL(previewUrl)
       }
     }
-  }, [result, resultPreviewPage, usesImageResultPreview])
+  }, [locale, result, resultPreviewPage, usesImageResultPreview])
 
   useEffect(() => {
     if (files.length === 0) {
@@ -849,7 +852,7 @@ export function HomeTool({ locale }: { locale: Locale }) {
         URL.revokeObjectURL(previewUrl)
       }
     }
-  }, [focusedFile, isManualProfile])
+  }, [focusedFile, isManualProfile, locale])
 
   useEffect(() => {
     if (files.length === 0) {
@@ -921,6 +924,7 @@ export function HomeTool({ locale }: { locale: Locale }) {
     deferredSelectedPageIndicesByFileId,
     files,
     freeBatchLimitError,
+    locale,
     mondialRelayVariantId,
     profileId,
     singleLabelSlot,
