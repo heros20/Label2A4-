@@ -1773,7 +1773,7 @@ export function HomeTool({ locale }: { locale: Locale }) {
 
         <div className="mt-4 rounded-[24px] border border-emerald-200/80 bg-emerald-50/80 p-4 text-sm leading-6 text-emerald-950 shadow-[0_18px_40px_-34px_rgba(34,197,94,0.18)]">
           <p className="font-semibold">
-            {locale === "en" ? "Your label is not listed yet?" : "Votre étiquette n&apos;est pas présente ?"}
+            {locale === "en" ? "Your label is not listed yet?" : "Votre étiquette n'est pas présente ?"}
           </p>
           <p className="mt-1">
             {locale === "en" ? "Send us your PDF through the " : "Envoyez-nous votre PDF via le "}
@@ -1785,7 +1785,7 @@ export function HomeTool({ locale }: { locale: Locale }) {
             </Link>
             {locale === "en"
               ? ". It helps us verify the exact format and add a matching layout when possible."
-              : ". Cela nous permet de vérifier le format et d&apos;ajouter une prise en charge adaptée si possible."}
+              : ". Cela nous permet de vérifier le format et d'ajouter une prise en charge adaptée si possible."}
           </p>
         </div>
       </section>
@@ -2546,7 +2546,7 @@ export function HomeTool({ locale }: { locale: Locale }) {
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">
               {locale === "en"
                 ? "Label2A4 turns your Chronopost, Colissimo, Mondial Relay and Happy Post PDF labels into compact A4 x4 sheets. It is useful for Vinted, Leboncoin and recurring shipping batches without changing your upload and print workflow."
-                : "Label2A4 transforme vos étiquettes PDF Chronopost, Colissimo, Mondial Relay et Happy Post en planches A4 x4. Pratique pour les ventes Vinted, Leboncoin et les expéditions régulières, sans modifier votre workflow d&apos;upload, de rognage et d&apos;impression."}
+                : "Label2A4 transforme vos étiquettes PDF Chronopost, Colissimo, Mondial Relay et Happy Post en planches A4 x4. Pratique pour les ventes Vinted, Leboncoin et les expéditions régulières, sans changer votre façon d'importer, de rogner et d'imprimer les fichiers."}
             </p>
           </div>
           <div className="flex flex-wrap gap-3 lg:justify-end">

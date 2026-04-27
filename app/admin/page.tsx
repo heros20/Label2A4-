@@ -62,7 +62,7 @@ export default async function AdminPage() {
         <section className={cardClass}>
           <h2 className="text-xl font-semibold text-slate-950">Connexion admin</h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Cette page n&apos;est pas publique.
+            Cette page n'est pas publique.
           </p>
           <div className="mt-5 max-w-md">
             <AdminLoginForm />
