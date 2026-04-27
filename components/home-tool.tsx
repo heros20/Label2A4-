@@ -1709,12 +1709,6 @@ export function HomeTool({ locale }: { locale: Locale }) {
                     {variantDisplay.description ? (
                       <div className="mt-2 text-sm text-slate-600">{variantDisplay.description}</div>
                     ) : null}
-                    {"defaultRotation" in variant && variant.defaultRotation !== undefined && (
-                      <div className="mt-3 inline-flex rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-800">
-                        {locale === "en" ? "Default rotation" : "Rotation par défaut"} {variant.defaultRotation}
-                        {"\u00B0"}
-                      </div>
-                    )}
                   </button>
                 )
               })}
