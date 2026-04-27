@@ -4,6 +4,33 @@ import type { Locale } from "@/lib/i18n"
 import { localizePath } from "@/lib/i18n"
 import type { SeoPageContent } from "@/lib/seo-pages"
 
+const SEO_PAGE_LOGOS: Record<string, { src: string; alt: string }> = {
+  "/chronopost": {
+    src: "/images/logo/chronopost.png",
+    alt: "Logo Chronopost",
+  },
+  "/colissimo": {
+    src: "/images/logo/colissimo.png",
+    alt: "Logo Colissimo",
+  },
+  "/happy-post": {
+    src: "/images/logo/happy-post.png",
+    alt: "Logo Happy Post",
+  },
+  "/mondial-relay": {
+    src: "/images/logo/mondial-relais.png",
+    alt: "Logo Mondial Relay",
+  },
+  "/vinted": {
+    src: "/images/logo/vinted.jpg",
+    alt: "Logo Vinted",
+  },
+  "/leboncoin": {
+    src: "/images/logo/leboncoin.png",
+    alt: "Logo Leboncoin",
+  },
+}
+
 function getComparisonImages(locale: Locale) {
   return {
     chronopost: [
@@ -219,6 +246,7 @@ interface SeoServicePageProps {
 export function SeoServicePage({ page, locale, children }: SeoServicePageProps) {
   const primaryHref =
     page.path === "/economies" ? "#simulateur" : page.path === "/entreprises" ? "/economies#simulateur" : "/#outil"
+  const pageLogo = SEO_PAGE_LOGOS[page.path]
   const faqJsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -246,7 +274,22 @@ export function SeoServicePage({ page, locale, children }: SeoServicePageProps) 
           >
             {locale === "en" ? "A4 printing guide" : "Guide d’impression A4"}
           </Link>
-          <p className="mt-7 text-sm font-semibold uppercase tracking-[0.16em] text-sky-800">{page.eyebrow}</p>
+          <div className="mt-7 flex flex-wrap items-center gap-3">
+            {pageLogo && (
+              <span className="flex h-12 items-center rounded-[18px] border border-slate-200/80 bg-white/82 px-4 shadow-sm">
+                <Image
+                  src={pageLogo.src}
+                  alt={pageLogo.alt}
+                  width={132}
+                  height={44}
+                  unoptimized
+                  className="max-h-9 w-auto object-contain"
+                  priority
+                />
+              </span>
+            )}
+            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-sky-800">{page.eyebrow}</p>
+          </div>
           <h1 className="mt-4 max-w-3xl text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl">
             {page.title}
           </h1>

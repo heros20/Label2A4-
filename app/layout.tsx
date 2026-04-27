@@ -54,15 +54,17 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     icons: {
       icon: [
+        { url: siteConfig.brand.favicon32Png, sizes: "32x32", type: "image/png" },
+        { url: siteConfig.brand.favicon16Png, sizes: "16x16", type: "image/png" },
+        { url: siteConfig.brand.logoMarkPng, sizes: "256x256", type: "image/png" },
         { url: "/favicon.ico", sizes: "any" },
-        { url: siteConfig.brand.faviconIco, sizes: "any", type: "image/x-icon" },
         { url: siteConfig.brand.logoSvg, type: "image/svg+xml" },
       ],
       shortcut: [{ url: siteConfig.brand.faviconIco, type: "image/x-icon" }],
       apple: [
         {
-          url: siteConfig.brand.logoPng,
-          sizes: `${siteConfig.brand.logoWidth}x${siteConfig.brand.logoHeight}`,
+          url: siteConfig.brand.appleTouchIconPng,
+          sizes: "180x180",
           type: "image/png",
         },
       ],

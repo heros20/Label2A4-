@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
 import {
   startTransition,
@@ -9,6 +10,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ChangeEvent,
 } from "react"
 import {
   Download,
@@ -95,6 +97,68 @@ const SINGLE_LABEL_PLACEMENTS: Array<{ id: SingleLabelSlot; label: string }> = [
 ]
 const FREE_MAX_PDF_FILES_PER_BATCH = siteConfig.pricing.freeMaxPdfFilesPerBatch
 const FREE_MAX_A4_SHEETS_PER_EXPORT = siteConfig.pricing.freeMaxA4SheetsPerExport
+const TRANSPORTER_LOGOS: Record<string, { src: string; alt: string }> = {
+  chronopost: {
+    src: "/images/logo/chronopost.png",
+    alt: "Logo Chronopost",
+  },
+  colissimo: {
+    src: "/images/logo/colissimo.png",
+    alt: "Logo Colissimo",
+  },
+  "happy-post": {
+    src: "/images/logo/happy-post.png",
+    alt: "Logo Happy Post",
+  },
+  "mondial-relay": {
+    src: "/images/logo/mondial-relais.png",
+    alt: "Logo Mondial Relay",
+  },
+}
+const HOME_COMPARISON_SLIDES = [
+  {
+    id: "chronopost",
+    label: "Chronopost",
+    before: {
+      src: "/images/chronopost/leboncoinx1.pdf.jpg",
+      alt: "Bordereau Chronopost imprimé seul sur une feuille A4",
+      frameClassName: "w-full max-w-full aspect-[1755/1240] rotate-270 scale-80",
+    },
+    after: {
+      src: "/images/chronopost/leboncoinx4.pdf.jpg",
+      alt: "Quatre bordereaux Chronopost regroupés sur une feuille A4",
+      frameClassName: "h-full max-h-full aspect-[1241/1754]",
+    },
+  },
+  {
+    id: "mondial-relay",
+    label: "Mondial Relay",
+    before: {
+      src: "/images/mondial-relais/mondialx1.jpg",
+      alt: "Bordereau Mondial Relay imprimé seul sur une feuille A4",
+      frameClassName: "h-full max-h-full aspect-[1241/1754] scale-100",
+    },
+    after: {
+      src: "/images/mondial-relais/mondialx4.jpg",
+      alt: "Quatre bordereaux Mondial Relay regroupés sur une feuille A4",
+      frameClassName: "h-full max-h-full aspect-[1241/1754]",
+    },
+  },
+  {
+    id: "colissimo",
+    label: "Colissimo",
+    before: {
+      src: "/images/colissimo/colissimox1.jpg",
+      alt: "Bordereau Colissimo imprimé seul sur une feuille A4",
+      frameClassName: "w-full max-w-full aspect-[1755/1240] rotate-270 scale-80",
+    },
+    after: {
+      src: "/images/colissimo/colissimox4.jpg",
+      alt: "Quatre bordereaux Colissimo regroupés sur une feuille A4",
+      frameClassName: "h-full max-h-full aspect-[1241/1754]",
+    },
+  },
+] as const
 
 const SINGLE_LABEL_PLACEMENTS_EN: Array<{ id: SingleLabelSlot; label: string }> = [
   { id: "top-left", label: "Top left" },
@@ -120,6 +184,25 @@ function isDefaultManualCrop(crop?: ManualCropRect | null) {
 
 function formatInteger(value: number, locale: Locale = "fr") {
   return new Intl.NumberFormat(locale === "en" ? "en-US" : "fr-FR").format(value)
+}
+
+function formatCropPercent(value: number) {
+  return `${Math.round(value * 100)}%`
+}
+
+function formatCropInputValue(value: number) {
+  return Math.round(value * 100)
+}
+
+function formatManualCropSummary(crop: ManualCropRect | undefined, locale: Locale) {
+  if (!crop || isDefaultManualCrop(crop)) {
+    return locale === "en" ? "full page" : "page entière"
+  }
+
+  const normalized = normalizeManualCropRect(crop)
+  const widthLabel = locale === "en" ? "W" : "L"
+  const heightLabel = locale === "en" ? "H" : "H"
+  return `X ${formatCropPercent(normalized.x)} · Y ${formatCropPercent(normalized.y)} · ${widthLabel} ${formatCropPercent(normalized.width)} · ${heightLabel} ${formatCropPercent(normalized.height)}`
 }
 
 function translatePdfToolError(message: string, locale: Locale) {
@@ -162,6 +245,145 @@ function normalizePageSelection(pageCount: number, selectedPageIndices?: number[
       ),
     ),
   ).sort((first, second) => first - second)
+}
+
+function HomeComparisonSlider({ locale }: { locale: Locale }) {
+  const [activeSlideIndex, setActiveSlideIndex] = useState(0)
+  const [isSlideChanging, setIsSlideChanging] = useState(false)
+  const [sequenceKey, setSequenceKey] = useState(0)
+  const slideChangeTimeoutRef = useRef<number | null>(null)
+  const activeSlide = HOME_COMPARISON_SLIDES[activeSlideIndex]
+
+  const handleSlideChange = (nextIndex: number) => {
+    if (nextIndex === activeSlideIndex) {
+      return
+    }
+
+    if (slideChangeTimeoutRef.current) {
+      window.clearTimeout(slideChangeTimeoutRef.current)
+    }
+
+    setIsSlideChanging(true)
+    slideChangeTimeoutRef.current = window.setTimeout(() => {
+      setActiveSlideIndex(nextIndex)
+      setSequenceKey((currentKey) => currentKey + 1)
+      window.setTimeout(() => {
+        setIsSlideChanging(false)
+      }, 120)
+    }, 220)
+  }
+
+  useEffect(() => {
+    setIsSlideChanging(false)
+
+    const timeouts = [
+      window.setTimeout(() => {
+        setIsSlideChanging(true)
+      }, 11700),
+      window.setTimeout(() => {
+        setActiveSlideIndex((currentIndex) => (currentIndex + 1) % HOME_COMPARISON_SLIDES.length)
+        setSequenceKey((currentKey) => currentKey + 1)
+      }, 12200),
+    ]
+
+    return () => {
+      timeouts.forEach((timeout) => window.clearTimeout(timeout))
+      if (slideChangeTimeoutRef.current) {
+        window.clearTimeout(slideChangeTimeoutRef.current)
+      }
+    }
+  }, [sequenceKey])
+
+  return (
+    <section className="rounded-[32px] border border-white/75 bg-white/88 p-4 shadow-[0_30px_82px_-58px_rgba(15,23,42,0.55)] backdrop-blur-xl sm:p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-800">
+            {locale === "en" ? "Before / after" : "Avant / après"}
+          </div>
+          <h2 className="mt-1 text-lg font-semibold tracking-tight text-slate-950">
+            {locale === "en" ? "4 labels on 1 A4 sheet" : "4 étiquettes sur 1 feuille A4"}
+          </h2>
+        </div>
+        <div className="flex rounded-full border border-slate-200/80 bg-slate-50 p-1">
+          {HOME_COMPARISON_SLIDES.map((slide, index) => (
+            <button
+              key={slide.id}
+              type="button"
+              className={cn(
+                "rounded-full px-3 py-1.5 text-xs font-semibold transition",
+                activeSlideIndex === index
+                  ? "bg-slate-950 text-white shadow-sm"
+                  : "text-slate-600 hover:bg-white hover:text-slate-950",
+              )}
+              onClick={() => handleSlideChange(index)}
+            >
+              {slide.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="relative mt-4 aspect-[1.12/1] overflow-hidden rounded-[26px] border border-slate-200/80 bg-slate-100">
+        <div
+          key={`${activeSlide.id}-${sequenceKey}`}
+          className={cn(
+            "absolute inset-0 transition-opacity duration-500 ease-out",
+            isSlideChanging ? "opacity-0" : "opacity-100",
+          )}
+        >
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-50 p-4">
+            <div className={cn("relative shrink-0", activeSlide.before.frameClassName)}>
+              <Image
+                src={activeSlide.before.src}
+                alt={activeSlide.before.alt}
+                fill
+                sizes="(min-width: 1024px) 430px, 90vw"
+                className="object-contain object-center"
+                priority
+              />
+            </div>
+          </div>
+
+          <div className="label2a4-comparison-reveal absolute inset-0 flex items-center justify-center bg-sky-50 p-4">
+            <div className={cn("relative shrink-0", activeSlide.after.frameClassName)}>
+              <Image
+                src={activeSlide.after.src}
+                alt={activeSlide.after.alt}
+                fill
+                sizes="(min-width: 1024px) 430px, 90vw"
+                className="object-contain object-center"
+                priority
+              />
+            </div>
+          </div>
+        </div>
+
+        <div
+          className={cn(
+            "label2a4-comparison-divider pointer-events-none absolute inset-y-0 w-px bg-white/95 shadow-[0_0_0_1px_rgba(15,23,42,0.08),0_0_34px_rgba(14,165,233,0.45)] transition-opacity duration-500 ease-out",
+            isSlideChanging ? "opacity-0" : "opacity-100",
+          )}
+        />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),transparent)]" />
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(248,250,252,0.98),rgba(240,249,255,0.98))] transition-opacity duration-300 ease-out",
+            isSlideChanging ? "opacity-100" : "opacity-0",
+          )}
+        />
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+        <div className="rounded-[18px] border border-slate-200/80 bg-slate-50 px-4 py-3 text-slate-600">
+          {locale === "en" ? "Before: one label alone" : "Avant : une étiquette seule"}
+        </div>
+        <div className="rounded-[18px] border border-sky-200/80 bg-sky-50 px-4 py-3 font-medium text-sky-900">
+          {locale === "en" ? "After: a sheet ready to print" : "Après : une planche prête à imprimer"}
+        </div>
+      </div>
+    </section>
+  )
 }
 
 export function HomeTool({ locale }: { locale: Locale }) {
@@ -945,6 +1167,24 @@ export function HomeTool({ locale }: { locale: Locale }) {
     setManualCropForFile(focusedFile.id, nextCrop)
   }
 
+  const updateFocusedManualCropFromPercent =
+    (field: keyof ManualCropRect) => (event: ChangeEvent<HTMLInputElement>) => {
+      if (!focusedFile) {
+        return
+      }
+
+      const percent = Number(event.target.value)
+      if (!Number.isFinite(percent)) {
+        return
+      }
+
+      const nextCrop = normalizeManualCropRect({
+        ...focusedManualCrop,
+        [field]: percent / 100,
+      })
+      setManualCropForFile(focusedFile.id, nextCrop)
+    }
+
   const resetFocusedManualCrop = () => {
     if (!focusedFile) {
       return
@@ -1299,7 +1539,10 @@ export function HomeTool({ locale }: { locale: Locale }) {
             {impactError && <p className="mt-2 text-sm text-amber-700">{impactError}</p>}
           </div>
 
-          <label
+          <div className="space-y-5">
+            <HomeComparisonSlider locale={locale} />
+
+            <label
             className={cn(
               "group relative flex min-h-[280px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[32px] border border-dashed border-sky-300/80 bg-[linear-gradient(165deg,rgba(255,255,255,0.95),rgba(241,245,249,0.94))] px-6 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_28px_80px_-56px_rgba(3,105,161,0.55)] transition duration-200",
               "hover:border-sky-500 hover:bg-white",
@@ -1342,12 +1585,14 @@ export function HomeTool({ locale }: { locale: Locale }) {
             {uploadError && (
               <p className="mt-4 max-w-sm text-sm font-medium text-amber-700">{uploadError}</p>
             )}
-          </label>
+            </label>
+          </div>
         </div>
 
         <div className="relative mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {LABEL_PROFILES.map((profile) => {
             const profileDisplay = getProfileDisplay(locale, profile.id)
+            const logo = TRANSPORTER_LOGOS[profile.id]
 
             return (
               <button
@@ -1361,8 +1606,22 @@ export function HomeTool({ locale }: { locale: Locale }) {
                 )}
                 onClick={() => setProfileId(profile.id)}
               >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-xl font-semibold text-slate-950">{profileDisplay.title}</div>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    {logo && (
+                      <div className="mb-3 flex h-10 w-24 items-center justify-start">
+                        <Image
+                          src={logo.src}
+                          alt={logo.alt}
+                          width={120}
+                          height={40}
+                          unoptimized
+                          className="max-h-9 w-auto object-contain"
+                        />
+                      </div>
+                    )}
+                    <div className="text-xl font-semibold text-slate-950">{profileDisplay.title}</div>
+                  </div>
                   <span
                     className={cn(
                       "rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em]",
@@ -1386,9 +1645,19 @@ export function HomeTool({ locale }: { locale: Locale }) {
           <div className="relative mt-4 rounded-[28px] border border-slate-200/80 bg-white/82 p-4 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.2)]">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h3 className="text-base font-semibold text-slate-950">
-                  {locale === "en" ? "Chronopost variants" : "Variantes Chronopost"}
-                </h3>
+                <div className="flex items-center gap-3">
+                  <Image
+                    src={TRANSPORTER_LOGOS.chronopost.src}
+                    alt={TRANSPORTER_LOGOS.chronopost.alt}
+                    width={112}
+                    height={36}
+                    unoptimized
+                    className="max-h-8 w-auto object-contain"
+                  />
+                  <h3 className="text-base font-semibold text-slate-950">
+                    {locale === "en" ? "Chronopost variants" : "Variantes Chronopost"}
+                  </h3>
+                </div>
                 <p className="mt-1 text-sm text-slate-600">
                   {locale === "en"
                     ? "Choose the Chronopost layout to apply to the batch."
@@ -1443,9 +1712,19 @@ export function HomeTool({ locale }: { locale: Locale }) {
           <div className="relative mt-4 rounded-[28px] border border-slate-200/80 bg-white/82 p-4 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.2)]">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h3 className="text-base font-semibold text-slate-950">
-                  {locale === "en" ? "Mondial Relay variants" : "Variantes Mondial Relay"}
-                </h3>
+                <div className="flex items-center gap-3">
+                  <Image
+                    src={TRANSPORTER_LOGOS["mondial-relay"].src}
+                    alt={TRANSPORTER_LOGOS["mondial-relay"].alt}
+                    width={112}
+                    height={36}
+                    unoptimized
+                    className="max-h-8 w-auto object-contain"
+                  />
+                  <h3 className="text-base font-semibold text-slate-950">
+                    {locale === "en" ? "Mondial Relay variants" : "Variantes Mondial Relay"}
+                  </h3>
+                </div>
                 <p className="mt-1 text-sm text-slate-600">
                   {locale === "en"
                     ? "Choose the Mondial Relay variant to apply to the batch."
@@ -1908,8 +2187,13 @@ export function HomeTool({ locale }: { locale: Locale }) {
                   </div>
                 )}
 
-                <div className="mt-5 grid gap-3 sm:max-w-xs">
-                  <div className={metricClass}>
+                <p className="mt-4 text-sm text-slate-500">
+                  {locale === "en"
+                    ? "On mobile, you can also refine the area with the fields below to avoid overly precise finger gestures."
+                    : "Sur mobile, affinez aussi la zone avec les champs ci-dessous pour éviter les manipulations trop fines au doigt."}
+                </p>
+                <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-5">
+                  <div className={cn(metricClass, "col-span-2 lg:col-span-1")}>
                     <div className="text-sm text-slate-500">{locale === "en" ? "Status" : "État"}</div>
                     <div className="mt-1 font-medium text-slate-900">
                       {isDefaultManualCrop(focusedManualCrop)
@@ -1920,6 +2204,58 @@ export function HomeTool({ locale }: { locale: Locale }) {
                           ? "Custom area"
                           : "Zone personnalisée"}
                     </div>
+                  </div>
+                  <div className={metricClass}>
+                    <div className="text-sm text-slate-500">X</div>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      max={100}
+                      step={1}
+                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-base font-medium text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                      value={formatCropInputValue(focusedManualCrop.x)}
+                      onChange={updateFocusedManualCropFromPercent("x")}
+                    />
+                  </div>
+                  <div className={metricClass}>
+                    <div className="text-sm text-slate-500">Y</div>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      max={100}
+                      step={1}
+                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-base font-medium text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                      value={formatCropInputValue(focusedManualCrop.y)}
+                      onChange={updateFocusedManualCropFromPercent("y")}
+                    />
+                  </div>
+                  <div className={metricClass}>
+                    <div className="text-sm text-slate-500">{locale === "en" ? "Width" : "Largeur"}</div>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min={1}
+                      max={100}
+                      step={1}
+                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-base font-medium text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                      value={formatCropInputValue(focusedManualCrop.width)}
+                      onChange={updateFocusedManualCropFromPercent("width")}
+                    />
+                  </div>
+                  <div className={metricClass}>
+                    <div className="text-sm text-slate-500">{locale === "en" ? "Height" : "Hauteur"}</div>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min={1}
+                      max={100}
+                      step={1}
+                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-base font-medium text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                      value={formatCropInputValue(focusedManualCrop.height)}
+                      onChange={updateFocusedManualCropFromPercent("height")}
+                    />
                   </div>
                 </div>
               </div>
@@ -2021,14 +2357,7 @@ export function HomeTool({ locale }: { locale: Locale }) {
                   </div>
                   {focusedFile && (
                     <div className="mt-2 text-sm text-slate-600">
-                      {focusedFile.name} :{" "}
-                      {isDefaultManualCrop(manualCropsByFileId[focusedFile.id])
-                        ? locale === "en"
-                          ? "full page"
-                          : "page entière"
-                        : locale === "en"
-                          ? "custom area"
-                          : "zone personnalisée"}
+                      {focusedFile.name} : {formatManualCropSummary(manualCropsByFileId[focusedFile.id], locale)}
                     </div>
                   )}
                 </div>
