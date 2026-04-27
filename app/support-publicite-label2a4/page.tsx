@@ -36,13 +36,13 @@ export default function SupportFlyerPage() {
             rel="noreferrer"
             className="inline-flex rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
           >
-            Ouvrir / imprimer
+            Ouvrir / imprimer le PDF
           </a>
           <a
             href={downloadHref}
             className="inline-flex rounded-full border border-slate-200/80 bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-sky-300 hover:text-sky-800"
           >
-            Télécharger le fichier HTML
+            Télécharger le PDF
           </a>
         </div>
 

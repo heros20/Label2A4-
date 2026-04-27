@@ -1037,10 +1037,20 @@ export function HomeTool({ locale }: { locale: Locale }) {
         )
       }
 
+      const exportBlob = await buildLabelA4Pdf(files, profileId, {
+        chronopostVariantId,
+        includeBrandSignature: true,
+        manualCropsByFileId: activeManualCropsByFileId,
+        mondialRelayVariantId,
+        rotationsByFileId: deferredRotationsByFileId,
+        selectedPageIndicesByFileId: deferredSelectedPageIndicesByFileId,
+        singleLabelSlot,
+      })
+
       if (action === "download") {
-        downloadBlob(result.blob, result.name)
+        downloadBlob(exportBlob, result.name)
       } else {
-        await printBlob(result.blob, {
+        await printBlob(exportBlob, {
           preferImagePrint: isMobileViewport,
         })
       }

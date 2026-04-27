@@ -1,4 +1,4 @@
-import { degrees, PDFDocument } from "pdf-lib"
+import { degrees, PDFDocument, rgb, StandardFonts } from "pdf-lib"
 import {
   DEFAULT_MANUAL_CROP_RECT,
   getResolvedLabelProfile,
@@ -22,6 +22,9 @@ const GRID_GAP = 12
 const ROWS = 2
 const COLUMNS = 2
 const MIN_CROP_SIZE = 0.01
+const BRAND_SIGNATURE_TEXT = "Imprimé avec Label2A4"
+const BRAND_SIGNATURE_LOGO_URL = "/images/logo/label2a4-mark.png"
+const BRAND_SIGNATURE_RESERVED_HEIGHT = 13
 
 // The user wants labels to fill the A4 in this exact order.
 const SLOT_ORDER = [1, 0, 3, 2] as const
@@ -37,6 +40,7 @@ export interface BuildLabelOptions {
   manualCrop?: ManualCropRect | null
   manualCropsByFileId?: Record<string, ManualCropRect>
   chronopostVariantId?: ChronopostVariantId
+  includeBrandSignature?: boolean
   mondialRelayVariantId?: MondialRelayVariantId
   rotationsByFileId?: Record<string, PdfRotation>
   selectedPageIndicesByFileId?: Record<string, number[]>
@@ -236,6 +240,69 @@ function getRotationDrawOffset(
   return { x: 0, y: 0 }
 }
 
+async function fetchBrandSignatureLogo() {
+  try {
+    const response = await fetch(BRAND_SIGNATURE_LOGO_URL)
+
+    if (!response.ok) {
+      return null
+    }
+
+    return new Uint8Array(await response.arrayBuffer())
+  } catch {
+    return null
+  }
+}
+
+async function getBrandSignatureAssets(output: PDFDocument) {
+  const logoBytes = await fetchBrandSignatureLogo()
+  const logo = logoBytes ? await output.embedPng(logoBytes) : null
+
+  return {
+    font: await output.embedFont(StandardFonts.Helvetica),
+    logo,
+  }
+}
+
+function drawBrandSignature({
+  assets,
+  page,
+  slot,
+}: {
+  assets: Awaited<ReturnType<typeof getBrandSignatureAssets>>
+  page: ReturnType<PDFDocument["addPage"]>
+  slot: ReturnType<typeof getSlotRect>
+}) {
+  const fontSize = 6.5
+  const logoSize = 8
+  const gap = 3
+  const { font, logo } = assets
+  const textWidth = font.widthOfTextAtSize(BRAND_SIGNATURE_TEXT, fontSize)
+  const signatureWidth = (logo ? logoSize + gap : 0) + textWidth
+  const x = slot.x + slot.width - signatureWidth - 4
+  const y = slot.y + 3
+  const color = rgb(0.45, 0.5, 0.58)
+
+  if (logo) {
+    page.drawImage(logo, {
+      x,
+      y: y - 1,
+      width: logoSize,
+      height: logoSize,
+      opacity: 0.7,
+    })
+  }
+
+  page.drawText(BRAND_SIGNATURE_TEXT, {
+    x: logo ? x + logoSize + gap : x,
+    y,
+    size: fontSize,
+    font,
+    color,
+    opacity: 0.82,
+  })
+}
+
 export async function getPdfPageCount(file: Blob) {
   const bytes = await file.arrayBuffer()
   const document = await PDFDocument.load(bytes)
@@ -283,6 +350,7 @@ export async function buildLabelA4Pdf(
 
   const shouldUseSingleLabelSlot = totalSelectedPageCount === 1 && Boolean(options.singleLabelSlot)
   const output = await PDFDocument.create()
+  const brandSignatureAssets = options.includeBrandSignature ? await getBrandSignatureAssets(output) : null
   let currentSheet = output.addPage([A4_PORTRAIT.width, A4_PORTRAIT.height])
   let itemIndex = 0
 
@@ -314,12 +382,18 @@ export async function buildLabelA4Pdf(
           ? SINGLE_LABEL_SLOT_MAP[options.singleLabelSlot]
           : SLOT_ORDER[itemIndex % 4]
       const slot = getSlotRect(slotIndex)
+      const labelSlotHeight = options.includeBrandSignature
+        ? slot.height - BRAND_SIGNATURE_RESERVED_HEIGHT
+        : slot.height
       const rotatedSize = getRotatedSize(croppedSize, rotation)
-      const scale = Math.min(slot.width / rotatedSize.width, slot.height / rotatedSize.height)
+      const scale = Math.min(slot.width / rotatedSize.width, labelSlotHeight / rotatedSize.height)
       const drawWidth = rotatedSize.width * scale
       const drawHeight = rotatedSize.height * scale
       const x = slot.x + (slot.width - drawWidth) / 2
-      const y = slot.y + (slot.height - drawHeight) / 2
+      const y =
+        slot.y +
+        (options.includeBrandSignature ? BRAND_SIGNATURE_RESERVED_HEIGHT : 0) +
+        (labelSlotHeight - drawHeight) / 2
       const drawOffset = getRotationDrawOffset(rotation, croppedSize, scale)
 
       currentSheet.drawPage(embeddedPage, {
@@ -329,6 +403,13 @@ export async function buildLabelA4Pdf(
         yScale: scale,
         rotate: degrees(-rotation),
       })
+      if (brandSignatureAssets) {
+        drawBrandSignature({
+          assets: brandSignatureAssets,
+          page: currentSheet,
+          slot,
+        })
+      }
 
       itemIndex += 1
       if (itemIndex % 4 === 0) {
