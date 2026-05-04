@@ -273,7 +273,12 @@ function SheetComparisonVisual({ locale, pagePath }: { locale: Locale; pagePath:
     pagePath === "/chronopost" ||
     pagePath === "/vinted" ||
     pagePath === "/entreprises" ||
-    pagePath === "/economies"
+    pagePath === "/economies" ||
+    pagePath === "/imprimer-etiquette" ||
+    pagePath === "/reduire-etiquette" ||
+    pagePath === "/rogner-etiquette" ||
+    pagePath === "/etiquette-pdf" ||
+    pagePath === "/economie-papier"
   ) {
     return <ImageComparisonVisual previews={comparisonImages.chronopost} />
   }
@@ -313,7 +318,11 @@ interface SeoServicePageProps {
 
 export function SeoServicePage({ page, locale, children }: SeoServicePageProps) {
   const primaryHref =
-    page.path === "/economies" ? "#simulateur" : page.path === "/entreprises" ? "/economies#simulateur" : "/#outil"
+    page.path === "/economies" || page.path === "/economie-papier"
+      ? "#simulateur"
+      : page.path === "/entreprises"
+        ? "/economies#simulateur"
+        : "/#outil"
   const pageLogo = SEO_PAGE_LOGOS[page.path]
   const faqJsonLd = {
     "@context": "https://schema.org",

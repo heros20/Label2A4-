@@ -2657,10 +2657,22 @@ export function HomeTool({ locale }: { locale: Locale }) {
               {locale === "en" ? "Read the A4 guide" : "Lire le guide A4"}
             </Link>
             <Link
-              href={localizePath("/mondial-relay", locale)}
+              href={localizePath("/imprimer-etiquette", locale)}
               className="inline-flex items-center rounded-full border border-slate-200/80 bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-sky-300 hover:text-sky-800"
             >
-              {locale === "en" ? "Mondial Relay guide" : "Guide Mondial Relay"}
+              {locale === "en" ? "Print label" : "Imprimer étiquette"}
+            </Link>
+            <Link
+              href={localizePath("/reduire-etiquette", locale)}
+              className="inline-flex items-center rounded-full border border-slate-200/80 bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-sky-300 hover:text-sky-800"
+            >
+              {locale === "en" ? "Reduce label" : "Réduire étiquette"}
+            </Link>
+            <Link
+              href={localizePath("/rogner-etiquette", locale)}
+              className="inline-flex items-center rounded-full border border-slate-200/80 bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-sky-300 hover:text-sky-800"
+            >
+              {locale === "en" ? "Crop label" : "Rogner étiquette"}
             </Link>
           </div>
         </div>

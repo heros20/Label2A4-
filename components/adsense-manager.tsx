@@ -34,6 +34,11 @@ const ADSENSE_CONTENT_PATHS = new Set([
   "/vinted",
   "/leboncoin",
   "/entreprises",
+  "/imprimer-etiquette",
+  "/reduire-etiquette",
+  "/rogner-etiquette",
+  "/etiquette-pdf",
+  "/economie-papier",
   "/economies",
 ])
 

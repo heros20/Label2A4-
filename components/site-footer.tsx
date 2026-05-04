@@ -17,6 +17,16 @@ export function SiteFooter({ locale }: { locale: Locale }) {
       ],
     },
     {
+      title: locale === "en" ? "Guides" : "Guides",
+      links: [
+        { href: "/imprimer-etiquette", label: locale === "en" ? "Print label" : "Imprimer étiquette" },
+        { href: "/reduire-etiquette", label: locale === "en" ? "Reduce label" : "Réduire étiquette" },
+        { href: "/rogner-etiquette", label: locale === "en" ? "Crop label" : "Rogner étiquette" },
+        { href: "/etiquette-pdf", label: locale === "en" ? "PDF label" : "Étiquette PDF" },
+        { href: "/economie-papier", label: locale === "en" ? "Paper savings" : "Économie papier" },
+      ],
+    },
+    {
       title: locale === "en" ? "Carriers" : "Transporteurs",
       links: [
         { href: "/mondial-relay", label: "Mondial Relay" },
@@ -73,7 +83,7 @@ export function SiteFooter({ locale }: { locale: Locale }) {
 
           <nav
             aria-label={locale === "en" ? "Footer navigation" : "Navigation de pied de page"}
-            className="grid gap-6 sm:grid-cols-2 lg:grid-cols-5"
+            className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
           >
             {footerLinkGroups.map((group) => (
               <div key={group.title}>

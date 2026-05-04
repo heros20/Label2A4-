@@ -63,6 +63,11 @@ const staticEnglishPaths: Array<string[]> = [
   ["mondial-relay"],
   ["vinted"],
   ["entreprises"],
+  ["imprimer-etiquette"],
+  ["reduire-etiquette"],
+  ["rogner-etiquette"],
+  ["etiquette-pdf"],
+  ["economie-papier"],
   ["economies"],
   ["paiement", "succes"],
   ["paiement", "annule"],
@@ -79,6 +84,11 @@ const seoPageKeys = new Set<SeoPageKey>([
   "mondial-relay",
   "vinted",
   "entreprises",
+  "imprimer-etiquette",
+  "reduire-etiquette",
+  "rogner-etiquette",
+  "etiquette-pdf",
+  "economie-papier",
   "economies",
 ])
 
@@ -273,7 +283,7 @@ export default async function EnglishPage({ params, searchParams }: EnglishPageP
   if (seoPageKeys.has(path as SeoPageKey)) {
     const page = getSeoPage(path as SeoPageKey, locale)
 
-    if (path === "economies") {
+    if (path === "economies" || path === "economie-papier") {
       return (
         <SeoServicePage page={page} locale={locale}>
           <SavingsSimulator locale={locale} />

@@ -46,6 +46,11 @@ export type SeoPageKey =
   | "vinted"
   | "leboncoin"
   | "entreprises"
+  | "imprimer-etiquette"
+  | "reduire-etiquette"
+  | "rogner-etiquette"
+  | "etiquette-pdf"
+  | "economie-papier"
   | "economies"
 
 const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
@@ -629,6 +634,326 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
         },
       ],
       ctaLabel: "Calculer le gain pour mon volume",
+    },
+    "imprimer-etiquette": {
+      path: "/imprimer-etiquette",
+      metaTitle: "Imprimer une étiquette colis PDF sur A4",
+      metaDescription:
+        "Guide pratique pour imprimer une étiquette PDF de transporteur sur A4, vérifier le code-barres et éviter de gaspiller une feuille entière.",
+      eyebrow: "Impression étiquette",
+      title: "Imprimer une étiquette colis PDF proprement sur A4",
+      intro:
+        "Quand une étiquette colis arrive en PDF, l’impression par défaut utilise souvent une feuille A4 complète. Label2A4 aide à préparer vos étiquettes Mondial Relay, Colissimo, Chronopost, Happy Post, FedEx ou DHL pour obtenir une sortie plus compacte, lisible et prête à découper.",
+      highlights: ["Étiquette PDF", "Impression A4", "Codes-barres lisibles"],
+      problem: {
+        title: "Une impression simple peut vite gaspiller du papier",
+        text:
+          "Beaucoup de bordereaux transporteurs occupent seulement une partie de la page, mais l’imprimante sort tout de même une feuille entière. Sur plusieurs colis, vous multipliez les feuilles, les découpes et les impressions inutiles.",
+      },
+      solution: {
+        title: "Une planche A4 plus dense et plus facile à imprimer",
+        text:
+          "Importez vos PDF, choisissez le profil du transporteur ou le mode manuel, puis générez une page A4 avec jusqu’à quatre étiquettes. Le fichier source n’est pas recréé : Label2A4 optimise le cadrage et le placement d’impression.",
+      },
+      useCases: [
+        {
+          title: "Ventes Vinted et Leboncoin",
+          text: "Regroupez les étiquettes des ventes du jour avant le dépôt en point relais, bureau de poste ou agence transporteur.",
+        },
+        {
+          title: "Envois e-commerce",
+          text: "Préparez des lots de commandes sans lancer une impression complète pour chaque bordereau PDF.",
+        },
+        {
+          title: "Imprimante maison",
+          text: "Gardez votre imprimante A4 habituelle tout en obtenant une feuille plus propre à découper et à coller.",
+        },
+      ],
+      economy: {
+        title: "Une étiquette seule n’a pas besoin de toute une page",
+        text:
+          "Dès que vous avez plusieurs bordereaux à imprimer, la mise en page A4 x4 peut réduire fortement la consommation de papier par rapport à une étiquette par feuille.",
+      },
+      steps: [
+        "Téléchargez vos étiquettes colis au format PDF.",
+        "Importez-les dans Label2A4 et sélectionnez le transporteur correspondant.",
+        "Vérifiez que les codes-barres et numéros de suivi restent nets dans l’aperçu.",
+        "Téléchargez la planche A4 et imprimez-la en qualité normale ou élevée.",
+      ],
+      faqs: [
+        {
+          question: "Comment imprimer une étiquette PDF sur A4 ?",
+          answer:
+            "Importez le PDF dans Label2A4, choisissez le profil adapté au transporteur, vérifiez l’aperçu puis téléchargez la feuille A4 prête à imprimer.",
+        },
+        {
+          question: "Peut-on imprimer plusieurs étiquettes sur une seule feuille ?",
+          answer:
+            "Oui. Quand le format des PDF le permet, Label2A4 place jusqu’à quatre étiquettes sur une feuille A4.",
+        },
+        {
+          question: "Le code-barres reste-t-il scannable ?",
+          answer:
+            "L’objectif est de conserver une étiquette lisible. Vérifiez toujours l’aperçu final et évitez les impressions trop pâles, floues ou fortement réduites.",
+        },
+      ],
+      ctaLabel: "Imprimer mes étiquettes",
+    },
+    "reduire-etiquette": {
+      path: "/reduire-etiquette",
+      metaTitle: "Réduire une étiquette PDF sans perdre le code-barres",
+      metaDescription:
+        "Réduisez une étiquette colis PDF pour l’imprimer sur A4, économiser du papier et garder une zone de scan lisible.",
+      eyebrow: "Réduire étiquette",
+      title: "Réduire une étiquette PDF pour l’imprimer plus proprement",
+      intro:
+        "Réduire une étiquette ne veut pas dire écraser tout le PDF au hasard. Pour rester utilisable, le code-barres, le QR code, l’adresse et le numéro de suivi doivent rester lisibles. Label2A4 applique des profils de rognage et de placement adaptés aux étiquettes colis.",
+      highlights: ["Réduction maîtrisée", "Aperçu avant impression", "PDF transporteur préservé"],
+      problem: {
+        title: "Une réduction trop forte rend l’étiquette difficile à scanner",
+        text:
+          "Les options classiques d’impression réduisent parfois toute la page, marges incluses. Résultat : l’étiquette paraît plus petite, mais la zone utile peut devenir moins lisible ou mal placée sur la feuille.",
+      },
+      solution: {
+        title: "Rogner la zone utile avant de la replacer sur A4",
+        text:
+          "Label2A4 isole d’abord la partie importante du PDF, puis la place sur une planche A4. Cette approche évite de réduire inutilement les marges vides et garde le bordereau plus propre à imprimer.",
+      },
+      useCases: [
+        {
+          title: "Étiquette trop grande",
+          text: "Ramenez un bordereau qui occupe toute la page vers un format plus pratique à découper.",
+        },
+        {
+          title: "Lots de colis",
+          text: "Réduisez plusieurs PDF compatibles pour les imprimer ensemble sur une planche A4.",
+        },
+        {
+          title: "Mode manuel",
+          text: "Ajustez vous-même la zone utile si votre transporteur ou votre format n’est pas encore reconnu.",
+        },
+      ],
+      economy: {
+        title: "La réduction utile vient surtout du regroupement",
+        text:
+          "Une étiquette réduite seule économise peu. Le vrai gain arrive quand plusieurs étiquettes sont placées sur la même feuille A4.",
+      },
+      steps: [
+        "Ajoutez votre étiquette PDF dans l’outil.",
+        "Sélectionnez un profil transporteur ou le mode rognage manuel.",
+        "Ajustez si nécessaire, puis contrôlez la lisibilité du code-barres.",
+        "Générez le PDF A4 optimisé.",
+      ],
+      faqs: [
+        {
+          question: "Comment réduire une étiquette colis ?",
+          answer:
+            "Utilisez un profil transporteur Label2A4 ou le rognage manuel pour isoler l’étiquette, puis exportez une feuille A4 optimisée.",
+        },
+        {
+          question: "Peut-on réduire une étiquette Colissimo, Chronopost ou Mondial Relay ?",
+          answer:
+            "Oui. Label2A4 propose des profils dédiés pour plusieurs transporteurs courants, avec un mode manuel pour les cas particuliers.",
+        },
+        {
+          question: "Une étiquette réduite est-elle acceptée par le transporteur ?",
+          answer:
+            "Elle doit rester nette et scannable. Vérifiez l’aperçu, imprimez proprement et ne masquez jamais le code-barres avec du ruban opaque ou brillant.",
+        },
+      ],
+      ctaLabel: "Réduire mon étiquette",
+    },
+    "rogner-etiquette": {
+      path: "/rogner-etiquette",
+      metaTitle: "Rogner une étiquette PDF avant impression",
+      metaDescription:
+        "Rognez la zone utile d’une étiquette PDF, retirez les marges inutiles et préparez une feuille A4 optimisée pour vos colis.",
+      eyebrow: "Rogner étiquette",
+      title: "Rogner une étiquette PDF pour enlever les marges inutiles",
+      intro:
+        "Rogner une étiquette consiste à conserver uniquement la partie utile du bordereau : adresse, suivi, codes de scan et informations transporteur. C’est la base d’une impression A4 plus compacte, surtout quand le PDF contient beaucoup d’espace vide.",
+      highlights: ["Rognage manuel", "Profils automatiques", "A4 x4"],
+      problem: {
+        title: "Les marges vides empêchent de bien regrouper les étiquettes",
+        text:
+          "Si vous imprimez le PDF complet, la feuille garde toutes les zones inutiles autour de l’étiquette. Même en réduisant l’impression, le rendu peut rester mal cadré et peu pratique à découper.",
+      },
+      solution: {
+        title: "Une zone personnalisée quand le profil automatique ne suffit pas",
+        text:
+          "Label2A4 propose des profils prêts à l’emploi et un mode rognage manuel. Vous pouvez sélectionner la zone à garder, passer d’un aperçu PDF à l’autre, puis générer une planche A4 plus propre.",
+      },
+      useCases: [
+        {
+          title: "Transporteur non listé",
+          text: "Utilisez la zone personnalisée pour préparer un PDF qui ne correspond pas encore à un profil existant.",
+        },
+        {
+          title: "PDF avec marges larges",
+          text: "Retirez les zones blanches autour de l’étiquette avant de l’intégrer dans une planche A4.",
+        },
+        {
+          title: "Plusieurs formats dans un lot",
+          text: "Passez d’un aperçu actif à l’autre et ajustez les fichiers qui ont besoin d’un cadrage différent.",
+        },
+      ],
+      economy: {
+        title: "Un bon rognage rend le regroupement plus efficace",
+        text:
+          "Plus la zone utile est bien cadrée, plus la planche A4 finale est lisible, régulière et intéressante pour économiser du papier.",
+      },
+      steps: [
+        "Importez un ou plusieurs PDF d’étiquettes.",
+        "Choisissez le mode rognage manuel si le profil automatique ne convient pas.",
+        "Déplacez et redimensionnez la zone utile sur l’aperçu actif.",
+        "Générez la feuille A4 finale après vérification.",
+      ],
+      faqs: [
+        {
+          question: "Comment rogner une étiquette PDF ?",
+          answer:
+            "Importez le PDF dans Label2A4, activez le mode rognage manuel, sélectionnez la zone utile puis exportez la planche A4.",
+        },
+        {
+          question: "À quoi sert le rognage d’une étiquette ?",
+          answer:
+            "Il retire les marges inutiles pour mieux placer l’étiquette sur la feuille et éviter de gaspiller une page entière.",
+        },
+        {
+          question: "Puis-je rogner plusieurs PDF différents ?",
+          answer:
+            "Oui. En mode manuel, vous pouvez changer l’aperçu actif et adapter la zone personnalisée aux fichiers qui en ont besoin.",
+        },
+      ],
+      ctaLabel: "Rogner mon étiquette",
+    },
+    "etiquette-pdf": {
+      path: "/etiquette-pdf",
+      metaTitle: "Étiquette PDF : préparer l’impression sur feuille A4",
+      metaDescription:
+        "Préparez vos étiquettes PDF de transporteurs pour une impression A4 plus compacte, avec rognage, réduction et regroupement.",
+      eyebrow: "Étiquette PDF",
+      title: "Préparer une étiquette PDF de transporteur avant impression",
+      intro:
+        "Une étiquette PDF contient déjà les informations officielles du transporteur. Label2A4 ne la remplace pas : l’outil aide à mieux l’imprimer, en rognant les marges utiles et en regroupant plusieurs bordereaux sur une seule feuille A4.",
+      highlights: ["PDF colis", "Rognage", "Impression optimisée"],
+      problem: {
+        title: "Le PDF transporteur n’est pas toujours pensé pour économiser le papier",
+        text:
+          "Les plateformes d’expédition génèrent souvent une page complète par colis. C’est simple, mais peu efficace quand l’étiquette n’occupe qu’une partie de la feuille.",
+      },
+      solution: {
+        title: "Conserver le PDF source, optimiser seulement la mise en page",
+        text:
+          "Avec Label2A4, vous importez le fichier original, vous sélectionnez le bon profil et vous récupérez un nouveau PDF A4 prêt à imprimer. Les informations de suivi et de scan restent celles du transporteur.",
+      },
+      useCases: [
+        {
+          title: "PDF Mondial Relay, Colissimo, Chronopost",
+          text: "Utilisez les profils dédiés pour les transporteurs les plus fréquents.",
+        },
+        {
+          title: "PDF FedEx, DHL ou Happy Post",
+          text: "Préparez aussi les bordereaux express ou internationaux avec des pages transporteur dédiées.",
+        },
+        {
+          title: "PDF particulier",
+          text: "Passez en rognage manuel si le format n’entre pas encore dans les profils proposés.",
+        },
+      ],
+      economy: {
+        title: "Un PDF final plus pratique à imprimer et archiver",
+        text:
+          "Au lieu de garder plusieurs fichiers imprimés séparément, vous pouvez produire une planche A4 unique pour vos étiquettes du jour.",
+      },
+      steps: [
+        "Téléchargez l’étiquette PDF depuis votre transporteur ou plateforme de vente.",
+        "Importez le fichier dans Label2A4.",
+        "Choisissez le profil ou ajustez la zone manuellement.",
+        "Téléchargez le PDF optimisé pour impression A4.",
+      ],
+      faqs: [
+        {
+          question: "Qu’est-ce qu’une étiquette PDF ?",
+          answer:
+            "C’est un fichier fourni par un transporteur ou une plateforme de vente contenant l’étiquette à imprimer et à coller sur le colis.",
+        },
+        {
+          question: "Label2A4 modifie-t-il le contenu de l’étiquette ?",
+          answer:
+            "Non. L’outil optimise le cadrage et le placement d’impression, mais ne recrée pas les informations transporteur.",
+        },
+        {
+          question: "Puis-je utiliser une étiquette PDF venant de Vinted ou Leboncoin ?",
+          answer:
+            "Oui, si l’étiquette est fournie sous forme de PDF transporteur compatible ou si elle peut être préparée avec le mode manuel.",
+        },
+      ],
+      ctaLabel: "Préparer mon PDF",
+    },
+    "economie-papier": {
+      path: "/economie-papier",
+      metaTitle: "Économie papier : imprimer moins de feuilles d’étiquettes",
+      metaDescription:
+        "Réduisez le gaspillage papier en regroupant plusieurs étiquettes colis PDF sur une seule feuille A4 prête à imprimer.",
+      eyebrow: "Économie papier",
+      title: "Faire des économies de papier avec vos étiquettes colis",
+      intro:
+        "L’économie papier la plus simple consiste à arrêter d’imprimer une petite étiquette seule sur une grande feuille A4. Label2A4 regroupe les bordereaux compatibles sur une planche A4 pour limiter les feuilles utilisées.",
+      highlights: ["Moins de feuilles", "Moins de gaspillage", "A4 x4"],
+      problem: {
+        title: "Le gaspillage paraît faible, mais il se répète à chaque colis",
+        text:
+          "Une feuille utilisée pour une seule étiquette semble anodine. Sur des ventes régulières, des retours clients ou des lots e-commerce, cette habitude devient un coût récurrent en papier, encre et manipulation.",
+      },
+      solution: {
+        title: "Jusqu’à quatre étiquettes sur une feuille A4",
+        text:
+          "Quand les PDF sont compatibles, Label2A4 place quatre bordereaux sur une même page. Vous imprimez moins de feuilles, découpez plus vite et gardez une sortie claire pour vos colis.",
+      },
+      useCases: [
+        {
+          title: "Particuliers",
+          text: "Réduisez les impressions lors des ventes Vinted, Leboncoin ou des dépôts groupés.",
+        },
+        {
+          title: "Petites boutiques",
+          text: "Limitez les feuilles consommées lors des préparations de commandes quotidiennes.",
+        },
+        {
+          title: "Équipes expédition",
+          text: "Standardisez une sortie A4 x4 pour mieux suivre les économies papier dans le temps.",
+        },
+      ],
+      economy: {
+        title: "Un gain visible dès quatre colis",
+        text:
+          "Dans le cas idéal, quatre étiquettes passent de quatre feuilles à une seule. Sur 100 étiquettes, cela peut représenter environ 75 feuilles évitées.",
+      },
+      steps: [
+        "Rassemblez les PDF d’étiquettes à imprimer.",
+        "Importez-les dans Label2A4.",
+        "Vérifiez la planche A4 générée.",
+        "Imprimez, découpez et collez les étiquettes sur les bons colis.",
+      ],
+      faqs: [
+        {
+          question: "Comment économiser du papier avec des étiquettes colis ?",
+          answer:
+            "Regroupez plusieurs étiquettes PDF sur une même feuille A4 au lieu d’imprimer une feuille entière par colis.",
+        },
+        {
+          question: "Combien de papier peut-on économiser ?",
+          answer:
+            "Dans le meilleur cas, une planche de quatre étiquettes utilise une feuille au lieu de quatre, soit jusqu’à trois feuilles économisées.",
+        },
+        {
+          question: "Faut-il une imprimante spéciale ?",
+          answer:
+            "Non. Label2A4 génère un PDF A4 destiné à une imprimante classique, avec une vérification de l’aperçu avant impression.",
+        },
+      ],
+      ctaLabel: "Économiser du papier",
     },
     economies: {
       path: "/economies",
@@ -1259,6 +1584,325 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
         },
       ],
       ctaLabel: "Estimate the gain for my volume",
+    },
+    "imprimer-etiquette": {
+      path: "/imprimer-etiquette",
+      metaTitle: "Print PDF shipping labels on A4",
+      metaDescription:
+        "Practical guide to print carrier PDF labels on A4, keep barcodes readable and avoid wasting a whole sheet per parcel.",
+      eyebrow: "Label printing",
+      title: "Print a PDF shipping label cleanly on A4",
+      intro:
+        "When a shipping label is delivered as a PDF, the default print often uses a full A4 sheet. Label2A4 helps prepare Mondial Relay, Colissimo, Chronopost, Happy Post, FedEx or DHL labels for a more compact, readable and cut-ready output.",
+      highlights: ["PDF label", "A4 printing", "Readable barcodes"],
+      problem: {
+        title: "Simple printing can waste paper fast",
+        text:
+          "Many carrier labels use only part of the page, while the printer still outputs a full sheet. With several parcels, you multiply sheets, cutting time and unnecessary prints.",
+      },
+      solution: {
+        title: "A denser A4 sheet that stays easy to print",
+        text:
+          "Upload your PDFs, choose the carrier profile or manual mode, then generate an A4 page with up to four labels. The source file is not recreated; Label2A4 optimizes cropping and print placement.",
+      },
+      useCases: [
+        {
+          title: "Vinted and marketplace sales",
+          text: "Group the day’s labels before drop-off at a parcel shop, post office or carrier agency.",
+        },
+        {
+          title: "E-commerce shipments",
+          text: "Prepare order batches without printing one full page for every PDF label.",
+        },
+        {
+          title: "Home printer",
+          text: "Keep your regular A4 printer while getting a cleaner sheet to cut and attach.",
+        },
+      ],
+      economy: {
+        title: "One small label does not need a whole page",
+        text:
+          "As soon as you have several labels to print, the A4 x4 layout can strongly reduce paper use compared with one label per sheet.",
+      },
+      steps: [
+        "Download your shipping labels as PDFs.",
+        "Upload them to Label2A4 and select the matching carrier.",
+        "Check that barcodes and tracking numbers remain sharp in the preview.",
+        "Download the A4 sheet and print it at normal or high quality.",
+      ],
+      faqs: [
+        {
+          question: "How do I print a PDF label on A4?",
+          answer:
+            "Upload the PDF to Label2A4, choose the matching carrier profile, check the preview and download the ready-to-print A4 sheet.",
+        },
+        {
+          question: "Can I print several labels on one sheet?",
+          answer: "Yes. When the PDF format allows it, Label2A4 places up to four labels on one A4 sheet.",
+        },
+        {
+          question: "Will the barcode stay scannable?",
+          answer:
+            "The goal is to keep the label readable. Always check the final preview and avoid pale, blurry or overly reduced prints.",
+        },
+      ],
+      ctaLabel: "Print my labels",
+    },
+    "reduire-etiquette": {
+      path: "/reduire-etiquette",
+      metaTitle: "Reduce a PDF shipping label without losing the barcode",
+      metaDescription:
+        "Reduce a PDF shipping label for A4 printing, save paper and keep the scannable area readable.",
+      eyebrow: "Reduce label",
+      title: "Reduce a PDF shipping label for cleaner printing",
+      intro:
+        "Reducing a label does not mean shrinking the whole PDF blindly. To remain usable, the barcode, QR code, address and tracking number must stay readable. Label2A4 applies crop and placement profiles designed for parcel labels.",
+      highlights: ["Controlled reduction", "Print preview", "Carrier PDF preserved"],
+      problem: {
+        title: "Too much reduction can make a label hard to scan",
+        text:
+          "Classic print options sometimes shrink the whole page, margins included. The label looks smaller, but the useful area can become less readable or poorly placed on the sheet.",
+      },
+      solution: {
+        title: "Crop the useful area before placing it on A4",
+        text:
+          "Label2A4 first isolates the important part of the PDF, then places it on an A4 sheet. This avoids shrinking empty margins and keeps the shipping label cleaner to print.",
+      },
+      useCases: [
+        {
+          title: "Oversized label",
+          text: "Turn a label that takes the whole page into a more practical format to cut.",
+        },
+        {
+          title: "Parcel batches",
+          text: "Reduce several compatible PDFs so they can be printed together on one A4 sheet.",
+        },
+        {
+          title: "Manual mode",
+          text: "Adjust the useful area yourself when your carrier or format is not supported yet.",
+        },
+      ],
+      economy: {
+        title: "The useful saving mostly comes from grouping",
+        text:
+          "A reduced label on its own saves little. The real gain appears when several labels are placed on the same A4 sheet.",
+      },
+      steps: [
+        "Add your PDF label to the tool.",
+        "Select a carrier profile or manual crop mode.",
+        "Adjust if needed, then check barcode readability.",
+        "Generate the optimized A4 PDF.",
+      ],
+      faqs: [
+        {
+          question: "How do I reduce a shipping label?",
+          answer:
+            "Use a Label2A4 carrier profile or manual crop mode to isolate the label, then export an optimized A4 sheet.",
+        },
+        {
+          question: "Can I reduce Colissimo, Chronopost or Mondial Relay labels?",
+          answer:
+            "Yes. Label2A4 includes dedicated profiles for several common carriers, plus manual mode for special cases.",
+        },
+        {
+          question: "Will a reduced label be accepted by the carrier?",
+          answer:
+            "It must remain sharp and scannable. Check the preview, print cleanly and never cover the barcode with opaque or shiny tape.",
+        },
+      ],
+      ctaLabel: "Reduce my label",
+    },
+    "rogner-etiquette": {
+      path: "/rogner-etiquette",
+      metaTitle: "Crop a PDF shipping label before printing",
+      metaDescription:
+        "Crop the useful area of a PDF shipping label, remove unnecessary margins and prepare an optimized A4 sheet.",
+      eyebrow: "Crop label",
+      title: "Crop a PDF shipping label to remove unnecessary margins",
+      intro:
+        "Cropping a label means keeping only the useful part of the shipping slip: address, tracking, scan codes and carrier information. It is the base of a more compact A4 print, especially when the PDF contains a lot of empty space.",
+      highlights: ["Manual crop", "Automatic profiles", "A4 x4"],
+      problem: {
+        title: "Empty margins prevent efficient label grouping",
+        text:
+          "If you print the complete PDF, the sheet keeps all the unused areas around the label. Even with print reduction, the result can stay poorly framed and hard to cut.",
+      },
+      solution: {
+        title: "A custom area when the automatic profile is not enough",
+        text:
+          "Label2A4 includes ready-made profiles and manual crop mode. You can select the area to keep, switch between active PDF previews and generate a cleaner A4 sheet.",
+      },
+      useCases: [
+        {
+          title: "Unsupported carrier",
+          text: "Use the custom area to prepare a PDF that does not match an existing profile yet.",
+        },
+        {
+          title: "PDF with wide margins",
+          text: "Remove blank areas around the label before placing it on an A4 sheet.",
+        },
+        {
+          title: "Several formats in one batch",
+          text: "Switch the active preview and adjust files that need a different crop.",
+        },
+      ],
+      economy: {
+        title: "Good cropping makes grouping more efficient",
+        text:
+          "The better the useful area is framed, the more readable, regular and paper-saving the final A4 sheet becomes.",
+      },
+      steps: [
+        "Upload one or several label PDFs.",
+        "Choose manual crop mode if the automatic profile is not suitable.",
+        "Move and resize the useful area on the active preview.",
+        "Generate the final A4 sheet after checking it.",
+      ],
+      faqs: [
+        {
+          question: "How do I crop a PDF label?",
+          answer:
+            "Upload the PDF to Label2A4, enable manual crop mode, select the useful area and export the A4 sheet.",
+        },
+        {
+          question: "Why crop a shipping label?",
+          answer:
+            "Cropping removes unnecessary margins so the label can be placed better on the sheet and avoid wasting a whole page.",
+        },
+        {
+          question: "Can I crop several different PDFs?",
+          answer:
+            "Yes. In manual mode, you can change the active preview and adapt the custom area to files that need it.",
+        },
+      ],
+      ctaLabel: "Crop my label",
+    },
+    "etiquette-pdf": {
+      path: "/etiquette-pdf",
+      metaTitle: "PDF shipping label: prepare A4 printing",
+      metaDescription:
+        "Prepare carrier PDF labels for more compact A4 printing with cropping, reduction and grouping.",
+      eyebrow: "PDF label",
+      title: "Prepare a carrier PDF label before printing",
+      intro:
+        "A PDF label already contains the official carrier information. Label2A4 does not replace it: the tool helps print it better by cropping useful margins and grouping several labels on one A4 sheet.",
+      highlights: ["Parcel PDF", "Cropping", "Optimized printing"],
+      problem: {
+        title: "Carrier PDFs are not always designed to save paper",
+        text:
+          "Shipping platforms often generate one full page per parcel. It is simple, but inefficient when the actual label only uses part of the sheet.",
+      },
+      solution: {
+        title: "Keep the source PDF and optimize only the layout",
+        text:
+          "With Label2A4, you upload the original file, select the right profile and get a new A4 PDF ready to print. Tracking and scan information remain the carrier’s own data.",
+      },
+      useCases: [
+        {
+          title: "Mondial Relay, Colissimo, Chronopost PDFs",
+          text: "Use dedicated profiles for the most common carriers.",
+        },
+        {
+          title: "FedEx, DHL or Happy Post PDFs",
+          text: "Prepare express or international labels with dedicated carrier pages too.",
+        },
+        {
+          title: "Custom PDF",
+          text: "Use manual crop mode when the format does not fit the proposed profiles yet.",
+        },
+      ],
+      economy: {
+        title: "A final PDF that is easier to print and archive",
+        text:
+          "Instead of keeping several files printed separately, you can produce one A4 sheet for the day’s labels.",
+      },
+      steps: [
+        "Download the PDF label from your carrier or marketplace.",
+        "Upload the file to Label2A4.",
+        "Choose a profile or adjust the area manually.",
+        "Download the optimized PDF for A4 printing.",
+      ],
+      faqs: [
+        {
+          question: "What is a PDF shipping label?",
+          answer:
+            "It is a file provided by a carrier or marketplace containing the label to print and attach to the parcel.",
+        },
+        {
+          question: "Does Label2A4 change the label content?",
+          answer:
+            "No. The tool optimizes cropping and print placement, but does not recreate carrier information.",
+        },
+        {
+          question: "Can I use a PDF label from Vinted or Leboncoin?",
+          answer:
+            "Yes, if the label is provided as a compatible carrier PDF or can be prepared with manual mode.",
+        },
+      ],
+      ctaLabel: "Prepare my PDF",
+    },
+    "economie-papier": {
+      path: "/economie-papier",
+      metaTitle: "Paper savings: print fewer shipping label sheets",
+      metaDescription:
+        "Reduce paper waste by grouping several PDF shipping labels on one ready-to-print A4 sheet.",
+      eyebrow: "Paper savings",
+      title: "Save paper when printing shipping labels",
+      intro:
+        "The simplest paper saving is to stop printing a small label alone on a large A4 sheet. Label2A4 groups compatible shipping slips on an A4 board to reduce sheet use.",
+      highlights: ["Fewer sheets", "Less waste", "A4 x4"],
+      problem: {
+        title: "The waste looks small, but it repeats with every parcel",
+        text:
+          "One sheet for one label may look harmless. Across regular marketplace sales, customer returns or e-commerce batches, it becomes a recurring paper, ink and handling cost.",
+      },
+      solution: {
+        title: "Up to four labels on one A4 sheet",
+        text:
+          "When PDFs are compatible, Label2A4 places four shipping labels on the same page. You print fewer sheets, cut faster and keep a clear output for your parcels.",
+      },
+      useCases: [
+        {
+          title: "Individuals",
+          text: "Reduce printing for Vinted, Leboncoin or grouped drop-offs.",
+        },
+        {
+          title: "Small shops",
+          text: "Limit paper use during daily order preparation.",
+        },
+        {
+          title: "Shipping teams",
+          text: "Standardize an A4 x4 output to track paper savings over time.",
+        },
+      ],
+      economy: {
+        title: "A visible gain from four parcels onward",
+        text:
+          "In the ideal case, four labels go from four sheets to one. For 100 labels, that can mean around 75 avoided sheets.",
+      },
+      steps: [
+        "Gather the PDF labels you need to print.",
+        "Upload them to Label2A4.",
+        "Check the generated A4 sheet.",
+        "Print, cut and attach labels to the right parcels.",
+      ],
+      faqs: [
+        {
+          question: "How can I save paper with shipping labels?",
+          answer:
+            "Group several PDF labels on the same A4 sheet instead of printing a full page for each parcel.",
+        },
+        {
+          question: "How much paper can I save?",
+          answer:
+            "In the best case, a four-label sheet uses one page instead of four, saving up to three sheets.",
+        },
+        {
+          question: "Do I need a special printer?",
+          answer:
+            "No. Label2A4 generates an A4 PDF for a standard printer, with a preview check before printing.",
+        },
+      ],
+      ctaLabel: "Save paper",
     },
     economies: {
       path: "/economies",
