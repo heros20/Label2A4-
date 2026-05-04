@@ -38,7 +38,7 @@ export function getLandingPageContent(locale: Locale) {
   return locale === "en"
     ? {
         description:
-          "A practical guide to print your Chronopost, Colissimo, Mondial Relay, Happy Post and FedEx shipping labels on a single A4 sheet.",
+          "A practical guide to print your Chronopost, Colissimo, Mondial Relay, Happy Post, FedEx and DHL shipping labels on a single A4 sheet.",
         faqs: [
           {
             question: "How do I print a Mondial Relay label on A4?",
@@ -54,7 +54,7 @@ export function getLandingPageContent(locale: Locale) {
           },
           {
             question: "Which carriers are supported?",
-            answer: "Label2A4 includes profiles for Chronopost, Colissimo, Mondial Relay, Happy Post and FedEx, plus a manual mode for other PDF formats.",
+            answer: "Label2A4 includes profiles for Chronopost, Colissimo, Mondial Relay, Happy Post, FedEx and DHL, plus a manual mode for other PDF formats.",
           },
           {
             question: "Is it useful for Vinted and Leboncoin sellers?",
@@ -65,7 +65,7 @@ export function getLandingPageContent(locale: Locale) {
       }
     : {
         description:
-          "Guide pratique pour imprimer vos étiquettes colis Chronopost, Colissimo, Mondial Relay, Happy Post et FedEx sur une seule feuille A4.",
+          "Guide pratique pour imprimer vos étiquettes colis Chronopost, Colissimo, Mondial Relay, Happy Post, FedEx et DHL sur une seule feuille A4.",
         faqs: [
           {
             question: "Comment imprimer une étiquette Mondial Relay sur A4 ?",
@@ -81,7 +81,7 @@ export function getLandingPageContent(locale: Locale) {
           },
           {
             question: "Quels transporteurs sont compatibles ?",
-            answer: "Label2A4 propose des profils pour Chronopost, Colissimo, Mondial Relay, Happy Post et FedEx, avec un mode manuel pour les autres formats PDF.",
+            answer: "Label2A4 propose des profils pour Chronopost, Colissimo, Mondial Relay, Happy Post, FedEx et DHL, avec un mode manuel pour les autres formats PDF.",
           },
           {
             question: "Est-ce utile pour Vinted et Leboncoin ?",

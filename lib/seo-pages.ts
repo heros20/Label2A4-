@@ -42,6 +42,7 @@ export type SeoPageKey =
   | "chronopost"
   | "happy-post"
   | "fedex"
+  | "dhl"
   | "vinted"
   | "leboncoin"
   | "entreprises"
@@ -385,6 +386,77 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
         },
       ],
       ctaLabel: "Optimiser mes étiquettes FedEx",
+    },
+    dhl: {
+      path: "/dhl",
+      metaTitle: "Imprimer des étiquettes DHL sur une feuille A4",
+      metaDescription:
+        "Optimisez vos étiquettes DHL PDF et imprimez plusieurs bordereaux sur une planche A4 x4 avec un profil de rognage dédié.",
+      eyebrow: "DHL",
+      title: "Imprimer plusieurs étiquettes DHL sur une seule feuille A4",
+      intro:
+        "Les expéditions DHL doivent disposer d’un bordereau rempli et d’une étiquette solidement fixée au colis. Label2A4 isole la zone utile de vos PDF DHL, conserve les éléments de suivi et de scan, puis les regroupe sur une planche A4 prête à imprimer.",
+      highlights: ["Profil DHL", "Suivi préservé", "Documents douaniers à part"],
+      problem: {
+        title: "Une étiquette DHL seule peut gaspiller une feuille entière",
+        text:
+          "Quand chaque bordereau DHL est imprimé seul, une grande partie de la feuille A4 peut rester inutilisée. Sur des lots e-commerce, retours ou expéditions internationales, cela augmente vite le papier, l’encre et le temps de découpe.",
+      },
+      solution: {
+        title: "Un rognage DHL automatique pour une planche claire",
+        text:
+          "Importez vos PDF, choisissez le profil DHL, puis générez un fichier final avec jusqu’à quatre étiquettes sur la même feuille. Le contenu transporteur reste inchangé : Label2A4 optimise seulement la zone imprimée et le placement.",
+      },
+      useCases: [
+        {
+          title: "Expéditions express",
+          text:
+            "Préparez les bordereaux DHL du jour avec une sortie compacte, pratique avant enlèvement, dépôt en agence ou préparation de commandes.",
+        },
+        {
+          title: "Lots e-commerce",
+          text:
+            "Regroupez plusieurs étiquettes DHL dans un seul PDF A4 pour réduire les impressions répétées lors des pics de commandes.",
+        },
+        {
+          title: "International et douane",
+          text:
+            "Gardez les factures commerciales ou pro forma demandées par DHL séparées de la planche d’étiquettes lorsque l’envoi les exige.",
+        },
+      ],
+      economy: {
+        title: "Jusqu’à quatre étiquettes DHL par feuille",
+        text:
+          "Sur les lots compatibles, une planche A4 x4 peut réduire fortement la consommation de papier par rapport à une impression classique, une étiquette par page.",
+      },
+      steps: [
+        "Importez vos PDF DHL dans Label2A4.",
+        "Sélectionnez le profil DHL dans les transporteurs.",
+        "Vérifiez que le suivi et les codes-barres restent nets, puis téléchargez la planche A4 x4.",
+      ],
+      faqs: [
+        {
+          question: "Comment imprimer plusieurs étiquettes DHL sur une feuille A4 ?",
+          answer:
+            "Ajoutez vos PDF DHL, sélectionnez le profil DHL, vérifiez l’aperçu puis exportez le PDF final avec jusqu’à quatre étiquettes par feuille.",
+        },
+        {
+          question: "Les codes-barres et le suivi DHL restent-ils lisibles ?",
+          answer:
+            "Label2A4 ne recrée pas l’étiquette : il rogne et replace le PDF source. Vérifiez toujours l’aperçu final et imprimez avec une qualité suffisante pour que les codes de scan restent lisibles.",
+        },
+        {
+          question: "Faut-il ajouter des documents douaniers avec DHL ?",
+          answer:
+            "Pour les marchandises et certains envois internationaux, DHL indique qu’une facture commerciale ou pro forma et d’autres documents peuvent être nécessaires. Label2A4 optimise l’étiquette, pas les obligations douanières.",
+        },
+        {
+          question: "Quand le suivi DHL apparaît-il ?",
+          answer:
+            "DHL indique que les événements de suivi peuvent apparaître 24 à 48 heures après la réception de l’identifiant Track and Trace. Conservez le numéro visible sur l’étiquette.",
+        },
+      ],
+      ctaLabel: "Optimiser mes étiquettes DHL",
     },
     vinted: {
       path: "/vinted",
@@ -948,6 +1020,76 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
         },
       ],
       ctaLabel: "Optimize my FedEx labels",
+    },
+    dhl: {
+      path: "/dhl",
+      metaTitle: "Print DHL shipping labels on A4",
+      metaDescription:
+        "Optimize DHL PDF shipping labels and print several waybills on one A4 x4 sheet with a dedicated carrier crop profile.",
+      eyebrow: "DHL",
+      title: "Print multiple DHL shipping labels on one A4 sheet",
+      intro:
+        "DHL shipments need a completed waybill and a shipping label securely attached to the parcel. Label2A4 isolates the useful area of your DHL PDFs, keeps tracking and scannable elements intact, then groups them on a ready-to-print A4 sheet.",
+      highlights: ["DHL profile", "Tracking preserved", "Customs documents aside"],
+      problem: {
+        title: "A single DHL label can waste a whole sheet",
+        text:
+          "Printing each DHL waybill on its own can leave much of the A4 sheet unused. For e-commerce batches, returns or international shipments, paper, ink and cutting time add up quickly.",
+      },
+      solution: {
+        title: "Automatic DHL cropping for a cleaner sheet",
+        text:
+          "Upload your PDFs, choose the DHL profile, then generate a final file with up to four labels on the same sheet. The carrier content stays unchanged: Label2A4 only optimizes the printed area and placement.",
+      },
+      useCases: [
+        {
+          title: "Express shipments",
+          text:
+            "Prepare the day’s DHL waybills in a compact output before pickup, agency drop-off or order packing.",
+        },
+        {
+          title: "E-commerce batches",
+          text: "Group several DHL labels into one A4 PDF to reduce repeated printing during order peaks.",
+        },
+        {
+          title: "International and customs",
+          text:
+            "Keep any commercial or pro forma invoices required by DHL separate from the label sheet when the shipment needs them.",
+        },
+      ],
+      economy: {
+        title: "Up to four DHL labels per sheet",
+        text:
+          "For compatible batches, an A4 x4 sheet can greatly reduce paper use compared with printing one label per page.",
+      },
+      steps: [
+        "Upload your DHL PDFs to Label2A4.",
+        "Select the DHL carrier profile.",
+        "Check that tracking and barcodes stay sharp, then download the A4 x4 sheet.",
+      ],
+      faqs: [
+        {
+          question: "How do I print several DHL labels on one A4 sheet?",
+          answer:
+            "Add your DHL PDFs, select the DHL profile, check the preview, then export the final PDF with up to four labels per sheet.",
+        },
+        {
+          question: "Will DHL barcodes and tracking stay readable?",
+          answer:
+            "Label2A4 does not recreate the label; it crops and places the source PDF. Always check the final preview and print with enough quality for scan codes to remain readable.",
+        },
+        {
+          question: "Do I need customs documents with DHL?",
+          answer:
+            "For goods and some international shipments, DHL says a commercial or pro forma invoice and other documents may be required. Label2A4 optimizes the label, not customs obligations.",
+        },
+        {
+          question: "When does DHL tracking appear?",
+          answer:
+            "DHL says tracking events may appear 24 to 48 hours after receiving the Track and Trace ID. Keep the number visible on the label.",
+        },
+      ],
+      ctaLabel: "Optimize my DHL labels",
     },
     vinted: {
       path: "/vinted",

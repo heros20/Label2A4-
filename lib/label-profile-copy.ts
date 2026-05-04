@@ -12,6 +12,7 @@ const profileDisplay = {
     },
     "happy-post": { title: "Happy Post", shortLabel: "Happy Post", description: "Format optimisé automatiquement." },
     fedex: { title: "FedEx", shortLabel: "FedEx", description: "Format optimisé automatiquement." },
+    dhl: { title: "DHL", shortLabel: "DHL", description: "Format optimisé automatiquement." },
     manual: { title: "Rognage manuel", shortLabel: "Manuel", description: "Sélection directe sur l’aperçu du PDF." },
   },
   en: {
@@ -24,6 +25,7 @@ const profileDisplay = {
     },
     "happy-post": { title: "Happy Post", shortLabel: "Happy Post", description: "Carrier layout applied automatically." },
     fedex: { title: "FedEx", shortLabel: "FedEx", description: "Carrier layout applied automatically." },
+    dhl: { title: "DHL", shortLabel: "DHL", description: "Carrier layout applied automatically." },
     manual: { title: "Manual adjustment", shortLabel: "Manual", description: "Select the useful area directly on the PDF preview." },
   },
 } as const

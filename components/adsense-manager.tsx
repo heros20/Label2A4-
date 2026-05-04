@@ -30,6 +30,7 @@ const ADSENSE_CONTENT_PATHS = new Set([
   "/mondial-relay",
   "/happy-post",
   "/fedex",
+  "/dhl",
   "/vinted",
   "/leboncoin",
   "/entreprises",

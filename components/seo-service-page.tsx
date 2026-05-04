@@ -25,6 +25,10 @@ const SEO_PAGE_LOGOS: Record<string, { src: string; alt: string }> = {
     src: "/images/logo/Fedex.png",
     alt: "Logo FedEx",
   },
+  "/dhl": {
+    src: "/images/logo/dhl.jpg",
+    alt: "Logo DHL",
+  },
   "/vinted": {
     src: "/images/logo/vinted.jpg",
     alt: "Logo Vinted",
@@ -193,6 +197,32 @@ function getComparisonImages(locale: Locale) {
         imageClassName: "object-contain object-center",
       },
     ],
+    dhl: [
+      {
+        label: locale === "en" ? "Before" : "Avant",
+        labelClassName: "text-slate-600",
+        panelClassName: "border-slate-200 bg-slate-50",
+        src: "/images/dhl/dhlx1.png",
+        alt:
+          locale === "en"
+            ? "A single DHL shipping label printed on one sheet"
+            : "Bordereau DHL imprimé seul sur une feuille",
+        frameClassName: "h-full max-h-full shrink-0 aspect-[790/1116] rotate-90 scale-150",
+        imageClassName: "object-contain object-center",
+      },
+      {
+        label: locale === "en" ? "After" : "Après",
+        labelClassName: "text-sky-800",
+        panelClassName: "border-sky-200 bg-sky-50",
+        src: "/images/dhl/dhlx4.png",
+        alt:
+          locale === "en"
+            ? "Four DHL shipping labels grouped on one A4 sheet"
+            : "Quatre bordereaux DHL regroupés sur une feuille A4",
+        frameClassName: "h-full max-h-full shrink-0 aspect-[552/780]",
+        imageClassName: "object-contain object-center",
+      },
+    ],
   } as const
 }
 
@@ -266,6 +296,10 @@ function SheetComparisonVisual({ locale, pagePath }: { locale: Locale; pagePath:
 
   if (pagePath === "/fedex") {
     return <ImageComparisonVisual previews={comparisonImages.fedex} />
+  }
+
+  if (pagePath === "/dhl") {
+    return <ImageComparisonVisual previews={comparisonImages.dhl} />
   }
 
   return null

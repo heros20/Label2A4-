@@ -176,6 +176,19 @@ export const LABEL_PROFILES = [
     },
   },
   {
+    id: "dhl",
+    slug: "dhl",
+    title: "DHL",
+    shortLabel: "DHL",
+    mode: "preset",
+    cropRect: {
+      x: 0.11,
+      y: 0.05,
+      width: 0.33,
+      height: 0.89,
+    },
+  },
+  {
     id: "manual",
     slug: "manuel",
     title: "Rognage manuel",

@@ -42,7 +42,7 @@ export const siteConfig = {
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "https://label2a4.vercel.app",
   description: process.env.NEXT_PUBLIC_SITE_DESCRIPTION ?? getSiteText(DEFAULT_LOCALE).description,
   socialTagline: getSiteText(DEFAULT_LOCALE).socialTagline,
-  supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "support@label2a4.local",
+  supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "support@label2a4.com",
   supportResponseDelay:
     process.env.NEXT_PUBLIC_SUPPORT_RESPONSE_DELAY ?? getSiteText(DEFAULT_LOCALE).supportResponseDelay,
   business: {

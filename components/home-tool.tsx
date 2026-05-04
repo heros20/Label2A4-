@@ -118,6 +118,10 @@ const TRANSPORTER_LOGOS: Record<string, { src: string; alt: string }> = {
     src: "/images/logo/Fedex.png",
     alt: "Logo FedEx",
   },
+  dhl: {
+    src: "/images/logo/dhl.jpg",
+    alt: "Logo DHL",
+  },
 }
 const HOME_COMPARISON_SLIDES = [
   {
@@ -1483,7 +1487,7 @@ export function HomeTool({ locale }: { locale: Locale }) {
 
             <div className="mt-6 flex flex-wrap gap-3 text-sm text-slate-700">
               <span className="rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 shadow-sm">
-                Chronopost, Colissimo, Mondial Relay, Happy Post, FedEx
+                Chronopost, Colissimo, Mondial Relay, Happy Post, FedEx, DHL
               </span>
               <span className="rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 shadow-sm">
                 {locale === "en" ? "Manual adjustment on preview" : "Rognage manuel sur aperçu"}
@@ -1952,18 +1956,44 @@ export function HomeTool({ locale }: { locale: Locale }) {
                   return (
                     <div
                       key={file.id}
+                      role={isManualProfile ? "button" : undefined}
+                      tabIndex={isManualProfile ? 0 : undefined}
+                      aria-label={
+                        isManualProfile
+                          ? locale === "en"
+                            ? `Show ${file.name} in the manual preview`
+                            : `Afficher ${file.name} dans l'aperçu manuel`
+                          : undefined
+                      }
                       className={cn(
                         "flex flex-col gap-4 rounded-[24px] border px-4 py-4 transition duration-200 sm:flex-row sm:items-center",
+                        isManualProfile && "cursor-pointer focus:outline-none focus:ring-4 focus:ring-sky-100",
                         focusedFile?.id === file.id
                           ? "border-sky-400 bg-[linear-gradient(135deg,rgba(240,249,255,0.9),rgba(255,255,255,0.95))] shadow-[0_20px_44px_-34px_rgba(2,132,199,0.38)]"
                           : "border-slate-200/80 bg-white/70 hover:border-slate-300 hover:bg-white",
                       )}
+                      onClick={() => {
+                        if (isManualProfile) {
+                          setFocusedFileId(file.id)
+                        }
+                      }}
+                      onKeyDown={(event) => {
+                        if (!isManualProfile || (event.key !== "Enter" && event.key !== " ")) {
+                          return
+                        }
+
+                        event.preventDefault()
+                        setFocusedFileId(file.id)
+                      }}
                     >
                       <div className="flex min-w-0 flex-1 items-start gap-3 text-left">
                         <button
                           type="button"
                           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] bg-sky-100 text-sky-800 transition hover:bg-sky-200"
-                          onClick={() => setFocusedFileId(file.id)}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            setFocusedFileId(file.id)
+                          }}
                           aria-label={locale === "en" ? `Select ${file.name}` : `Sélectionner ${file.name}`}
                         >
                           <FileText className="h-5 w-5" />
@@ -1972,7 +2002,10 @@ export function HomeTool({ locale }: { locale: Locale }) {
                           <button
                             type="button"
                             className="block max-w-full text-left"
-                            onClick={() => setFocusedFileId(file.id)}
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              setFocusedFileId(file.id)
+                            }}
                           >
                             <div className="truncate font-medium text-slate-950">{file.name}</div>
                             <div className="text-sm text-slate-500">
@@ -2067,21 +2100,30 @@ export function HomeTool({ locale }: { locale: Locale }) {
                         <button
                           type="button"
                           className="rounded-full border border-slate-200/80 bg-white/80 p-2 text-slate-600 transition hover:border-sky-300 hover:text-sky-800"
-                          onClick={() => rotateFile(file.id, -90)}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            rotateFile(file.id, -90)
+                          }}
                         >
                           <RotateCcw className="h-4 w-4" />
                         </button>
                         <button
                           type="button"
                           className="rounded-full border border-slate-200/80 bg-white/80 px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-sky-300 hover:text-sky-800"
-                          onClick={() => setRotationForFile(file.id, 0)}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            setRotationForFile(file.id, 0)
+                          }}
                         >
                           {"0\u00B0"}
                         </button>
                         <button
                           type="button"
                           className="rounded-full border border-slate-200/80 bg-white/80 p-2 text-slate-600 transition hover:border-sky-300 hover:text-sky-800"
-                          onClick={() => rotateFile(file.id, 90)}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            rotateFile(file.id, 90)
+                          }}
                         >
                           <RotateCw className="h-4 w-4" />
                         </button>
@@ -2089,7 +2131,10 @@ export function HomeTool({ locale }: { locale: Locale }) {
                           type="button"
                           className="rounded-full border border-slate-200/80 bg-white/80 p-2 text-slate-600 transition hover:border-sky-300 hover:text-sky-800 disabled:opacity-40"
                           disabled={index === 0}
-                          onClick={() => moveFile(index, -1)}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            moveFile(index, -1)
+                          }}
                         >
                           <MoveUp className="h-4 w-4" />
                         </button>
@@ -2097,14 +2142,20 @@ export function HomeTool({ locale }: { locale: Locale }) {
                           type="button"
                           className="rounded-full border border-slate-200/80 bg-white/80 p-2 text-slate-600 transition hover:border-sky-300 hover:text-sky-800 disabled:opacity-40"
                           disabled={index === files.length - 1}
-                          onClick={() => moveFile(index, 1)}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            moveFile(index, 1)
+                          }}
                         >
                           <MoveDown className="h-4 w-4" />
                         </button>
                         <button
                           type="button"
                           className="rounded-full border border-slate-200/80 bg-white/80 p-2 text-red-600 transition hover:border-red-300"
-                          onClick={() => updateFiles(files.filter((current) => current.id !== file.id))}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            updateFiles(files.filter((current) => current.id !== file.id))
+                          }}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -2594,8 +2645,8 @@ export function HomeTool({ locale }: { locale: Locale }) {
             </h2>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">
               {locale === "en"
-                ? "Label2A4 turns your Chronopost, Colissimo, Mondial Relay, Happy Post and FedEx PDF labels into compact A4 x4 sheets. It is useful for Vinted, Leboncoin and recurring shipping batches without changing your upload and print workflow."
-                : "Label2A4 transforme vos étiquettes PDF Chronopost, Colissimo, Mondial Relay, Happy Post et FedEx en planches A4 x4. Pratique pour les ventes Vinted, Leboncoin et les expéditions régulières, sans changer votre façon d'importer, de rogner et d'imprimer les fichiers."}
+                ? "Label2A4 turns your Chronopost, Colissimo, Mondial Relay, Happy Post, FedEx and DHL PDF labels into compact A4 x4 sheets. It is useful for Vinted, Leboncoin and recurring shipping batches without changing your upload and print workflow."
+                : "Label2A4 transforme vos étiquettes PDF Chronopost, Colissimo, Mondial Relay, Happy Post, FedEx et DHL en planches A4 x4. Pratique pour les ventes Vinted, Leboncoin et les expéditions régulières, sans changer votre façon d'importer, de rogner et d'imprimer les fichiers."}
             </p>
           </div>
           <div className="flex flex-wrap gap-3 lg:justify-end">
