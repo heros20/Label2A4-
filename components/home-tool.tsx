@@ -325,7 +325,7 @@ function HomeComparisonSlider({ locale }: { locale: Locale }) {
             {locale === "en" ? "Before / after" : "Avant / après"}
           </div>
           <h2 className="mt-1 text-lg font-semibold tracking-tight text-slate-950">
-            {locale === "en" ? "4 labels on 1 A4 sheet" : "4 étiquettes sur 1 feuille A4"}
+            {locale === "en" ? "4 parcels, 1 sheet" : "4 colis, 1 feuille"}
           </h2>
         </div>
         <div className="flex rounded-full border border-slate-200/80 bg-slate-50 p-1">
@@ -416,7 +416,7 @@ function HomeComparisonSlider({ locale }: { locale: Locale }) {
           )}
           onClick={() => setForcedComparisonStage("before")}
         >
-          {locale === "en" ? "Before: one label alone" : "Avant : une étiquette seule"}
+          {locale === "en" ? "Before: 1 parcel = 1 sheet" : "Avant : 1 colis = 1 feuille"}
         </button>
         <button
           type="button"
@@ -428,7 +428,7 @@ function HomeComparisonSlider({ locale }: { locale: Locale }) {
           )}
           onClick={() => setForcedComparisonStage("after")}
         >
-          {locale === "en" ? "After: a sheet ready to print" : "Après : une planche prête à imprimer"}
+          {locale === "en" ? "After: 4 parcels = 1 sheet" : "Après : 4 colis = 1 feuille"}
         </button>
       </div>
     </section>
@@ -1469,20 +1469,20 @@ export function HomeTool({ locale }: { locale: Locale }) {
           </div>
         </header>
 
-        <div className="relative grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+        <div className="relative grid gap-8 pt-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:pt-4">
           <div className="max-w-4xl">
             <span className="inline-flex items-center rounded-full border border-sky-200/80 bg-sky-100/80 px-4 py-1 text-sm font-medium text-sky-950 shadow-sm">
-              {locale === "en" ? "PDF shipping label preparation" : "Préparation d’étiquettes PDF"}
+              {locale === "en" ? "Stop wasting one sheet per label" : "Fini la feuille entière pour une étiquette"}
             </span>
             <h1 className="mt-5 max-w-3xl text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl lg:text-[3.55rem] lg:leading-[1.02]">
               {locale === "en"
-                ? "Turn shipping label PDFs into clean A4 x4 sheets ready to print"
-                : "Étiquettes PDF vers A4 x4, avec un rendu propre et prêt à imprimer"}
+                ? "Print 4 shipping labels on one A4 sheet"
+                : "Imprimez 4 étiquettes colis sur une seule feuille A4"}
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
               {locale === "en"
-                ? "Upload your PDFs, choose the right carrier layout, then export a clean A4 sheet adapted to carrier formats and manual adjustments."
-                : "Importez vos PDF, choisissez le bon rognage puis récupérez une planche A4 nette, adaptée aux formats transporteurs et aux cas manuels."}
+                ? "Upload your carrier PDFs, preview the result, then download a clean A4 sheet. Your original label content stays intact."
+                : "Importez vos PDF transporteurs, vérifiez l’aperçu, puis téléchargez une planche A4 propre. Le contenu de vos étiquettes d’origine reste intact."}
             </p>
 
             <div className="mt-6 flex flex-wrap gap-3 text-sm text-slate-700">
@@ -1490,10 +1490,10 @@ export function HomeTool({ locale }: { locale: Locale }) {
                 Chronopost, Colissimo, Mondial Relay, Happy Post, FedEx, DHL
               </span>
               <span className="rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 shadow-sm">
-                {locale === "en" ? "Manual adjustment on preview" : "Rognage manuel sur aperçu"}
+                {locale === "en" ? "Free test with preview" : "Test gratuit avec aperçu"}
               </span>
               <span className="rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 shadow-sm">
-                {locale === "en" ? "Automatic A4 x4 layout" : "Placement A4 x4 automatique"}
+                {locale === "en" ? "Barcodes and tracking kept visible" : "Codes-barres et suivi gardés visibles"}
               </span>
             </div>
 
@@ -1599,6 +1599,11 @@ export function HomeTool({ locale }: { locale: Locale }) {
                 ? "Less wasted paper, more efficiency. The estimate compares one label per sheet with an A4 x4 layout."
                 : "Moins de papier gaspillé, plus d'efficacité. Le calcul compare une étiquette seule par feuille avec une planche A4 x4."}
             </p>
+            <div className="mt-4 rounded-[24px] border border-sky-200/80 bg-sky-50/80 p-4 text-sm leading-6 text-sky-950">
+              {locale === "en"
+                ? "Made for shipping labels: barcodes, QR codes and tracking numbers stay visible, and you always review the preview before exporting the final PDF."
+                : "Pensé pour les étiquettes colis : codes-barres, QR codes et numéros de suivi restent visibles, et vous vérifiez toujours l’aperçu avant d’exporter le PDF final."}
+            </div>
             {impactError && <p className="mt-2 text-sm text-amber-700">{impactError}</p>}
           </div>
 
@@ -1629,12 +1634,12 @@ export function HomeTool({ locale }: { locale: Locale }) {
               <Upload className="h-10 w-10" />
             </div>
             <h2 className="mt-6 text-[1.75rem] font-semibold tracking-tight text-slate-950">
-              {locale === "en" ? "Drop your PDFs" : "Déposez vos PDF"}
+              {locale === "en" ? "Try with my PDF" : "Essayer avec mon PDF"}
             </h2>
             <p className="mt-3 max-w-sm text-slate-600">
               {locale === "en"
-                ? "The batch order is preserved, then the result is rebuilt on A4 sheets."
-                : "L’ordre du lot est conservé, puis la sortie est recomposée sur feuille A4."}
+                ? "Drop one or more labels here. You can check the A4 preview before downloading."
+                : "Déposez une ou plusieurs étiquettes ici. Vous vérifiez l’aperçu A4 avant de télécharger."}
             </p>
 
             <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-sm text-slate-500">
@@ -1642,7 +1647,10 @@ export function HomeTool({ locale }: { locale: Locale }) {
                 {locale === "en" ? "PDF only" : "PDF uniquement"}
               </span>
               <span className="rounded-full border border-slate-200/80 bg-white/90 px-3 py-1.5">
-                {locale === "en" ? "Multi-select" : "Sélection multiple"}
+                {locale === "en" ? "Original kept intact" : "Original intact"}
+              </span>
+              <span className="rounded-full border border-slate-200/80 bg-white/90 px-3 py-1.5">
+                {locale === "en" ? "No install" : "Sans installation"}
               </span>
             </div>
             {uploadError && (
@@ -2646,7 +2654,7 @@ export function HomeTool({ locale }: { locale: Locale }) {
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">
               {locale === "en"
                 ? "Label2A4 turns your Chronopost, Colissimo, Mondial Relay, Happy Post, FedEx and DHL PDF labels into compact A4 x4 sheets. It is useful for Vinted, Leboncoin and recurring shipping batches without changing your upload and print workflow."
-                : "Label2A4 transforme vos étiquettes PDF Chronopost, Colissimo, Mondial Relay, Happy Post, FedEx et DHL en planches A4 x4. Pratique pour les ventes Vinted, Leboncoin et les expéditions régulières, sans changer votre façon d'importer, de rogner et d'imprimer les fichiers."}
+                : "Label2A4 transforme vos étiquettes PDF Chronopost, Colissimo, Mondial Relay, Happy Post, FedEx et DHL en planches A4 x4. Pratique pour les ventes Vinted, Leboncoin et les expéditions régulières, avec aperçu avant impression et PDF source conservé."}
             </p>
           </div>
           <div className="flex flex-wrap gap-3 lg:justify-end">
