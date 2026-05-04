@@ -163,6 +163,19 @@ export const LABEL_PROFILES = [
     defaultRotation: 90,
   },
   {
+    id: "fedex",
+    slug: "fedex",
+    title: "FedEx",
+    shortLabel: "FedEx",
+    mode: "preset",
+    cropRect: {
+      x: 0,
+      y: 0,
+      width: 0.48,
+      height: 0.98,
+    },
+  },
+  {
     id: "manual",
     slug: "manuel",
     title: "Rognage manuel",

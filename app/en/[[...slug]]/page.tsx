@@ -56,6 +56,7 @@ const staticEnglishPaths: Array<string[]> = [
   ["cgv"],
   ["chronopost"],
   ["colissimo"],
+  ["fedex"],
   ["happy-post"],
   ["leboncoin"],
   ["mondial-relay"],
@@ -70,6 +71,7 @@ const staticEnglishPaths: Array<string[]> = [
 const seoPageKeys = new Set<SeoPageKey>([
   "chronopost",
   "colissimo",
+  "fedex",
   "happy-post",
   "leboncoin",
   "mondial-relay",

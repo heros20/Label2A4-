@@ -114,6 +114,10 @@ const TRANSPORTER_LOGOS: Record<string, { src: string; alt: string }> = {
     src: "/images/logo/mondial-relais.png",
     alt: "Logo Mondial Relay",
   },
+  fedex: {
+    src: "/images/logo/Fedex.png",
+    alt: "Logo FedEx",
+  },
 }
 const HOME_COMPARISON_SLIDES = [
   {
@@ -156,6 +160,20 @@ const HOME_COMPARISON_SLIDES = [
       src: "/images/colissimo/colissimox4.jpg",
       alt: "Quatre bordereaux Colissimo regroupés sur une feuille A4",
       frameClassName: "h-full max-h-full aspect-[1241/1754]",
+    },
+  },
+  {
+    id: "fedex",
+    label: "FedEx",
+    before: {
+      src: "/images/fedex/fedexx1.png",
+      alt: "Bordereau FedEx imprimé seul sur une feuille A4",
+      frameClassName: "h-full max-h-full aspect-[570/740]",
+    },
+    after: {
+      src: "/images/fedex/fedexx4.png",
+      alt: "Quatre bordereaux FedEx regroupés sur une feuille A4",
+      frameClassName: "h-full max-h-full aspect-[549/782]",
     },
   },
 ] as const
@@ -251,8 +269,11 @@ function HomeComparisonSlider({ locale }: { locale: Locale }) {
   const [activeSlideIndex, setActiveSlideIndex] = useState(0)
   const [isSlideChanging, setIsSlideChanging] = useState(false)
   const [sequenceKey, setSequenceKey] = useState(0)
+  const [comparisonStage, setComparisonStage] = useState<"before" | "after">("before")
+  const [forcedComparisonStage, setForcedComparisonStage] = useState<"before" | "after" | null>(null)
   const slideChangeTimeoutRef = useRef<number | null>(null)
   const activeSlide = HOME_COMPARISON_SLIDES[activeSlideIndex]
+  const activeComparisonStage = forcedComparisonStage ?? comparisonStage
 
   const handleSlideChange = (nextIndex: number) => {
     if (nextIndex === activeSlideIndex) {
@@ -264,6 +285,7 @@ function HomeComparisonSlider({ locale }: { locale: Locale }) {
     }
 
     setIsSlideChanging(true)
+    setForcedComparisonStage(null)
     slideChangeTimeoutRef.current = window.setTimeout(() => {
       setActiveSlideIndex(nextIndex)
       setSequenceKey((currentKey) => currentKey + 1)
@@ -275,12 +297,23 @@ function HomeComparisonSlider({ locale }: { locale: Locale }) {
 
   useEffect(() => {
     setIsSlideChanging(false)
+    setComparisonStage("before")
 
     const timeouts = [
+      window.setTimeout(() => {
+        setComparisonStage("after")
+      }, 3500),
+      window.setTimeout(() => {
+        setComparisonStage("before")
+      }, 7200),
+      window.setTimeout(() => {
+        setComparisonStage("after")
+      }, 9800),
       window.setTimeout(() => {
         setIsSlideChanging(true)
       }, 11700),
       window.setTimeout(() => {
+        setForcedComparisonStage(null)
         setActiveSlideIndex((currentIndex) => (currentIndex + 1) % HOME_COMPARISON_SLIDES.length)
         setSequenceKey((currentKey) => currentKey + 1)
       }, 12200),
@@ -345,7 +378,14 @@ function HomeComparisonSlider({ locale }: { locale: Locale }) {
             </div>
           </div>
 
-          <div className="label2a4-comparison-reveal absolute inset-0 flex items-center justify-center bg-sky-50 p-4">
+          <div
+            className={cn(
+              "absolute inset-0 flex items-center justify-center bg-sky-50 p-4 transition-[clip-path] duration-700 ease-in-out",
+              activeComparisonStage === "after"
+                ? "[clip-path:polygon(0_0,100%_0,100%_100%,0_100%)]"
+                : "[clip-path:polygon(0_0,0%_0,0%_100%,0_100%)]",
+            )}
+          >
             <div className={cn("relative shrink-0", activeSlide.after.frameClassName)}>
               <Image
                 src={activeSlide.after.src}
@@ -361,7 +401,8 @@ function HomeComparisonSlider({ locale }: { locale: Locale }) {
 
         <div
           className={cn(
-            "label2a4-comparison-divider pointer-events-none absolute inset-y-0 w-px bg-white/95 shadow-[0_0_0_1px_rgba(15,23,42,0.08),0_0_34px_rgba(14,165,233,0.45)] transition-opacity duration-500 ease-out",
+            "pointer-events-none absolute inset-y-0 w-px bg-white/95 shadow-[0_0_0_1px_rgba(15,23,42,0.08),0_0_34px_rgba(14,165,233,0.45)] transition-[left,opacity] duration-700 ease-in-out",
+            activeComparisonStage === "after" ? "left-full" : "left-0",
             isSlideChanging ? "opacity-0" : "opacity-100",
           )}
         />
@@ -375,12 +416,30 @@ function HomeComparisonSlider({ locale }: { locale: Locale }) {
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-        <div className="rounded-[18px] border border-slate-200/80 bg-slate-50 px-4 py-3 text-slate-600">
+        <button
+          type="button"
+          className={cn(
+            "rounded-[18px] border px-4 py-3 text-left transition",
+            activeComparisonStage === "before"
+              ? "border-slate-400 bg-white font-medium text-slate-950 shadow-sm"
+              : "border-slate-200/80 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-white",
+          )}
+          onClick={() => setForcedComparisonStage("before")}
+        >
           {locale === "en" ? "Before: one label alone" : "Avant : une étiquette seule"}
-        </div>
-        <div className="rounded-[18px] border border-sky-200/80 bg-sky-50 px-4 py-3 font-medium text-sky-900">
+        </button>
+        <button
+          type="button"
+          className={cn(
+            "rounded-[18px] border px-4 py-3 text-left transition",
+            activeComparisonStage === "after"
+              ? "border-sky-300 bg-sky-50 font-medium text-sky-950 shadow-sm"
+              : "border-sky-200/80 bg-white text-sky-800 hover:border-sky-300 hover:bg-sky-50",
+          )}
+          onClick={() => setForcedComparisonStage("after")}
+        >
           {locale === "en" ? "After: a sheet ready to print" : "Après : une planche prête à imprimer"}
-        </div>
+        </button>
       </div>
     </section>
   )
@@ -1438,7 +1497,7 @@ export function HomeTool({ locale }: { locale: Locale }) {
 
             <div className="mt-6 flex flex-wrap gap-3 text-sm text-slate-700">
               <span className="rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 shadow-sm">
-                Chronopost, Colissimo, Mondial Relay, Happy Post
+                Chronopost, Colissimo, Mondial Relay, Happy Post, FedEx
               </span>
               <span className="rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 shadow-sm">
                 {locale === "en" ? "Manual adjustment on preview" : "Rognage manuel sur aperçu"}
@@ -2549,8 +2608,8 @@ export function HomeTool({ locale }: { locale: Locale }) {
             </h2>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">
               {locale === "en"
-                ? "Label2A4 turns your Chronopost, Colissimo, Mondial Relay and Happy Post PDF labels into compact A4 x4 sheets. It is useful for Vinted, Leboncoin and recurring shipping batches without changing your upload and print workflow."
-                : "Label2A4 transforme vos étiquettes PDF Chronopost, Colissimo, Mondial Relay et Happy Post en planches A4 x4. Pratique pour les ventes Vinted, Leboncoin et les expéditions régulières, sans changer votre façon d'importer, de rogner et d'imprimer les fichiers."}
+                ? "Label2A4 turns your Chronopost, Colissimo, Mondial Relay, Happy Post and FedEx PDF labels into compact A4 x4 sheets. It is useful for Vinted, Leboncoin and recurring shipping batches without changing your upload and print workflow."
+                : "Label2A4 transforme vos étiquettes PDF Chronopost, Colissimo, Mondial Relay, Happy Post et FedEx en planches A4 x4. Pratique pour les ventes Vinted, Leboncoin et les expéditions régulières, sans changer votre façon d'importer, de rogner et d'imprimer les fichiers."}
             </p>
           </div>
           <div className="flex flex-wrap gap-3 lg:justify-end">

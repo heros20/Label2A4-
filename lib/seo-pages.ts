@@ -41,6 +41,7 @@ export type SeoPageKey =
   | "colissimo"
   | "chronopost"
   | "happy-post"
+  | "fedex"
   | "vinted"
   | "leboncoin"
   | "entreprises"
@@ -277,6 +278,72 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
         },
       ],
       ctaLabel: "Optimiser mes étiquettes Happy Post",
+    },
+    fedex: {
+      path: "/fedex",
+      metaTitle: "Imprimer des étiquettes FedEx sur une feuille A4",
+      metaDescription:
+        "Regroupez vos étiquettes FedEx PDF sur des planches A4 x4 avec un rognage automatique adapté aux bordereaux FedEx.",
+      eyebrow: "FedEx",
+      title: "Imprimer plusieurs étiquettes FedEx sur une seule feuille A4",
+      intro:
+        "Les bordereaux FedEx contiennent les informations d’expédition, le numéro de suivi et les codes-barres nécessaires au scan. Label2A4 isole la zone utile du PDF puis regroupe vos étiquettes FedEx sur une planche A4 prête à imprimer.",
+      highlights: ["Profil FedEx", "A4 x4", "Codes-barres préservés"],
+      problem: {
+        title: "Une étiquette FedEx seule peut occuper toute une page",
+        text:
+          "Quand vous imprimez chaque PDF FedEx séparément, une grande partie de la feuille A4 peut rester inutilisée, surtout lors des lots e-commerce, retours clients ou expéditions internationales.",
+      },
+      solution: {
+        title: "Un rognage automatique pour une planche plus propre",
+        text:
+          "Importez vos PDF, choisissez le profil FedEx, puis générez un fichier final avec jusqu’à quatre étiquettes sur la même feuille. Le contenu FedEx reste inchangé : seul le placement d’impression est optimisé.",
+      },
+      useCases: [
+        {
+          title: "Expéditions internationales",
+          text:
+            "Préparez vos étiquettes FedEx avec une sortie compacte tout en gardant vos documents douaniers séparés quand ils sont nécessaires.",
+        },
+        {
+          title: "Retours clients",
+          text:
+            "Regroupez plusieurs étiquettes de retour FedEx dans un seul PDF A4 avant impression, sans modifier les fichiers source.",
+        },
+        {
+          title: "Lots e-commerce",
+          text:
+            "Réduisez le nombre de feuilles utilisées lorsque plusieurs commandes partent avec FedEx le même jour.",
+        },
+      ],
+      economy: {
+        title: "Jusqu’à quatre étiquettes FedEx par feuille",
+        text:
+          "Sur les lots compatibles, la mise en page A4 x4 peut diviser la consommation de papier par quatre par rapport à une impression classique, une étiquette par page.",
+      },
+      steps: [
+        "Importez vos PDF FedEx dans Label2A4.",
+        "Sélectionnez le profil FedEx dans les transporteurs.",
+        "Vérifiez l’aperçu, puis téléchargez la planche A4 x4 prête à imprimer.",
+      ],
+      faqs: [
+        {
+          question: "Comment imprimer plusieurs étiquettes FedEx sur une feuille A4 ?",
+          answer:
+            "Ajoutez vos PDF FedEx dans Label2A4, sélectionnez le profil FedEx, puis exportez le PDF final avec jusqu’à quatre étiquettes par feuille.",
+        },
+        {
+          question: "Le numéro de suivi et les codes-barres FedEx restent-ils lisibles ?",
+          answer:
+            "Label2A4 ne recrée pas l’étiquette : il rogne et replace le PDF source. Vérifiez toujours l’aperçu final et imprimez avec une qualité suffisante pour que les codes-barres restent scannables.",
+        },
+        {
+          question: "Que faire pour les documents de douane FedEx ?",
+          answer:
+            "Gardez les documents douaniers ou factures commerciales avec l’envoi lorsque FedEx les demande. La planche Label2A4 optimise l’impression des étiquettes, pas les obligations documentaires du transporteur.",
+        },
+      ],
+      ctaLabel: "Optimiser mes étiquettes FedEx",
     },
     vinted: {
       path: "/vinted",
@@ -734,6 +801,70 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
         },
       ],
       ctaLabel: "Optimize my Happy Post labels",
+    },
+    fedex: {
+      path: "/fedex",
+      metaTitle: "Print FedEx shipping labels on A4",
+      metaDescription:
+        "Group FedEx PDF shipping labels on A4 x4 sheets with an automatic crop profile designed for FedEx labels.",
+      eyebrow: "FedEx",
+      title: "Print multiple FedEx shipping labels on one A4 sheet",
+      intro:
+        "FedEx labels include the shipment details, tracking number and scannable barcodes needed for handling. Label2A4 isolates the useful area of the PDF and groups your FedEx labels on a ready-to-print A4 sheet.",
+      highlights: ["FedEx profile", "A4 x4", "Barcodes preserved"],
+      problem: {
+        title: "A single FedEx label can take a whole page",
+        text:
+          "Printing each FedEx PDF separately can leave most of the A4 sheet unused, especially for e-commerce batches, customer returns or international shipments.",
+      },
+      solution: {
+        title: "Automatic cropping for a cleaner print sheet",
+        text:
+          "Upload your PDFs, choose the FedEx profile, then generate a final file with up to four labels on the same sheet. The FedEx content stays unchanged; only the print layout is optimized.",
+      },
+      useCases: [
+        {
+          title: "International shipments",
+          text:
+            "Prepare FedEx labels in a compact output while keeping customs documents separate whenever they are required.",
+        },
+        {
+          title: "Customer returns",
+          text: "Group several FedEx return labels into one A4 PDF before printing, without changing the source files.",
+        },
+        {
+          title: "E-commerce batches",
+          text: "Use fewer sheets when several orders ship with FedEx on the same day.",
+        },
+      ],
+      economy: {
+        title: "Up to four FedEx labels per sheet",
+        text:
+          "For compatible batches, the A4 x4 layout can reduce paper usage by up to four times compared with printing one label per page.",
+      },
+      steps: [
+        "Upload your FedEx PDFs to Label2A4.",
+        "Select the FedEx carrier profile.",
+        "Check the preview, then download the ready-to-print A4 x4 sheet.",
+      ],
+      faqs: [
+        {
+          question: "How do I print several FedEx labels on one A4 sheet?",
+          answer:
+            "Add your FedEx PDFs to Label2A4, select the FedEx profile, then export the final PDF with up to four labels per sheet.",
+        },
+        {
+          question: "Will the FedEx tracking number and barcodes stay readable?",
+          answer:
+            "Label2A4 does not recreate the label; it crops and places the source PDF. Always check the final preview and print with enough quality for barcodes to remain scannable.",
+        },
+        {
+          question: "What about FedEx customs documents?",
+          answer:
+            "Keep any customs documents or commercial invoices with the shipment when FedEx requires them. The Label2A4 sheet optimizes label printing, not carrier documentation requirements.",
+        },
+      ],
+      ctaLabel: "Optimize my FedEx labels",
     },
     vinted: {
       path: "/vinted",

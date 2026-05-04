@@ -21,6 +21,10 @@ const SEO_PAGE_LOGOS: Record<string, { src: string; alt: string }> = {
     src: "/images/logo/mondial-relais.png",
     alt: "Logo Mondial Relay",
   },
+  "/fedex": {
+    src: "/images/logo/Fedex.png",
+    alt: "Logo FedEx",
+  },
   "/vinted": {
     src: "/images/logo/vinted.jpg",
     alt: "Logo Vinted",
@@ -163,6 +167,32 @@ function getComparisonImages(locale: Locale) {
         imageClassName: "object-contain object-center",
       },
     ],
+    fedex: [
+      {
+        label: locale === "en" ? "Before" : "Avant",
+        labelClassName: "text-slate-600",
+        panelClassName: "border-slate-200 bg-slate-50",
+        src: "/images/fedex/fedexx1.png",
+        alt:
+          locale === "en"
+            ? "A single FedEx shipping label printed on one sheet"
+            : "Bordereau FedEx imprimé seul sur une feuille",
+        frameClassName: "h-full max-h-full shrink-0 aspect-[570/740]",
+        imageClassName: "object-contain object-center",
+      },
+      {
+        label: locale === "en" ? "After" : "Après",
+        labelClassName: "text-sky-800",
+        panelClassName: "border-sky-200 bg-sky-50",
+        src: "/images/fedex/fedexx4.png",
+        alt:
+          locale === "en"
+            ? "Four FedEx shipping labels grouped on one A4 sheet"
+            : "Quatre bordereaux FedEx regroupés sur une feuille A4",
+        frameClassName: "h-full max-h-full shrink-0 aspect-[549/782]",
+        imageClassName: "object-contain object-center",
+      },
+    ],
   } as const
 }
 
@@ -232,6 +262,10 @@ function SheetComparisonVisual({ locale, pagePath }: { locale: Locale; pagePath:
 
   if (pagePath === "/colissimo") {
     return <ImageComparisonVisual previews={comparisonImages.colissimo} />
+  }
+
+  if (pagePath === "/fedex") {
+    return <ImageComparisonVisual previews={comparisonImages.fedex} />
   }
 
   return null

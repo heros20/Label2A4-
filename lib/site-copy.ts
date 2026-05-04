@@ -3,7 +3,7 @@ import type { Locale } from "@/lib/i18n"
 const siteCopy = {
   fr: {
     description:
-      "Regroupez vos étiquettes PDF Chronopost, Colissimo, Mondial Relay et Happy Post sur des feuilles A4 x4 prêtes à imprimer.",
+      "Regroupez vos étiquettes PDF Chronopost, Colissimo, Mondial Relay, Happy Post et FedEx sur des feuilles A4 x4 prêtes à imprimer.",
     keywords: [
       "étiquette PDF A4",
       "étiquettes colis",
@@ -16,6 +16,7 @@ const siteCopy = {
       "Colissimo A4",
       "Chronopost A4",
       "Happy Post A4",
+      "FedEx A4",
       "étiquette Vinted",
       "étiquette Leboncoin",
     ],
@@ -24,7 +25,7 @@ const siteCopy = {
   },
   en: {
     description:
-      "Group your Chronopost, Colissimo, Mondial Relay and Happy Post PDF shipping labels onto ready-to-print A4 x4 sheets.",
+      "Group your Chronopost, Colissimo, Mondial Relay, Happy Post and FedEx PDF shipping labels onto ready-to-print A4 x4 sheets.",
     keywords: [
       "shipping labels",
       "PDF labels on A4",
@@ -37,6 +38,7 @@ const siteCopy = {
       "Colissimo labels",
       "Mondial Relay labels",
       "Happy Post labels",
+      "FedEx labels",
       "Vinted labels",
       "Leboncoin labels",
     ],
