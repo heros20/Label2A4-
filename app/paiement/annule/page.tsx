@@ -1,5 +1,5 @@
 import { PaymentCancelledPageContent } from "@/components/pages/public-pages"
-import { buildPageMetadata } from "@/lib/page-metadata"
+import { buildPageMetadata, noIndexPageRobots } from "@/lib/page-metadata"
 
 const locale = "fr" as const
 
@@ -8,6 +8,7 @@ export const metadata = buildPageMetadata({
   description: "Le paiement premium Label2A4 n'a pas ete finalise. Vous pouvez reprendre votre utilisation gratuite ou relancer l'achat.",
   path: "/paiement/annule",
   locale,
+  robots: noIndexPageRobots,
 })
 
 export default function PaiementAnnulePage() {

@@ -668,8 +668,8 @@ export function PrivacyPageContent({ locale }: { locale: Locale }) {
         <h2 className="text-xl font-semibold text-slate-950">{locale === "en" ? "3. Legal basis" : "3. Base legale"}</h2>
         <p>
           {locale === "en"
-            ? "Strictly necessary processing relies on the performance of the requested service. Payments are handled by the payment provider. Audience measurement and conversion events are enabled only if you accept optional trackers through the consent banner."
-            : "Les traitements strictement necessaires reposent sur l'execution du service demande. Les paiements sont geres par le prestataire de paiement. La mesure d'audience et les evenements de conversion sont actives uniquement si vous acceptez les traceurs facultatifs via le bandeau prevu a cet effet."}
+            ? "Strictly necessary processing relies on the performance of the requested service. Payments are handled by the payment provider. Audience measurement, conversion events and advertising cookies are enabled only if you accept optional trackers through the consent banner."
+            : "Les traitements strictement necessaires reposent sur l'execution du service demande. Les paiements sont geres par le prestataire de paiement. La mesure d'audience, les evenements de conversion et les cookies publicitaires sont actives uniquement si vous acceptez les traceurs facultatifs via le bandeau prevu a cet effet."}
         </p>
       </section>
 
@@ -700,8 +700,8 @@ export function PrivacyPageContent({ locale }: { locale: Locale }) {
         </h2>
         <p>
           {locale === "en"
-            ? `Payment data necessary to process purchases is handled by a specialized payment provider. Hosting is provided by ${siteConfig.host.name}. Audience measurement is supplied by a consent-aware analytics tool. Support requests may transit through the transactional email provider configured for support. No advertising network is used, and no PDF is sold, shared or stored for marketing purposes.`
-            : `Les donnees necessaires au paiement sont traitees par un prestataire specialise. L'hebergement est assure par ${siteConfig.host.name}. La mesure d'audience est fournie par un outil d'analyse respectueux du consentement. Les demandes de support peuvent transiter par le prestataire d'email transactionnel configure pour le support. Aucun reseau publicitaire n'est utilise et aucun PDF n'est revendu, cede ou stocke a des fins marketing.`}
+            ? `Payment data necessary to process purchases is handled by a specialized payment provider. Hosting is provided by ${siteConfig.host.name}. Audience measurement is supplied by a consent-aware analytics tool. Support requests may transit through the transactional email provider configured for support. Google AdSense may be used to display ads on content pages after consent, and premium users do not receive ads. No PDF is sold, shared or stored for marketing purposes.`
+            : `Les donnees necessaires au paiement sont traitees par un prestataire specialise. L'hebergement est assure par ${siteConfig.host.name}. La mesure d'audience est fournie par un outil d'analyse respectueux du consentement. Les demandes de support peuvent transiter par le prestataire d'email transactionnel configure pour le support. Google AdSense peut etre utilise pour afficher des annonces sur les pages de contenu apres consentement, et les utilisateurs premium ne recoivent pas de publicites. Aucun PDF n'est revendu, cede ou stocke a des fins marketing.`}
         </p>
       </section>
 
@@ -728,6 +728,33 @@ export function CookiesPageContent({ locale }: { locale: Locale }) {
           {locale === "en"
             ? "The site uses technical cookies to remember your anonymous identifier and premium access state. The free quota may also rely on minimal server-side storage so that simply clearing cache or cookies does not reset the daily limit."
             : "Le site utilise des cookies techniques pour mémoriser votre identifiant anonyme et votre état d'accès premium. Le quota gratuit peut aussi s'appuyer sur un stockage serveur minimal afin d'éviter qu'un simple vidage du cache ou des cookies ne réinitialise la limite quotidienne."}
+        </p>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-xl font-semibold text-slate-950">
+          {locale === "en" ? "Optional advertising and analytics cookies" : "Cookies facultatifs de publicité et de mesure"}
+        </h2>
+        <p>
+          {locale === "en"
+            ? "The free version may display Google AdSense ads on editorial and tool pages that contain publisher content. These ads are not loaded on account, payment, password, admin or support utility pages. Advertising and analytics scripts are loaded only after you accept optional cookies."
+            : "La version gratuite peut afficher des annonces Google AdSense sur les pages editoriales et les pages outil qui contiennent du contenu editeur. Ces annonces ne sont pas chargees sur les pages compte, paiement, mot de passe, administration ou support technique. Les scripts publicitaires et de mesure sont charges uniquement apres acceptation des cookies facultatifs."}
+        </p>
+        <p>
+          {locale === "en"
+            ? "If you refuse optional cookies, the site remains usable and the AdSense script is removed. If you subscribe to a premium plan or use a valid premium pass, ads are also removed from your session."
+            : "Si vous refusez les cookies facultatifs, le site reste utilisable et le script AdSense est retire. Si vous souscrivez une offre premium ou utilisez un pass premium valide, les annonces sont egalement retirees de votre session."}
+        </p>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-xl font-semibold text-slate-950">
+          {locale === "en" ? "Managing your choice" : "Gestion de votre choix"}
+        </h2>
+        <p>
+          {locale === "en"
+            ? "Your choice is stored in the browser so the banner does not appear on every visit. You can change your choice by clearing site data for Label2A4 in your browser, then choosing again when the banner appears."
+            : "Votre choix est conserve dans le navigateur afin que le bandeau ne s'affiche pas a chaque visite. Vous pouvez le modifier en supprimant les donnees du site Label2A4 dans votre navigateur, puis en choisissant a nouveau lorsque le bandeau reapparait."}
         </p>
       </section>
     </PageShell>

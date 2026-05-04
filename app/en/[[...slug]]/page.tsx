@@ -22,7 +22,7 @@ import {
 import { HomeTool } from "@/components/home-tool"
 import { SavingsSimulator } from "@/components/savings-simulator"
 import { SeoServicePage } from "@/components/seo-service-page"
-import { buildPageMetadata } from "@/lib/page-metadata"
+import { buildPageMetadata, noIndexPageRobots } from "@/lib/page-metadata"
 import { getSeoMetadata, getSeoPage, type SeoPageKey } from "@/lib/seo-pages"
 import { getSiteText } from "@/lib/site-copy"
 import { localizePath } from "@/lib/i18n"
@@ -142,6 +142,7 @@ function resolveMetadata(segments: string[]) {
         description: "Find your premium access, quota, purchases and billing details in your Label2A4 account area.",
         path: "/compte",
         locale,
+        robots: noIndexPageRobots,
       })
     case "connexion":
       return buildPageMetadata({
@@ -149,6 +150,7 @@ function resolveMetadata(segments: string[]) {
         description: "Sign in to your Label2A4 account to access premium exports, quota details and billing.",
         path: "/connexion",
         locale,
+        robots: noIndexPageRobots,
       })
     case "inscription":
       return buildPageMetadata({
@@ -156,6 +158,7 @@ function resolveMetadata(segments: string[]) {
         description: "Create your Label2A4 account to keep your purchases, quotas and invoices in one place.",
         path: "/inscription",
         locale,
+        robots: noIndexPageRobots,
       })
     case "mot-de-passe-oublie":
       return buildPageMetadata({
@@ -163,6 +166,7 @@ function resolveMetadata(segments: string[]) {
         description: "Receive a secure email to set a new Label2A4 password.",
         path: "/mot-de-passe-oublie",
         locale,
+        robots: noIndexPageRobots,
       })
     case "mentions-legales":
       return buildPageMetadata({
@@ -212,6 +216,7 @@ function resolveMetadata(segments: string[]) {
         description: "Your Label2A4 payment was confirmed. Your premium access is now available from your account.",
         path: "/paiement/succes",
         locale,
+        robots: noIndexPageRobots,
       })
     case "paiement/annule":
       return buildPageMetadata({
@@ -219,6 +224,7 @@ function resolveMetadata(segments: string[]) {
         description: "Your Label2A4 premium payment was not completed. You can keep using the free plan or restart checkout.",
         path: "/paiement/annule",
         locale,
+        robots: noIndexPageRobots,
       })
     case "auth/reset-password":
       return buildPageMetadata({
@@ -226,6 +232,7 @@ function resolveMetadata(segments: string[]) {
         description: "Choose a new password to secure your Label2A4 account.",
         path: "/auth/reset-password",
         locale,
+        robots: noIndexPageRobots,
       })
     default:
       return null

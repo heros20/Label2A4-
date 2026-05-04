@@ -1,5 +1,5 @@
 import { PaymentSuccessPageContent } from "@/components/pages/public-pages"
-import { buildPageMetadata } from "@/lib/page-metadata"
+import { buildPageMetadata, noIndexPageRobots } from "@/lib/page-metadata"
 
 const locale = "fr" as const
 
@@ -8,6 +8,7 @@ export const metadata = buildPageMetadata({
   description: "Votre paiement Label2A4 a ete confirme. Retrouvez votre acces premium depuis votre compte.",
   path: "/paiement/succes",
   locale,
+  robots: noIndexPageRobots,
 })
 
 export default function PaiementSuccesPage() {

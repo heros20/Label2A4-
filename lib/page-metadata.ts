@@ -2,6 +2,15 @@ import type { Metadata } from "next"
 import { getLocaleHrefLang, getOpenGraphLocale, localizePath, type Locale } from "@/lib/i18n"
 import { siteConfig } from "@/lib/site-config"
 
+export const noIndexPageRobots: Metadata["robots"] = {
+  index: false,
+  follow: true,
+  googleBot: {
+    index: false,
+    follow: true,
+  },
+}
+
 function absoluteUrl(path: string) {
   return new URL(path, siteConfig.siteUrl).toString()
 }
@@ -10,11 +19,13 @@ export function buildPageMetadata({
   description,
   locale,
   path,
+  robots,
   title,
 }: {
   description: string
   locale: Locale
   path: string
+  robots?: Metadata["robots"]
   title: string
 }): Metadata {
   const localizedPath = localizePath(path, locale)
@@ -24,6 +35,7 @@ export function buildPageMetadata({
   return {
     title,
     description,
+    robots,
     alternates: {
       canonical,
       languages: {

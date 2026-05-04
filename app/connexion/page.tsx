@@ -1,5 +1,5 @@
 import { ConnexionPageContent } from "@/components/pages/public-pages"
-import { buildPageMetadata } from "@/lib/page-metadata"
+import { buildPageMetadata, noIndexPageRobots } from "@/lib/page-metadata"
 
 const locale = "fr" as const
 
@@ -8,6 +8,7 @@ export const metadata = buildPageMetadata({
   description: "Connectez-vous a votre compte Label2A4 pour retrouver vos exports premium, votre quota et votre facturation.",
   path: "/connexion",
   locale,
+  robots: noIndexPageRobots,
 })
 
 export default function ConnexionPage() {

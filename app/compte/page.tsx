@@ -1,5 +1,5 @@
 import { AccountPageContent, getAccountStatusMessage } from "@/components/pages/public-pages"
-import { buildPageMetadata } from "@/lib/page-metadata"
+import { buildPageMetadata, noIndexPageRobots } from "@/lib/page-metadata"
 
 const locale = "fr" as const
 
@@ -8,6 +8,7 @@ export const metadata = buildPageMetadata({
   description: "Retrouvez votre acces premium, votre quota, vos achats et votre facturation Label2A4 depuis votre espace compte.",
   path: "/compte",
   locale,
+  robots: noIndexPageRobots,
 })
 
 interface ComptePageProps {

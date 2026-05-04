@@ -57,17 +57,17 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
       eyebrow: "Mondial Relay",
       title: "Imprimer une étiquette Mondial Relay sur une feuille A4",
       intro:
-        "Les étiquettes Mondial Relay arrivent souvent en PDF isolé. Label2A4 les ajuste automatiquement puis les place proprement sur une feuille A4, jusqu’à quatre étiquettes par page.",
-      highlights: ["Ajustement Mondial Relay", "Placement A4 x4", "PDF prêt à imprimer"],
+        "Les étiquettes Mondial Relay servent au dépôt en Point Relais, Locker ou agence selon le parcours choisi. Label2A4 ajuste vos PDF Mondial Relay, conserve la zone de scan et les place proprement sur une feuille A4, jusqu’à quatre étiquettes par page.",
+      highlights: ["Ajustement Mondial Relay", "Point Relais et Locker", "PDF prêt à imprimer"],
       problem: {
         title: "Un PDF par colis consomme vite trop de papier",
         text:
-          "Quand chaque étiquette Mondial Relay est imprimée sur une page entière, trois quarts de la feuille restent inutilisés. Sur plusieurs colis, le gaspillage devient visible.",
+          "Quand chaque étiquette Mondial Relay est imprimée sur une page entière, trois quarts de la feuille restent inutilisés. Sur plusieurs colis, le gaspillage devient visible, même si Mondial Relay propose aussi l’impression en Point Relais pour certains parcours.",
       },
       solution: {
         title: "Une planche A4 optimisée pour vos dépôts",
         text:
-          "Importez vos PDF, choisissez le profil Mondial Relay, puis récupérez une planche A4 avec quatre emplacements propres. Vous gardez le rendu transporteur tout en réduisant les impressions.",
+          "Importez vos PDF, choisissez le profil Mondial Relay et la variante adaptée, puis récupérez une planche A4 avec quatre emplacements propres. Vous gardez le rendu transporteur tout en réduisant les impressions à domicile ou au bureau.",
       },
       useCases: [
         {
@@ -80,7 +80,7 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
         },
         {
           title: "Envois ponctuels",
-          text: "Gardez une méthode simple quand vous avez deux, trois ou quatre colis à déposer en même temps.",
+          text: "Gardez une méthode simple quand vous avez deux, trois ou quatre colis à déposer en même temps, avec une feuille plus facile à découper.",
         },
       ],
       economy: {
@@ -91,7 +91,7 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
       steps: [
         "Importez vos PDF Mondial Relay dans l’outil.",
         "Sélectionnez le profil Mondial Relay et la variante adaptée.",
-        "Téléchargez le PDF A4 x4 prêt pour l’impression.",
+        "Vérifiez que les codes-barres restent nets, puis téléchargez le PDF A4 x4 prêt pour l’impression.",
       ],
       faqs: [
         {
@@ -104,6 +104,16 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
           answer:
             "Oui. L’outil regroupe jusqu’à quatre étiquettes sur une feuille A4, selon le nombre de PDF importés.",
         },
+        {
+          question: "Faut-il imprimer l’étiquette Mondial Relay si j’ai un QR code ?",
+          answer:
+            "Mondial Relay propose l’impression en Point Relais avec un QR code pour certains envois. Si vous avez déjà téléchargé le PDF de l’étiquette, Label2A4 sert à optimiser cette impression sur votre imprimante A4.",
+        },
+        {
+          question: "Comment coller une étiquette Mondial Relay après découpe ?",
+          answer:
+            "Collez l’étiquette à plat sur une face du colis et évitez de recouvrir le code-barres avec du ruban opaque ou brillant afin de préserver le scan au dépôt.",
+        },
       ],
       ctaLabel: "Optimiser mes étiquettes Mondial Relay",
     },
@@ -115,17 +125,17 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
       eyebrow: "Colissimo",
       title: "Réduire une étiquette Colissimo et l’imprimer sur A4",
       intro:
-        "Label2A4 prépare vos étiquettes Colissimo pour une impression A4 plus compacte, sans refaire votre bordereau ni modifier le contenu du PDF.",
-      highlights: ["Profil Colissimo", "A4 x4", "Découpe simple"],
+        "Les étiquettes Colissimo regroupent les informations d’acheminement, le suivi et parfois les documents liés aux envois internationaux. Label2A4 prépare vos PDF Colissimo pour une impression A4 plus compacte, sans refaire votre bordereau ni modifier le contenu transporteur.",
+      highlights: ["Profil Colissimo", "Suivi préservé", "Documents douaniers à part"],
       problem: {
         title: "Les bordereaux Colissimo prennent souvent une page entière",
         text:
-          "Pour un vendeur régulier, imprimer chaque étiquette seule multiplie les feuilles, le temps de découpe et le coût d’impression.",
+          "Pour un vendeur régulier, imprimer chaque étiquette seule multiplie les feuilles, le temps de découpe et le coût d’impression. Sur les envois internationaux, il faut aussi garder les documents douaniers requis à portée du colis.",
       },
       solution: {
         title: "Un PDF optimisé avec quatre emplacements",
         text:
-          "L’outil ajuste la zone utile de l’étiquette Colissimo puis compose une page A4 avec un placement régulier, plus simple à imprimer et à découper.",
+          "L’outil ajuste la zone utile de l’étiquette Colissimo puis compose une page A4 avec un placement régulier, plus simple à imprimer et à découper. Les déclarations CN23 ou factures restent à gérer séparément lorsque La Poste les demande.",
       },
       useCases: [
         {
@@ -134,7 +144,7 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
         },
         {
           title: "Boutiques en ligne",
-          text: "Réduisez la consommation de papier quand plusieurs commandes partent avec Colissimo.",
+          text: "Réduisez la consommation de papier quand plusieurs commandes partent avec Colissimo, notamment lors des pics de préparation.",
         },
         {
           title: "Préparation de lots",
@@ -148,6 +158,7 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
       steps: [
         "Ajoutez les PDF Colissimo dans l’ordre voulu.",
         "Choisissez le profil Colissimo.",
+        "Vérifiez la lisibilité du code-barres et conservez les documents de douane séparés si l’envoi les exige.",
         "Générez puis téléchargez la planche A4 finale.",
       ],
       faqs: [
@@ -161,6 +172,16 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
           answer:
             "L’objectif est de conserver un rendu net et imprimable. Vérifiez toujours l’aperçu final avant impression, surtout avec un PDF source de faible qualité.",
         },
+        {
+          question: "Que faire des documents douaniers Colissimo ?",
+          answer:
+            "Pour certains envois internationaux ou Outre-mer, Colissimo demande des exemplaires CN23 et des factures à placer dans une pochette transparente. Label2A4 optimise l’étiquette, mais ne remplace pas ces documents.",
+        },
+        {
+          question: "Puis-je mélanger plusieurs étiquettes Colissimo ?",
+          answer:
+            "Oui. Importez plusieurs PDF Colissimo dans le bon ordre, puis générez une planche A4 x4. Contrôlez chaque étiquette avant impression pour éviter d’intervertir les colis.",
+        },
       ],
       ctaLabel: "Préparer mes étiquettes Colissimo",
     },
@@ -172,22 +193,22 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
       eyebrow: "Chronopost",
       title: "Imprimer plusieurs étiquettes Chronopost sur une feuille A4",
       intro:
-        "Pour les expéditions rapides et les lots du jour, Label2A4 transforme vos PDF Chronopost en planches A4 plus denses et prêtes à imprimer.",
-      highlights: ["Profil Chronopost", "Lot multi-PDF", "Sortie A4"],
+        "Pour les expéditions rapides et les lots du jour, Label2A4 transforme vos PDF Chronopost en planches A4 plus denses et prêtes à imprimer. Le numéro de colis et les codes de scan restent dans le PDF source, que vous pouvez ensuite suivre sur le module Chronopost.",
+      highlights: ["Profil Chronopost", "Suivi colis", "Sortie A4"],
       problem: {
         title: "Les impressions Chronopost s’accumulent vite",
         text:
-          "Quand les commandes partent en volume, une feuille par étiquette ajoute du coût, du papier et des manipulations inutiles.",
+          "Quand les commandes partent en volume, une feuille par étiquette ajoute du coût, du papier et des manipulations inutiles. Les expéditions express demandent en plus une étiquette nette, lisible et facile à associer au bon colis.",
       },
       solution: {
         title: "Une planche claire pour quatre étiquettes",
         text:
-          "Importez vos PDF Chronopost, laissez l’outil appliquer la mise en page adaptée, puis imprimez un PDF final regroupé sur A4.",
+          "Importez vos PDF Chronopost, laissez l’outil appliquer la mise en page adaptée, puis imprimez un PDF final regroupé sur A4. Gardez l’aperçu sous les yeux pour vérifier le numéro de colis avant découpe.",
       },
       useCases: [
         {
           title: "Expéditions express",
-          text: "Préparez les envois urgents avec une sortie unique et lisible.",
+          text: "Préparez les envois urgents avec une sortie unique et lisible, utile quand plusieurs colis doivent partir dans la même collecte.",
         },
         {
           title: "Opérations commerciales",
@@ -206,7 +227,7 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
       steps: [
         "Déposez vos PDF Chronopost.",
         "Sélectionnez le profil Chronopost.",
-        "Téléchargez la planche A4 prête à imprimer.",
+        "Contrôlez le numéro de colis, puis téléchargez la planche A4 prête à imprimer.",
       ],
       faqs: [
         {
@@ -217,6 +238,16 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
         {
           question: "Faut-il modifier le fichier Chronopost original ?",
           answer: "Non. Vous importez le PDF tel quel, puis l’outil génère un nouveau PDF A4 optimisé.",
+        },
+        {
+          question: "Où trouver le numéro de suivi Chronopost ?",
+          answer:
+            "Chronopost indique que le suivi se fait avec le numéro de colis, souvent composé de 13 caractères pour les envois en France ou de 15 caractères pour certains colis venant de l’étranger.",
+        },
+        {
+          question: "Les documents douaniers Chronopost sont-ils inclus ?",
+          answer:
+            "Pour les envois internationaux, vérifiez les formalités Chronopost et gardez les documents douaniers demandés avec le colis. Label2A4 optimise la mise en page de l’étiquette, pas le dossier de dédouanement.",
         },
       ],
       ctaLabel: "Optimiser mes étiquettes Chronopost",
@@ -229,17 +260,17 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
       eyebrow: "Happy Post",
       title: "Imprimer plusieurs étiquettes Happy Post sur une feuille A4",
       intro:
-        "Fini le gaspillage : Label2A4 ajuste vos étiquettes Happy Post et les place sur une planche A4 x4 prête à imprimer, découper et coller.",
-      highlights: ["Happy Post", "4 étiquettes par feuille", "Économie papier"],
+        "Fini le gaspillage : Label2A4 ajuste vos étiquettes Happy Post et les place sur une planche A4 x4 prête à imprimer, découper et coller. Le bordereau Happy Post reste associé à son numéro de suivi, que l’expéditeur peut retrouver dans son espace client ou sur l’étiquette.",
+      highlights: ["Happy Post", "Suivi sur étiquette", "Économie papier"],
       problem: {
         title: "Une étiquette Happy Post peut consommer une feuille entière",
         text:
-          "Quand chaque bordereau colis est imprimé seul, vous utilisez plus de papier, plus d’encre et plus de temps de découpe que nécessaire.",
+          "Quand chaque bordereau colis est imprimé seul, vous utilisez plus de papier, plus d’encre et plus de temps de découpe que nécessaire. Sur les expéditions internationales, certains documents comme CN22 ou CN23 peuvent aussi accompagner l’étiquette.",
       },
       solution: {
         title: "Une planche A4 optimisée pour vos colis",
         text:
-          "Importez vos PDF Happy Post, laissez Label2A4 appliquer l’ajustement adapté, puis générez un PDF final avec jusqu’à quatre étiquettes sur une seule feuille A4.",
+          "Importez vos PDF Happy Post, laissez Label2A4 appliquer l’ajustement adapté, puis générez un PDF final avec jusqu’à quatre étiquettes sur une seule feuille A4. Gardez les éventuels documents douaniers séparés lorsque l’envoi les exige.",
       },
       useCases: [
         {
@@ -252,7 +283,7 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
         },
         {
           title: "Impression maison",
-          text: "Gardez votre imprimante A4 habituelle tout en réduisant le gaspillage de papier et d’encre.",
+          text: "Gardez votre imprimante A4 habituelle tout en réduisant le gaspillage de papier et d’encre, sans changer votre parcours Happy Post.",
         },
       ],
       economy: {
@@ -263,7 +294,7 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
       steps: [
         "Importez vos PDF Happy Post dans Label2A4.",
         "Sélectionnez le profil Happy Post.",
-        "Générez puis imprimez la planche A4 optimisée.",
+        "Vérifiez le numéro de suivi et les codes de scan, puis imprimez la planche A4 optimisée.",
       ],
       faqs: [
         {
@@ -275,6 +306,16 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
           question: "L’ajustement Happy Post est-il automatique ?",
           answer:
             "Oui. Le profil Happy Post applique un cadrage prédéfini et une rotation adaptée par défaut, tout en laissant la possibilité d’ajuster l’orientation si besoin.",
+        },
+        {
+          question: "Où trouver le suivi Happy Post ?",
+          answer:
+            "Happy Post indique que le numéro de suivi se trouve dans l’espace client, rubrique Mes commandes, ou sur l’étiquette de transport. Il peut ensuite être saisi sur la page de suivi Happy Post.",
+        },
+        {
+          question: "Que faire si le suivi Happy Post n’apparaît pas tout de suite ?",
+          answer:
+            "Après un dépôt en point relais, le suivi peut prendre quelques jours à s’activer le temps que le colis soit collecté et scanné. Vérifiez le numéro et conservez l’étiquette lisible.",
         },
       ],
       ctaLabel: "Optimiser mes étiquettes Happy Post",
@@ -585,17 +626,17 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
       eyebrow: "Mondial Relay",
       title: "Print Mondial Relay shipping labels on one A4 sheet",
       intro:
-        "Mondial Relay labels often arrive as standalone PDFs. Label2A4 applies the right layout automatically and places them neatly on an A4 sheet, with up to four labels per page.",
-      highlights: ["Automatic carrier layout", "A4 x4 output", "Ready-to-print PDF"],
+        "Mondial Relay labels are used for drop-off in Point Relais, lockers or agencies depending on the selected route. Label2A4 keeps the scannable label area intact and places your PDFs neatly on an A4 sheet, with up to four labels per page.",
+      highlights: ["Automatic carrier layout", "Point Relais and lockers", "Ready-to-print PDF"],
       problem: {
         title: "One PDF per parcel wastes paper fast",
         text:
-          "When each Mondial Relay label is printed on a full page, most of the A4 sheet stays empty. With multiple parcels, the waste becomes very visible.",
+          "When each Mondial Relay label is printed on a full page, most of the A4 sheet stays empty. With multiple parcels, the waste becomes very visible, even though some Mondial Relay routes can also be printed in a relay point.",
       },
       solution: {
         title: "A cleaner A4 sheet for your daily drop-offs",
         text:
-          "Upload your PDFs, select the Mondial Relay profile, and export one clean A4 sheet with four label slots. You keep the carrier format while printing fewer pages.",
+          "Upload your PDFs, select the Mondial Relay profile and matching variant, then export one clean A4 sheet with four label slots. You keep the carrier format while printing fewer pages at home or at the office.",
       },
       useCases: [
         {
@@ -608,7 +649,7 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
         },
         {
           title: "Occasional shipments",
-          text: "Keep a simple workflow when you need to drop off two, three or four parcels at once.",
+          text: "Keep a simple workflow when you need to drop off two, three or four parcels at once, with a sheet that is easier to cut.",
         },
       ],
       economy: {
@@ -619,7 +660,7 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
       steps: [
         "Upload your Mondial Relay PDFs.",
         "Select the Mondial Relay profile and the matching variant.",
-        "Download the ready-to-print A4 x4 PDF.",
+        "Check that the barcodes stay sharp, then download the ready-to-print A4 x4 PDF.",
       ],
       faqs: [
         {
@@ -630,6 +671,16 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
         {
           question: "Can I place multiple Mondial Relay labels on one page?",
           answer: "Yes. The tool groups up to four labels on one A4 sheet, depending on how many PDFs you upload.",
+        },
+        {
+          question: "Do I need to print a Mondial Relay label if I have a QR code?",
+          answer:
+            "Mondial Relay offers relay-point printing with a QR code for some shipments. If you already downloaded the label PDF, Label2A4 helps optimize that PDF for your own A4 printer.",
+        },
+        {
+          question: "How should I attach a Mondial Relay label after cutting it?",
+          answer:
+            "Attach the label flat on one side of the parcel and avoid covering the barcode with opaque or glossy tape so it can still be scanned at drop-off.",
         },
       ],
       ctaLabel: "Optimize my Mondial Relay labels",
@@ -642,17 +693,17 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
       eyebrow: "Colissimo",
       title: "Print Colissimo shipping labels on a compact A4 layout",
       intro:
-        "Label2A4 prepares your Colissimo labels for a cleaner A4 print workflow without recreating the label or changing the PDF content.",
-      highlights: ["Colissimo profile", "A4 x4", "Easy cutting"],
+        "Colissimo labels include routing information, tracking details and, for some international shipments, related customs paperwork. Label2A4 prepares your Colissimo PDFs for a cleaner A4 print workflow without recreating the label or changing carrier content.",
+      highlights: ["Colissimo profile", "Tracking preserved", "Customs documents aside"],
       problem: {
         title: "Colissimo labels often take a full page",
         text:
-          "For regular sellers, printing each label on its own sheet multiplies paper usage, cutting time and printing costs.",
+          "For regular sellers, printing each label on its own sheet multiplies paper usage, cutting time and printing costs. For international shipments, you may also need to keep the required customs documents with the parcel.",
       },
       solution: {
         title: "One optimized PDF with four slots",
         text:
-          "The tool isolates the useful Colissimo label area, then creates a consistent A4 sheet that is easier to print and cut.",
+          "The tool isolates the useful Colissimo label area, then creates a consistent A4 sheet that is easier to print and cut. CN23 declarations or invoices should still be handled separately when La Poste requires them.",
       },
       useCases: [
         {
@@ -661,7 +712,7 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
         },
         {
           title: "Online stores",
-          text: "Reduce paper usage when several orders are sent with Colissimo.",
+          text: "Reduce paper usage when several orders are sent with Colissimo, especially during packing peaks.",
         },
         {
           title: "Batch preparation",
@@ -675,6 +726,7 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
       steps: [
         "Add your Colissimo PDFs in the order you want.",
         "Choose the Colissimo profile.",
+        "Check barcode readability and keep customs documents separate if the shipment requires them.",
         "Generate and download the final A4 sheet.",
       ],
       faqs: [
@@ -688,6 +740,16 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
           answer:
             "The goal is to keep the output sharp and printable. Always check the final preview before printing, especially when the source PDF quality is low.",
         },
+        {
+          question: "What should I do with Colissimo customs documents?",
+          answer:
+            "For some international or overseas shipments, Colissimo asks for CN23 copies and invoices in a transparent pouch. Label2A4 optimizes the label, but it does not replace these documents.",
+        },
+        {
+          question: "Can I mix several Colissimo labels?",
+          answer:
+            "Yes. Import several Colissimo PDFs in the right order, then generate an A4 x4 sheet. Check each label before printing to avoid mixing parcels.",
+        },
       ],
       ctaLabel: "Prepare my Colissimo labels",
     },
@@ -699,21 +761,22 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
       eyebrow: "Chronopost",
       title: "Print multiple Chronopost shipping labels on one A4 sheet",
       intro:
-        "For urgent shipments and daily batches, Label2A4 turns your Chronopost PDFs into denser A4 sheets that are ready to print.",
-      highlights: ["Chronopost profile", "Multi-PDF batch", "A4 output"],
+        "For urgent shipments and daily batches, Label2A4 turns your Chronopost PDFs into denser A4 sheets that are ready to print. The parcel number and scannable codes remain in the source PDF, ready to check later through Chronopost tracking.",
+      highlights: ["Chronopost profile", "Parcel tracking", "A4 output"],
       problem: {
         title: "Chronopost prints stack up quickly",
-        text: "When orders go out in volume, one sheet per label adds avoidable cost, paper waste and extra handling.",
+        text:
+          "When orders go out in volume, one sheet per label adds avoidable cost, paper waste and extra handling. Express shipments also need a clean, readable label that is easy to match with the right parcel.",
       },
       solution: {
         title: "One clear sheet for four labels",
         text:
-          "Upload your Chronopost PDFs, let the tool apply the right carrier layout automatically, then print one final grouped A4 PDF.",
+          "Upload your Chronopost PDFs, let the tool apply the right carrier layout automatically, then print one final grouped A4 PDF. Keep the preview visible so you can check the parcel number before cutting.",
       },
       useCases: [
         {
           title: "Express shipments",
-          text: "Prepare urgent orders with a single clean output.",
+          text: "Prepare urgent orders with a single clean output, useful when several parcels leave in the same pickup.",
         },
         {
           title: "Commercial campaigns",
@@ -731,7 +794,7 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
       steps: [
         "Drop in your Chronopost PDFs.",
         "Select the Chronopost profile.",
-        "Download the ready-to-print A4 sheet.",
+        "Check the parcel number, then download the ready-to-print A4 sheet.",
       ],
       faqs: [
         {
@@ -741,6 +804,16 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
         {
           question: "Do I need to modify the original Chronopost PDF?",
           answer: "No. You upload the PDF as it is, and the tool generates a new optimized A4 PDF.",
+        },
+        {
+          question: "Where can I find the Chronopost tracking number?",
+          answer:
+            "Chronopost says tracking uses the parcel number, often 13 characters for shipments in France or 15 characters for some parcels coming from abroad.",
+        },
+        {
+          question: "Are Chronopost customs documents included?",
+          answer:
+            "For international shipments, check Chronopost customs requirements and keep any required documents with the parcel. Label2A4 optimizes label layout, not the customs file.",
         },
       ],
       ctaLabel: "Optimize my Chronopost labels",
@@ -753,17 +826,17 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
       eyebrow: "Happy Post",
       title: "Print multiple Happy Post labels on one A4 sheet",
       intro:
-        "Stop wasting paper: Label2A4 automatically adjusts your Happy Post labels and places them on a ready-to-print A4 x4 sheet.",
-      highlights: ["Happy Post", "4 labels per sheet", "Paper savings"],
+        "Stop wasting paper: Label2A4 automatically adjusts your Happy Post labels and places them on a ready-to-print A4 x4 sheet. The Happy Post waybill remains linked to its tracking number, which can be found in the customer account or on the label.",
+      highlights: ["Happy Post", "Tracking on label", "Paper savings"],
       problem: {
         title: "A single Happy Post label can use a full sheet",
         text:
-          "When each shipping label is printed alone, you use more paper, more ink and more cutting time than necessary.",
+          "When each shipping label is printed alone, you use more paper, more ink and more cutting time than necessary. International shipments may also include documents such as CN22 or CN23 forms.",
       },
       solution: {
         title: "An optimized A4 sheet for your parcels",
         text:
-          "Upload your Happy Post PDFs, let Label2A4 apply the right automatic adjustment, then generate a final PDF with up to four labels on one A4 sheet.",
+          "Upload your Happy Post PDFs, let Label2A4 apply the right automatic adjustment, then generate a final PDF with up to four labels on one A4 sheet. Keep any customs documents separate when the shipment requires them.",
       },
       useCases: [
         {
@@ -776,7 +849,7 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
         },
         {
           title: "Home printing",
-          text: "Keep using a standard A4 printer while reducing paper and ink waste.",
+          text: "Keep using a standard A4 printer while reducing paper and ink waste, without changing your Happy Post workflow.",
         },
       ],
       economy: {
@@ -786,7 +859,7 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
       steps: [
         "Upload your Happy Post PDFs.",
         "Select the Happy Post profile.",
-        "Generate and print the optimized A4 sheet.",
+        "Check the tracking number and scannable codes, then print the optimized A4 sheet.",
       ],
       faqs: [
         {
@@ -798,6 +871,16 @@ const seoPagesByLocale: Record<Locale, Record<SeoPageKey, SeoPageContent>> = {
           question: "Is the Happy Post layout applied automatically?",
           answer:
             "Yes. The Happy Post profile applies a predefined adjustment and rotation by default, while still letting you tweak the orientation if needed.",
+        },
+        {
+          question: "Where can I find Happy Post tracking?",
+          answer:
+            "Happy Post says the tracking number is available in the customer account, under orders, or on the transport label. It can then be entered on the Happy Post tracking page.",
+        },
+        {
+          question: "What if Happy Post tracking does not appear immediately?",
+          answer:
+            "After drop-off at a relay point, tracking can take a few days to activate while the parcel is collected and scanned. Check the number and keep the label readable.",
         },
       ],
       ctaLabel: "Optimize my Happy Post labels",

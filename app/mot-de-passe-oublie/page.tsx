@@ -1,5 +1,5 @@
 import { ForgotPasswordPageContent } from "@/components/pages/public-pages"
-import { buildPageMetadata } from "@/lib/page-metadata"
+import { buildPageMetadata, noIndexPageRobots } from "@/lib/page-metadata"
 
 const locale = "fr" as const
 
@@ -8,6 +8,7 @@ export const metadata = buildPageMetadata({
   description: "Recevez un email securise pour definir un nouveau mot de passe Label2A4.",
   path: "/mot-de-passe-oublie",
   locale,
+  robots: noIndexPageRobots,
 })
 
 export default function MotDePasseOubliePage() {

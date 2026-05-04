@@ -1,5 +1,5 @@
 import { ResetPasswordPageContent } from "@/components/pages/public-pages"
-import { buildPageMetadata } from "@/lib/page-metadata"
+import { buildPageMetadata, noIndexPageRobots } from "@/lib/page-metadata"
 
 const locale = "fr" as const
 
@@ -8,6 +8,7 @@ export const metadata = buildPageMetadata({
   description: "Choisissez un nouveau mot de passe pour securiser votre compte Label2A4.",
   path: "/auth/reset-password",
   locale,
+  robots: noIndexPageRobots,
 })
 
 interface ResetPasswordPageProps {

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
+import { usePathname } from "next/navigation"
 import {
   COOKIE_CONSENT_KEY,
   COOKIE_CONSENT_UPDATED_EVENT,
@@ -20,6 +21,21 @@ const ADSENSE_AUTO_AD_SELECTORS = [
   'iframe[src*="doubleclick.net"]',
 ]
 
+const ADSENSE_CONTENT_PATHS = new Set([
+  "/",
+  "/landing",
+  "/faq",
+  "/chronopost",
+  "/colissimo",
+  "/mondial-relay",
+  "/happy-post",
+  "/fedex",
+  "/vinted",
+  "/leboncoin",
+  "/entreprises",
+  "/economies",
+])
+
 interface AccessResponsePayload {
   access?: AccessSnapshot
 }
@@ -36,6 +52,22 @@ function hasAdsConsent() {
   } catch {
     return false
   }
+}
+
+function normalizeAdsensePath(pathname: string) {
+  if (pathname === "/en") {
+    return "/"
+  }
+
+  if (pathname.startsWith("/en/")) {
+    return pathname.slice(3) || "/"
+  }
+
+  return pathname || "/"
+}
+
+function isAdsenseContentPath(pathname: string) {
+  return ADSENSE_CONTENT_PATHS.has(normalizeAdsensePath(pathname))
 }
 
 function injectAdsenseScript() {
@@ -67,8 +99,15 @@ function removeAdsenseScript() {
 }
 
 export function AdsenseManager() {
+  const pathname = usePathname()
+
   useEffect(() => {
-    if (!siteConfig.compliance.adsEnabled || !siteConfig.compliance.adsenseClientId.trim()) {
+    if (
+      !siteConfig.compliance.adsEnabled ||
+      !siteConfig.compliance.adsenseClientId.trim() ||
+      !isAdsenseContentPath(pathname)
+    ) {
+      removeAdsenseScript()
       return
     }
 
@@ -126,7 +165,7 @@ export function AdsenseManager() {
       window.removeEventListener("focus", syncAdsenseForCurrentAccess)
       document.removeEventListener("visibilitychange", syncAdsenseWhenVisible)
     }
-  }, [])
+  }, [pathname])
 
   return null
 }
