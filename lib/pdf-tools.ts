@@ -22,7 +22,7 @@ const GRID_GAP = 12
 const ROWS = 2
 const COLUMNS = 2
 const MIN_CROP_SIZE = 0.01
-const BRAND_SIGNATURE_TEXT = "Imprimé avec Label2A4"
+const BRAND_SIGNATURE_TEXT = "imprimé par Label2a4.com"
 const BRAND_SIGNATURE_LOGO_URL = "/images/logo/label2a4-mark.png"
 const BRAND_SIGNATURE_RESERVED_HEIGHT = 13
 
@@ -273,7 +273,7 @@ function drawBrandSignature({
   page: ReturnType<PDFDocument["addPage"]>
   slot: ReturnType<typeof getSlotRect>
 }) {
-  const fontSize = 6.5
+  const fontSize = 7
   const logoSize = 8
   const gap = 3
   const { font, logo } = assets
@@ -281,7 +281,7 @@ function drawBrandSignature({
   const signatureWidth = (logo ? logoSize + gap : 0) + textWidth
   const x = slot.x + slot.width - signatureWidth - 4
   const y = slot.y + 3
-  const color = rgb(0.45, 0.5, 0.58)
+  const color = rgb(0.32, 0.36, 0.42)
 
   if (logo) {
     page.drawImage(logo, {
@@ -289,7 +289,7 @@ function drawBrandSignature({
       y: y - 1,
       width: logoSize,
       height: logoSize,
-      opacity: 0.7,
+      opacity: 0.82,
     })
   }
 
@@ -299,7 +299,7 @@ function drawBrandSignature({
     size: fontSize,
     font,
     color,
-    opacity: 0.82,
+    opacity: 0.95,
   })
 }
 
