@@ -162,20 +162,6 @@ const HOME_COMPARISON_SLIDES = [
       frameClassName: "h-full max-h-full aspect-[1241/1754]",
     },
   },
-  {
-    id: "fedex",
-    label: "FedEx",
-    before: {
-      src: "/images/fedex/fedexx1.png",
-      alt: "Bordereau FedEx imprimé seul sur une feuille A4",
-      frameClassName: "h-full max-h-full aspect-[570/740]",
-    },
-    after: {
-      src: "/images/fedex/fedexx4.png",
-      alt: "Quatre bordereaux FedEx regroupés sur une feuille A4",
-      frameClassName: "h-full max-h-full aspect-[549/782]",
-    },
-  },
 ] as const
 
 const SINGLE_LABEL_PLACEMENTS_EN: Array<{ id: SingleLabelSlot; label: string }> = [
