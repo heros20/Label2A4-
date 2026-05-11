@@ -202,6 +202,10 @@ function formatCropInputValue(value: number) {
   return Math.round(value * 100)
 }
 
+function getManualCropPageKey(fileId: string, pageIndex: number) {
+  return `${fileId}:${pageIndex}`
+}
+
 function formatManualCropSummary(crop: ManualCropRect | undefined, locale: Locale) {
   if (!crop || isDefaultManualCrop(crop)) {
     return locale === "en" ? "full page" : "page entière"
@@ -447,9 +451,11 @@ export function HomeTool({ locale }: { locale: Locale }) {
   )
   const [singleLabelSlot, setSingleLabelSlot] = useState<SingleLabelSlot>("top-right")
   const [manualCropsByFileId, setManualCropsByFileId] = useState<Record<string, ManualCropRect>>({})
+  const [manualCropsByPageId, setManualCropsByPageId] = useState<Record<string, ManualCropRect>>({})
   const [rotationsByFileId, setRotationsByFileId] = useState<Record<string, PdfRotation>>({})
   const [selectedPageIndicesByFileId, setSelectedPageIndicesByFileId] = useState<Record<string, number[]>>({})
   const [pageCounts, setPageCounts] = useState<Record<string, number>>({})
+  const [focusedPageIndex, setFocusedPageIndex] = useState(0)
   const [uploadError, setUploadError] = useState("")
   const [manualPreview, setManualPreview] = useState<PreviewImage | null>(null)
   const [isLoadingManualPreview, setIsLoadingManualPreview] = useState(false)
@@ -480,16 +486,27 @@ export function HomeTool({ locale }: { locale: Locale }) {
   const selectedProfile = getResolvedLabelProfile(profileId, { chronopostVariantId, mondialRelayVariantId })
   const focusedFile = files.find((file) => file.id === focusedFileId) ?? files[0] ?? null
   const focusedFileIndex = focusedFile ? files.findIndex((file) => file.id === focusedFile.id) : -1
-  const focusedManualCrop = focusedFile ? manualCropsByFileId[focusedFile.id] ?? DEFAULT_MANUAL_CROP_RECT : DEFAULT_MANUAL_CROP_RECT
+  const focusedPageCount = focusedFile ? pageCounts[focusedFile.id] ?? 0 : 0
+  const normalizedFocusedPageIndex = focusedPageCount
+    ? Math.min(Math.max(focusedPageIndex, 0), focusedPageCount - 1)
+    : 0
+  const focusedManualCrop =
+    focusedFile
+      ? manualCropsByPageId[getManualCropPageKey(focusedFile.id, normalizedFocusedPageIndex)] ??
+        manualCropsByFileId[focusedFile.id] ??
+        DEFAULT_MANUAL_CROP_RECT
+      : DEFAULT_MANUAL_CROP_RECT
   const selectedDefaultRotation = selectedProfile.mode === "preset" ? normalizePdfRotation(selectedProfile.defaultRotation ?? 0) : 0
   const focusedRotation = focusedFile ? rotationsByFileId[focusedFile.id] ?? selectedDefaultRotation : selectedDefaultRotation
   const isChronopostProfile = baseSelectedProfile.id === "chronopost"
   const isMondialRelayProfile = baseSelectedProfile.id === "mondial-relay"
   const isManualProfile = selectedProfile.mode === "manual"
   const deferredManualCropsByFileId = useDeferredValue(manualCropsByFileId)
+  const deferredManualCropsByPageId = useDeferredValue(manualCropsByPageId)
   const deferredRotationsByFileId = useDeferredValue(rotationsByFileId)
   const deferredSelectedPageIndicesByFileId = useDeferredValue(selectedPageIndicesByFileId)
   const activeManualCropsByFileId = isManualProfile ? deferredManualCropsByFileId : undefined
+  const activeManualCropsByPageId = isManualProfile ? deferredManualCropsByPageId : undefined
   const usesImageResultPreview = isMobileViewport
   const hasResolvedPageCounts = files.length > 0 && files.every((file) => typeof pageCounts[file.id] === "number")
 
@@ -530,8 +547,8 @@ export function HomeTool({ locale }: { locale: Locale }) {
     return Math.max(Math.ceil(labels / 4), 1)
   }, [files, pageCounts, totalLabels])
   const customManualCropCount = useMemo(
-    () => files.reduce((sum, file) => sum + (manualCropsByFileId[file.id] ? 1 : 0), 0),
-    [files, manualCropsByFileId],
+    () => Object.keys(manualCropsByPageId).length + files.reduce((sum, file) => sum + (manualCropsByFileId[file.id] ? 1 : 0), 0),
+    [files, manualCropsByFileId, manualCropsByPageId],
   )
   const rotatedFileCount = useMemo(
     () =>
@@ -836,6 +853,19 @@ export function HomeTool({ locale }: { locale: Locale }) {
   }, [files, pageCounts])
 
   useEffect(() => {
+    if (!focusedFile) {
+      setFocusedPageIndex(0)
+      return
+    }
+
+    const pageCount = pageCounts[focusedFile.id]
+
+    if (pageCount && focusedPageIndex >= pageCount) {
+      setFocusedPageIndex(pageCount - 1)
+    }
+  }, [focusedFile, focusedPageIndex, pageCounts])
+
+  useEffect(() => {
     if (files.length === 0) {
       return
     }
@@ -860,7 +890,7 @@ export function HomeTool({ locale }: { locale: Locale }) {
     setIsLoadingManualPreview(true)
     setManualPreviewError("")
 
-    renderPdfPageToImage(focusedFile, 1, 1.4)
+    renderPdfPageToImage(focusedFile, normalizedFocusedPageIndex + 1, 1.4)
       .then((preview) => {
         if (!active) {
           return
@@ -877,6 +907,7 @@ export function HomeTool({ locale }: { locale: Locale }) {
         if (active) {
           reportClientError("manual-preview", error, {
             fileName: focusedFile.name,
+            pageIndex: normalizedFocusedPageIndex,
           })
           setManualPreview(null)
           setManualPreviewError(
@@ -901,7 +932,7 @@ export function HomeTool({ locale }: { locale: Locale }) {
         URL.revokeObjectURL(previewUrl)
       }
     }
-  }, [focusedFile, isManualProfile, locale])
+  }, [focusedFile, isManualProfile, locale, normalizedFocusedPageIndex])
 
   useEffect(() => {
     if (files.length === 0) {
@@ -927,6 +958,7 @@ export function HomeTool({ locale }: { locale: Locale }) {
     buildLabelA4Pdf(files, profileId, {
       chronopostVariantId,
       manualCropsByFileId: activeManualCropsByFileId,
+      manualCropsByPageId: activeManualCropsByPageId,
       mondialRelayVariantId,
       rotationsByFileId: deferredRotationsByFileId,
       selectedPageIndicesByFileId: deferredSelectedPageIndicesByFileId,
@@ -968,6 +1000,7 @@ export function HomeTool({ locale }: { locale: Locale }) {
     }
   }, [
     activeManualCropsByFileId,
+    activeManualCropsByPageId,
     chronopostVariantId,
     deferredRotationsByFileId,
     deferredSelectedPageIndicesByFileId,
@@ -1090,6 +1123,7 @@ export function HomeTool({ locale }: { locale: Locale }) {
         chronopostVariantId,
         includeBrandSignature: true,
         manualCropsByFileId: activeManualCropsByFileId,
+        manualCropsByPageId: activeManualCropsByPageId,
         mondialRelayVariantId,
         rotationsByFileId: deferredRotationsByFileId,
         selectedPageIndicesByFileId: deferredSelectedPageIndicesByFileId,
@@ -1136,6 +1170,13 @@ export function HomeTool({ locale }: { locale: Locale }) {
         }),
       ),
     )
+    setManualCropsByPageId((current) => {
+      const nextFileIds = new Set(nextFiles.map((file) => file.id))
+
+      return Object.fromEntries(
+        Object.entries(current).filter(([key]) => nextFileIds.has(key.split(":")[0] ?? "")),
+      )
+    })
     setRotationsByFileId((current) =>
       Object.fromEntries(
         nextFiles.flatMap((file) => {
@@ -1206,16 +1247,17 @@ export function HomeTool({ locale }: { locale: Locale }) {
     updateFiles(nextFiles)
   }
 
-  const setManualCropForFile = (fileId: string, crop: ManualCropRect) => {
+  const setManualCropForPage = (fileId: string, pageIndex: number, crop: ManualCropRect) => {
     const normalized = normalizeManualCropRect(crop)
+    const pageKey = getManualCropPageKey(fileId, pageIndex)
 
-    setManualCropsByFileId((current) => {
+    setManualCropsByPageId((current) => {
       const next = { ...current }
 
       if (isDefaultManualCrop(normalized)) {
-        delete next[fileId]
+        delete next[pageKey]
       } else {
-        next[fileId] = normalized
+        next[pageKey] = normalized
       }
 
       return next
@@ -1227,7 +1269,7 @@ export function HomeTool({ locale }: { locale: Locale }) {
       return
     }
 
-    setManualCropForFile(focusedFile.id, nextCrop)
+    setManualCropForPage(focusedFile.id, normalizedFocusedPageIndex, nextCrop)
   }
 
   const updateFocusedManualCropFromPercent =
@@ -1245,7 +1287,7 @@ export function HomeTool({ locale }: { locale: Locale }) {
         ...focusedManualCrop,
         [field]: percent / 100,
       })
-      setManualCropForFile(focusedFile.id, nextCrop)
+      setManualCropForPage(focusedFile.id, normalizedFocusedPageIndex, nextCrop)
     }
 
   const resetFocusedManualCrop = () => {
@@ -1259,6 +1301,11 @@ export function HomeTool({ locale }: { locale: Locale }) {
         delete next[focusedFile.id]
         return next
       })
+      setManualCropsByPageId((current) => {
+        const next = { ...current }
+        delete next[getManualCropPageKey(focusedFile.id, normalizedFocusedPageIndex)]
+        return next
+      })
     })
   }
 
@@ -1268,11 +1315,19 @@ export function HomeTool({ locale }: { locale: Locale }) {
     startTransition(() => {
       if (isDefaultManualCrop(normalized)) {
         setManualCropsByFileId({})
+        setManualCropsByPageId({})
         return
       }
 
-      setManualCropsByFileId(
-        Object.fromEntries(files.map((file) => [file.id, normalized] as const)),
+      setManualCropsByFileId({})
+      setManualCropsByPageId(
+        Object.fromEntries(
+          files.flatMap((file) =>
+            getAllPageIndices(pageCounts[file.id] ?? 1).map(
+              (pageIndex) => [getManualCropPageKey(file.id, pageIndex), normalized] as const,
+            ),
+          ),
+        ),
       )
     })
   }
@@ -1363,6 +1418,7 @@ export function HomeTool({ locale }: { locale: Locale }) {
     }
 
     setFocusedFileId(files[nextIndex].id)
+    setFocusedPageIndex(0)
   }
 
   const changeResultPreviewPage = (direction: -1 | 1) => {
@@ -1953,7 +2009,9 @@ export function HomeTool({ locale }: { locale: Locale }) {
 
               <div className="mt-6 space-y-3">
                 {files.map((file, index) => {
-                  const hasCustomManualCrop = Boolean(manualCropsByFileId[file.id])
+                  const hasCustomManualCrop =
+                    Boolean(manualCropsByFileId[file.id]) ||
+                    Object.keys(manualCropsByPageId).some((key) => key.startsWith(`${file.id}:`))
                   const fileRotation = rotationsByFileId[file.id] ?? selectedDefaultRotation
                   const filePageCount = pageCounts[file.id]
                   const selectedPageIndices = filePageCount
@@ -2262,7 +2320,52 @@ export function HomeTool({ locale }: { locale: Locale }) {
                     {files.length > 1 && focusedFileIndex >= 0 && (
                       <span> · {focusedFileIndex + 1}/{files.length}</span>
                     )}
+                    {focusedPageCount > 1 && (
+                      <span> Â· page {normalizedFocusedPageIndex + 1}/{focusedPageCount}</span>
+                    )}
                   </p>
+                )}
+
+                {focusedFile && focusedPageCount > 1 && (
+                  <div className="mt-4 rounded-[24px] border border-slate-200/80 bg-slate-50/80 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-medium text-slate-900">
+                          {locale === "en" ? "Page to crop" : "Page a rogner"}
+                        </div>
+                        <div className="mt-1 text-sm text-slate-500">
+                          {locale === "en"
+                            ? "Each page keeps its own manual crop."
+                            : "Chaque page conserve son propre rognage manuel."}
+                        </div>
+                      </div>
+                      <div className="flex max-h-28 flex-wrap gap-2 overflow-y-auto">
+                        {getAllPageIndices(focusedPageCount).map((pageIndex) => {
+                          const pageKey = getManualCropPageKey(focusedFile.id, pageIndex)
+                          const hasPageCrop = Boolean(manualCropsByPageId[pageKey])
+                          const isActivePage = pageIndex === normalizedFocusedPageIndex
+
+                          return (
+                            <button
+                              key={pageIndex}
+                              type="button"
+                              className={cn(
+                                "h-9 min-w-9 rounded-full border px-3 text-xs font-semibold transition",
+                                isActivePage
+                                  ? "border-sky-500 bg-sky-600 text-white"
+                                  : hasPageCrop
+                                    ? "border-sky-300 bg-sky-50 text-sky-900 hover:border-sky-400"
+                                    : "border-slate-200 bg-white text-slate-600 hover:border-sky-300 hover:text-sky-800",
+                              )}
+                              onClick={() => setFocusedPageIndex(pageIndex)}
+                            >
+                              {pageIndex + 1}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
                 )}
 
                 <div className="mt-5">
@@ -2469,7 +2572,13 @@ export function HomeTool({ locale }: { locale: Locale }) {
                   </div>
                   {focusedFile && (
                     <div className="mt-2 text-sm text-slate-600">
-                      {focusedFile.name} : {formatManualCropSummary(manualCropsByFileId[focusedFile.id], locale)}
+                      {focusedFile.name}
+                      {focusedPageCount > 1 ? ` page ${normalizedFocusedPageIndex + 1}` : ""} :{" "}
+                      {formatManualCropSummary(
+                        manualCropsByPageId[getManualCropPageKey(focusedFile.id, normalizedFocusedPageIndex)] ??
+                          manualCropsByFileId[focusedFile.id],
+                        locale,
+                      )}
                     </div>
                   )}
                 </div>

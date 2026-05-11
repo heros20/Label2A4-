@@ -34,11 +34,20 @@ export type SingleLabelSlot = "top-right" | "top-left" | "bottom-right" | "botto
 export type PdfRotation = (typeof PDF_ROTATIONS)[number]
 
 type PdfInputFile = File & { id?: string }
+type PageBoundingBox = { left: number; bottom: number; right: number; top: number }
+type TransformationMatrix = [number, number, number, number, number, number]
+type CropResult = {
+  boundingBox?: PageBoundingBox
+  transformationMatrix?: TransformationMatrix
+  width: number
+  height: number
+}
 
 export interface BuildLabelOptions {
   singleLabelSlot?: SingleLabelSlot
   manualCrop?: ManualCropRect | null
   manualCropsByFileId?: Record<string, ManualCropRect>
+  manualCropsByPageId?: Record<string, ManualCropRect>
   chronopostVariantId?: ChronopostVariantId
   includeBrandSignature?: boolean
   mondialRelayVariantId?: MondialRelayVariantId
@@ -94,7 +103,7 @@ function applyCropBox(
   y0: number,
   width: number,
   height: number,
-) {
+): CropResult {
   if (width <= 0 || height <= 0) {
     throw new Error(PDF_TOOL_ERROR_MESSAGES.emptyCrop)
   }
@@ -108,6 +117,10 @@ function applyCropBox(
   page.setArtBox?.(0, 0, width, height)
 
   return { width, height }
+}
+
+function getManualCropPageKey(fileId: string, pageIndex: number) {
+  return `${fileId}:${pageIndex}`
 }
 
 function normalizeCropRule(cropRule: LabelCropRule): Required<LabelCropRule> {
@@ -163,25 +176,95 @@ function cropPageToManualRect(
   page: {
     getWidth: () => number
     getHeight: () => number
-    translateContent: (x: number, y: number) => void
-    resetPosition?: () => void
-    setMediaBox: (x: number, y: number, width: number, height: number) => void
-    setCropBox?: (x: number, y: number, width: number, height: number) => void
-    setTrimBox?: (x: number, y: number, width: number, height: number) => void
-    setBleedBox?: (x: number, y: number, width: number, height: number) => void
-    setArtBox?: (x: number, y: number, width: number, height: number) => void
+    getCropBox?: () => { x: number; y: number; width: number; height: number }
+    getRotation?: () => { angle: number }
   },
   cropRect: ManualCropRect,
-) {
+): CropResult {
   const rect = normalizeManualCropRect(cropRect)
-  const pageWidth = page.getWidth()
-  const pageHeight = page.getHeight()
-  const x0 = pageWidth * rect.x
-  const y0 = pageHeight * (1 - rect.y - rect.height)
-  const width = pageWidth * rect.width
-  const height = pageHeight * rect.height
+  const cropBox = page.getCropBox?.() ?? { x: 0, y: 0, width: page.getWidth(), height: page.getHeight() }
+  const rotation = normalizePdfRotation(page.getRotation?.().angle ?? 0)
+  const viewBox = [cropBox.x, cropBox.y, cropBox.x + cropBox.width, cropBox.y + cropBox.height] as const
+  const centerX = (viewBox[2] + viewBox[0]) / 2
+  const centerY = (viewBox[3] + viewBox[1]) / 2
+  let rotateA = 1
+  let rotateB = 0
+  let rotateC = 0
+  let rotateD = -1
 
-  return applyCropBox(page, x0, y0, width, height)
+  if (rotation === 90) {
+    rotateA = 0
+    rotateB = 1
+    rotateC = 1
+    rotateD = 0
+  } else if (rotation === 180) {
+    rotateA = -1
+    rotateB = 0
+    rotateC = 0
+    rotateD = 1
+  } else if (rotation === 270) {
+    rotateA = 0
+    rotateB = -1
+    rotateC = -1
+    rotateD = 0
+  }
+
+  const isQuarterTurn = rotateA === 0
+  const displayWidth = isQuarterTurn ? cropBox.height : cropBox.width
+  const displayHeight = isQuarterTurn ? cropBox.width : cropBox.height
+  const offsetCanvasX = isQuarterTurn ? Math.abs(centerY - viewBox[1]) : Math.abs(centerX - viewBox[0])
+  const offsetCanvasY = isQuarterTurn ? Math.abs(centerX - viewBox[0]) : Math.abs(centerY - viewBox[1])
+  const transform = [
+    rotateA,
+    rotateB,
+    rotateC,
+    rotateD,
+    offsetCanvasX - rotateA * centerX - rotateC * centerY,
+    offsetCanvasY - rotateB * centerX - rotateD * centerY,
+  ] as const
+  const determinant = transform[0] * transform[3] - transform[1] * transform[2]
+  const toPdfPoint = (displayX: number, displayY: number) => {
+    const x = displayX - transform[4]
+    const y = displayY - transform[5]
+
+    return {
+      x: (transform[3] * x - transform[2] * y) / determinant,
+      y: (-transform[1] * x + transform[0] * y) / determinant,
+    }
+  }
+  const left = rect.x * displayWidth
+  const top = rect.y * displayHeight
+  const right = (rect.x + rect.width) * displayWidth
+  const bottom = (rect.y + rect.height) * displayHeight
+  const points = [
+    toPdfPoint(left, top),
+    toPdfPoint(right, top),
+    toPdfPoint(right, bottom),
+    toPdfPoint(left, bottom),
+  ]
+  const x0 = Math.min(...points.map((point) => point.x))
+  const y0 = Math.min(...points.map((point) => point.y))
+  const x1 = Math.max(...points.map((point) => point.x))
+  const y1 = Math.max(...points.map((point) => point.y))
+
+  return {
+    boundingBox: {
+      left: x0,
+      bottom: y0,
+      right: x1,
+      top: y1,
+    },
+    transformationMatrix: [
+      transform[0],
+      -transform[1],
+      transform[2],
+      -transform[3],
+      transform[4] - left,
+      bottom - transform[5],
+    ],
+    width: displayWidth * rect.width,
+    height: displayHeight * rect.height,
+  }
 }
 
 function getSlotRect(slotIndex: number) {
@@ -323,6 +406,7 @@ export async function buildLabelA4Pdf(
     mondialRelayVariantId: options.mondialRelayVariantId,
   })
   const manualCropsByFileId = options.manualCropsByFileId ?? {}
+  const manualCropsByPageId = options.manualCropsByPageId ?? {}
   const fallbackManualCrop = options.manualCrop ?? DEFAULT_MANUAL_CROP_RECT
   const rotationsByFileId = options.rotationsByFileId ?? {}
   const defaultRotation = normalizePdfRotation(profile.mode === "preset" ? profile.defaultRotation ?? 0 : 0)
@@ -361,22 +445,31 @@ export async function buildLabelA4Pdf(
 
     const copiedPages = await output.copyPages(source, pageIndices)
 
-    for (const copiedPage of copiedPages) {
+    for (const [copiedPageIndex, copiedPage] of copiedPages.entries()) {
+      const sourcePageIndex = pageIndices[copiedPageIndex]
       const rotation = normalizePdfRotation((file.id ? rotationsByFileId[file.id] : undefined) ?? defaultRotation)
-      let croppedSize: { width: number; height: number }
+      let cropResult: CropResult
 
       if (profile.mode === "manual") {
+        const pageCrop =
+          file.id && sourcePageIndex !== undefined
+            ? manualCropsByPageId[getManualCropPageKey(file.id, sourcePageIndex)]
+            : undefined
         const fileCrop = (file.id ? manualCropsByFileId[file.id] : undefined) ?? fallbackManualCrop
-        croppedSize = cropPageToManualRect(copiedPage, fileCrop)
+        cropResult = cropPageToManualRect(copiedPage, pageCrop ?? fileCrop)
       } else if ("cropRect" in profile && profile.cropRect) {
-        croppedSize = cropPageToManualRect(copiedPage, profile.cropRect)
+        cropResult = cropPageToManualRect(copiedPage, profile.cropRect)
       } else if ("crop" in profile && profile.crop) {
-        croppedSize = cropPageToRule(copiedPage, profile.crop)
+        cropResult = cropPageToRule(copiedPage, profile.crop)
       } else {
         throw new Error(PDF_TOOL_ERROR_MESSAGES.incompleteProfile)
       }
 
-      const embeddedPage = await output.embedPage(copiedPage)
+      const embeddedPage = await output.embedPage(
+        copiedPage,
+        cropResult.boundingBox,
+        cropResult.transformationMatrix,
+      )
       const slotIndex =
         shouldUseSingleLabelSlot && options.singleLabelSlot
           ? SINGLE_LABEL_SLOT_MAP[options.singleLabelSlot]
@@ -385,7 +478,7 @@ export async function buildLabelA4Pdf(
       const labelSlotHeight = options.includeBrandSignature
         ? slot.height - BRAND_SIGNATURE_RESERVED_HEIGHT
         : slot.height
-      const rotatedSize = getRotatedSize(croppedSize, rotation)
+      const rotatedSize = getRotatedSize(cropResult, rotation)
       const scale = Math.min(slot.width / rotatedSize.width, labelSlotHeight / rotatedSize.height)
       const drawWidth = rotatedSize.width * scale
       const drawHeight = rotatedSize.height * scale
@@ -394,7 +487,7 @@ export async function buildLabelA4Pdf(
         slot.y +
         (options.includeBrandSignature ? BRAND_SIGNATURE_RESERVED_HEIGHT : 0) +
         (labelSlotHeight - drawHeight) / 2
-      const drawOffset = getRotationDrawOffset(rotation, croppedSize, scale)
+      const drawOffset = getRotationDrawOffset(rotation, cropResult, scale)
 
       currentSheet.drawPage(embeddedPage, {
         x: x + drawOffset.x,
