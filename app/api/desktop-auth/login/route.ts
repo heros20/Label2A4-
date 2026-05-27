@@ -45,6 +45,18 @@ function cleanEmail(value: unknown) {
   return typeof value === "string" ? value.trim().toLowerCase().slice(0, 180) : ""
 }
 
+function isAdminPremiumEmail(email?: string | null) {
+  if (!email) {
+    return false
+  }
+
+  return (process.env.ADMIN_PREMIUM_EMAILS ?? "")
+    .split(",")
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean)
+    .includes(email.toLowerCase())
+}
+
 export async function POST(request: NextRequest) {
   const locale = getRequestLocaleFromRequest(request)
 
@@ -88,13 +100,30 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
 
     if (error || !data.user) {
       return NextResponse.json(
         { error: locale === "en" ? "Invalid login credentials." : "Identifiants invalides." },
         { status: 401 },
       )
+    }
+
+    if (isAdminPremiumEmail(data.user.email)) {
+      return NextResponse.json({
+        email: data.user.email,
+        expiresAt: null,
+        isPremium: true,
+        plan: "annual",
+        subscriptionStatus: "admin",
+        token: createDesktopToken({
+          userId: data.user.id,
+          email: data.user.email,
+        }),
+      })
     }
 
     const planState = await resolveStoredPlanStateForUser(data.user.id)

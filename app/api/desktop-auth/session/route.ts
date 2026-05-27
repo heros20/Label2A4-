@@ -66,6 +66,17 @@ function verifyDesktopToken(token: string): DesktopTokenPayload | null {
   }
 }
 
+function isAdminPremiumEmail(email?: string | null) {
+  return Boolean(
+    email &&
+      (process.env.ADMIN_PREMIUM_EMAILS ?? "")
+        .split(",")
+        .map((item) => item.trim().toLowerCase())
+        .filter(Boolean)
+        .includes(email.toLowerCase()),
+  )
+}
+
 async function handleSession(request: NextRequest) {
   const locale = getRequestLocaleFromRequest(request)
 
@@ -77,6 +88,16 @@ async function handleSession(request: NextRequest) {
         { error: locale === "en" ? "Invalid desktop session." : "Session bureau invalide." },
         { status: 401 },
       )
+    }
+
+    if (isAdminPremiumEmail(tokenPayload.email)) {
+      return NextResponse.json({
+        email: tokenPayload.email,
+        expiresAt: null,
+        isPremium: true,
+        plan: "annual",
+        subscriptionStatus: "admin",
+      })
     }
 
     const planState = await resolveStoredPlanStateForUser(tokenPayload.userId)
