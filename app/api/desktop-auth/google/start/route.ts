@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
-import { getSupabasePublishableKey, getSupabaseUrl, isSupabaseAuthConfigured } from "@/lib/supabase/config"
+import { createRouteSupabaseClient } from "@/lib/supabase/route"
+import { isSupabaseAuthConfigured } from "@/lib/supabase/config"
 
 export const runtime = "nodejs"
 
@@ -10,9 +10,8 @@ export async function GET(request: NextRequest) {
   }
 
   const origin = new URL(request.url).origin
-  const supabase = createClient(getSupabaseUrl(), getSupabasePublishableKey(), {
-    auth: { autoRefreshToken: false, detectSessionInUrl: false, persistSession: false },
-  })
+  const cookieDraft = new NextResponse()
+  const supabase = createRouteSupabaseClient(request, cookieDraft)
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
@@ -29,5 +28,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Connexion Google indisponible." }, { status: 500 })
   }
 
-  return NextResponse.json({ authUrl: data.url })
+  const response = NextResponse.redirect(data.url)
+  cookieDraft.cookies.getAll().forEach((cookie) => response.cookies.set(cookie))
+  return response
 }

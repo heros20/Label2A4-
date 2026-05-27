@@ -1,8 +1,8 @@
 import { createHmac } from "crypto"
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
 import { resolveStoredPlanStateForUser } from "@/lib/billing-store"
-import { getSupabasePublishableKey, getSupabaseUrl, isSupabaseAuthConfigured } from "@/lib/supabase/config"
+import { createRouteSupabaseClient } from "@/lib/supabase/route"
+import { isSupabaseAuthConfigured } from "@/lib/supabase/config"
 
 export const runtime = "nodejs"
 
@@ -61,10 +61,8 @@ export async function GET(request: NextRequest) {
       return redirectToDesktopResult(request, { desktopError: "Code Google manquant." })
     }
 
-    const supabase = createClient(getSupabaseUrl(), getSupabasePublishableKey(), {
-      auth: { autoRefreshToken: false, detectSessionInUrl: false, persistSession: false },
-    })
-
+    const cookieDraft = new NextResponse()
+    const supabase = createRouteSupabaseClient(request, cookieDraft)
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (error || !data.user) {
