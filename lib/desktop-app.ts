@@ -9,8 +9,8 @@ export const DESKTOP_APP_FILE_NAME = "Label2A4-Setup.exe"
 export const DESKTOP_APP_DOWNLOAD_PATH = "/api/desktop-app/download"
 export const DESKTOP_APP_MAX_SIZE_BYTES = 120 * 1024 * 1024
 
-const desktopAppBucket = "desktop-app"
-const desktopAppObjectPath = `setup/${DESKTOP_APP_FILE_NAME}`
+export const DESKTOP_APP_BUCKET = "desktop-app"
+export const DESKTOP_APP_OBJECT_PATH = `setup/${DESKTOP_APP_FILE_NAME}`
 const desktopAppDirectory = path.join(process.cwd(), "public", "downloads")
 const desktopAppPath = path.join(desktopAppDirectory, DESKTOP_APP_FILE_NAME)
 
@@ -37,6 +37,20 @@ interface SupabaseStorageFileObject {
   updated_at?: string
 }
 
+export function validateDesktopAppInstallerMetadata(fileName: string, sizeBytes: number) {
+  if (!fileName.toLowerCase().endsWith(".exe")) {
+    throw new Error("Le fichier doit etre un executable .exe.")
+  }
+
+  if (sizeBytes <= 0) {
+    throw new Error("Le fichier est vide.")
+  }
+
+  if (sizeBytes > DESKTOP_APP_MAX_SIZE_BYTES) {
+    throw new Error("Le fichier est trop volumineux pour cet upload.")
+  }
+}
+
 async function getLocalDesktopAppFileInfo(): Promise<DesktopAppFileInfo> {
   try {
     const fileStat = await stat(desktopAppPath)
@@ -59,13 +73,13 @@ async function getLocalDesktopAppFileInfo(): Promise<DesktopAppFileInfo> {
 
 async function ensureDesktopAppBucket() {
   const supabase = getSupabaseAdminClient()
-  const { error: getBucketError } = await supabase.storage.getBucket(desktopAppBucket)
+  const { error: getBucketError } = await supabase.storage.getBucket(DESKTOP_APP_BUCKET)
 
   if (!getBucketError) {
     return
   }
 
-  const { error: createBucketError } = await supabase.storage.createBucket(desktopAppBucket, {
+  const { error: createBucketError } = await supabase.storage.createBucket(DESKTOP_APP_BUCKET, {
     fileSizeLimit: DESKTOP_APP_MAX_SIZE_BYTES,
     public: false,
   })
@@ -77,7 +91,7 @@ async function ensureDesktopAppBucket() {
 
 async function getSupabaseDesktopAppFileInfo(): Promise<DesktopAppFileInfo> {
   const supabase = getSupabaseAdminClient()
-  const { data, error } = await supabase.storage.from(desktopAppBucket).list("setup", {
+  const { data, error } = await supabase.storage.from(DESKTOP_APP_BUCKET).list("setup", {
     limit: 20,
     search: DESKTOP_APP_FILE_NAME,
   })
@@ -109,17 +123,7 @@ export async function getDesktopAppFileInfo(): Promise<DesktopAppFileInfo> {
 }
 
 export async function saveDesktopAppInstaller(file: File) {
-  if (!file.name.toLowerCase().endsWith(".exe")) {
-    throw new Error("Le fichier doit etre un executable .exe.")
-  }
-
-  if (file.size <= 0) {
-    throw new Error("Le fichier est vide.")
-  }
-
-  if (file.size > DESKTOP_APP_MAX_SIZE_BYTES) {
-    throw new Error("Le fichier est trop volumineux pour cet upload.")
-  }
+  validateDesktopAppInstallerMetadata(file.name, file.size)
 
   const bytes = Buffer.from(await file.arrayBuffer())
 
@@ -127,7 +131,7 @@ export async function saveDesktopAppInstaller(file: File) {
     await ensureDesktopAppBucket()
 
     const supabase = getSupabaseAdminClient()
-    const { error } = await supabase.storage.from(desktopAppBucket).upload(desktopAppObjectPath, bytes, {
+    const { error } = await supabase.storage.from(DESKTOP_APP_BUCKET).upload(DESKTOP_APP_OBJECT_PATH, bytes, {
       cacheControl: "60",
       contentType: "application/vnd.microsoft.portable-executable",
       upsert: true,
@@ -149,7 +153,7 @@ export async function saveDesktopAppInstaller(file: File) {
 export async function getDesktopAppDownload(): Promise<DesktopAppDownload | null> {
   if (isSupabaseAdminConfigured()) {
     const supabase = getSupabaseAdminClient()
-    const { data, error } = await supabase.storage.from(desktopAppBucket).download(desktopAppObjectPath)
+    const { data, error } = await supabase.storage.from(DESKTOP_APP_BUCKET).download(DESKTOP_APP_OBJECT_PATH)
 
     if (!error && data) {
       return {
@@ -169,4 +173,24 @@ export async function getDesktopAppDownload(): Promise<DesktopAppDownload | null
   } catch {
     return null
   }
+}
+
+export async function createDesktopAppSignedUpload(fileName: string, sizeBytes: number) {
+  if (!isSupabaseAdminConfigured()) {
+    throw new Error("Configuration Supabase Storage requise pour uploader ce fichier.")
+  }
+
+  validateDesktopAppInstallerMetadata(fileName, sizeBytes)
+  await ensureDesktopAppBucket()
+
+  const supabase = getSupabaseAdminClient()
+  const { data, error } = await supabase.storage
+    .from(DESKTOP_APP_BUCKET)
+    .createSignedUploadUrl(DESKTOP_APP_OBJECT_PATH, { upsert: true })
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  return data
 }

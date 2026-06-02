@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from "next/server"
 import { isAdminDashboardConfigured, isAdminRequestAuthenticated } from "@/lib/admin-auth"
-import { saveDesktopAppInstaller } from "@/lib/desktop-app"
+import {
+  DESKTOP_APP_BUCKET,
+  createDesktopAppSignedUpload,
+  getDesktopAppFileInfo,
+} from "@/lib/desktop-app"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 function jsonError(message: string, status: number) {
   return NextResponse.json({ error: message }, { status })
+}
+
+interface DesktopAppAdminPayload {
+  action?: unknown
+  fileName?: unknown
+  sizeBytes?: unknown
 }
 
 export async function POST(request: NextRequest) {
@@ -19,23 +29,44 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const formData = await request.formData()
-    const file = formData.get("installer")
+    const payload = (await request.json()) as DesktopAppAdminPayload
+    const action = typeof payload.action === "string" ? payload.action : ""
 
-    if (!(file instanceof File)) {
-      return jsonError("Fichier setup.exe manquant.", 400)
+    if (action === "prepare-upload") {
+      if (typeof payload.fileName !== "string" || typeof payload.sizeBytes !== "number") {
+        return jsonError("Informations du fichier manquantes.", 400)
+      }
+
+      const signedUpload = await createDesktopAppSignedUpload(payload.fileName, payload.sizeBytes)
+      return NextResponse.json({
+        ok: true,
+        upload: {
+          bucket: DESKTOP_APP_BUCKET,
+          path: signedUpload.path,
+          token: signedUpload.token,
+        },
+      })
     }
 
-    const info = await saveDesktopAppInstaller(file)
-    return NextResponse.json({
-      ok: true,
-      file: {
-        exists: info.exists,
-        fileName: info.fileName,
-        sizeBytes: info.sizeBytes,
-        updatedAt: info.updatedAt?.toISOString() ?? null,
-      },
-    })
+    if (action === "complete-upload") {
+      const info = await getDesktopAppFileInfo()
+
+      if (!info.exists) {
+        return jsonError("Upload non retrouve dans le stockage.", 400)
+      }
+
+      return NextResponse.json({
+        ok: true,
+        file: {
+          exists: info.exists,
+          fileName: info.fileName,
+          sizeBytes: info.sizeBytes,
+          updatedAt: info.updatedAt?.toISOString() ?? null,
+        },
+      })
+    }
+
+    return jsonError("Action admin inconnue.", 400)
   } catch (error) {
     const message = error instanceof Error ? error.message : "Impossible de remplacer l'application bureau."
     console.error("[label2a4-admin-desktop-app-upload]", error)

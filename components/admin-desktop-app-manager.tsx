@@ -3,13 +3,40 @@
 import { Upload } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
 import { formatFileSize } from "@/lib/utils"
+
+const desktopAppMaxSizeBytes = 120 * 1024 * 1024
 
 interface AdminDesktopAppManagerProps {
   exists: boolean
   fileName: string
   sizeBytes: number
   updatedAt: string | null
+}
+
+interface AdminDesktopAppResponse {
+  error?: string
+  ok?: boolean
+  upload?: {
+    bucket: string
+    path: string
+    token: string
+  }
+}
+
+async function readJsonResponse(response: Response): Promise<AdminDesktopAppResponse> {
+  const text = await response.text()
+
+  if (!text) {
+    return {}
+  }
+
+  try {
+    return JSON.parse(text) as AdminDesktopAppResponse
+  } catch {
+    return { error: text.slice(0, 180) }
+  }
 }
 
 export function AdminDesktopAppManager({
@@ -32,14 +59,64 @@ export function AdminDesktopAppManager({
     try {
       const form = event.currentTarget
       const formData = new FormData(form)
-      const response = await fetch("/api/admin/desktop-app", {
-        method: "POST",
-        body: formData,
-      })
-      const payload = (await response.json()) as { error?: string; ok?: boolean }
+      const installer = formData.get("installer")
 
-      if (!response.ok || !payload.ok) {
-        throw new Error(payload.error ?? "Upload impossible.")
+      if (!(installer instanceof File)) {
+        throw new Error("Selectionnez un setup.exe.")
+      }
+
+      if (!installer.name.toLowerCase().endsWith(".exe")) {
+        throw new Error("Le fichier doit etre un executable .exe.")
+      }
+
+      if (installer.size <= 0) {
+        throw new Error("Le fichier est vide.")
+      }
+
+      if (installer.size > desktopAppMaxSizeBytes) {
+        throw new Error("Le fichier est trop volumineux pour cet upload.")
+      }
+
+      const prepareResponse = await fetch("/api/admin/desktop-app", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "prepare-upload",
+          fileName: installer.name,
+          sizeBytes: installer.size,
+        }),
+      })
+      const preparePayload = await readJsonResponse(prepareResponse)
+
+      if (!prepareResponse.ok || !preparePayload.ok || !preparePayload.upload) {
+        throw new Error(preparePayload.error ?? "Preparation de l'upload impossible.")
+      }
+
+      const supabase = getSupabaseBrowserClient()
+      const { error: uploadError } = await supabase.storage
+        .from(preparePayload.upload.bucket)
+        .uploadToSignedUrl(preparePayload.upload.path, preparePayload.upload.token, installer, {
+          cacheControl: "60",
+          contentType: "application/vnd.microsoft.portable-executable",
+        })
+
+      if (uploadError) {
+        throw new Error(uploadError.message)
+      }
+
+      const completeResponse = await fetch("/api/admin/desktop-app", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ action: "complete-upload" }),
+      })
+      const completePayload = await readJsonResponse(completeResponse)
+
+      if (!completeResponse.ok || !completePayload.ok) {
+        throw new Error(completePayload.error ?? "Finalisation de l'upload impossible.")
       }
 
       form.reset()
