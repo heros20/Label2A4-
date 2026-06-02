@@ -204,8 +204,10 @@ export default async function AdminPage() {
         </div>
         <div className="mt-5">
           <AdminDesktopAppManager
+            downloadUrl={desktopAppFile.downloadUrl}
             exists={desktopAppFile.exists}
             fileName={desktopAppFile.fileName}
+            source={desktopAppFile.source}
             sizeBytes={desktopAppFile.sizeBytes}
             updatedAt={desktopAppFile.updatedAt?.toLocaleString("fr-FR") ?? null}
           />

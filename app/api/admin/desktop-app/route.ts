@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { isAdminDashboardConfigured, isAdminRequestAuthenticated } from "@/lib/admin-auth"
 import {
-  DESKTOP_APP_BUCKET,
-  createDesktopAppSignedUpload,
   getDesktopAppFileInfo,
+  saveDesktopAppReleaseUrl,
 } from "@/lib/desktop-app"
 
 export const runtime = "nodejs"
@@ -15,8 +14,7 @@ function jsonError(message: string, status: number) {
 
 interface DesktopAppAdminPayload {
   action?: unknown
-  fileName?: unknown
-  sizeBytes?: unknown
+  downloadUrl?: unknown
 }
 
 export async function POST(request: NextRequest) {
@@ -32,38 +30,28 @@ export async function POST(request: NextRequest) {
     const payload = (await request.json()) as DesktopAppAdminPayload
     const action = typeof payload.action === "string" ? payload.action : ""
 
-    if (action === "prepare-upload") {
-      if (typeof payload.fileName !== "string" || typeof payload.sizeBytes !== "number") {
-        return jsonError("Informations du fichier manquantes.", 400)
+    if (action === "update-release-url") {
+      if (typeof payload.downloadUrl !== "string") {
+        return jsonError("URL GitHub Release manquante.", 400)
       }
 
-      const signedUpload = await createDesktopAppSignedUpload(payload.fileName, payload.sizeBytes)
-      return NextResponse.json({
-        ok: true,
-        upload: {
-          bucket: DESKTOP_APP_BUCKET,
-          path: signedUpload.path,
-          token: signedUpload.token,
-        },
-      })
-    }
-
-    if (action === "complete-upload") {
-      const info = await getDesktopAppFileInfo()
-
-      if (!info.exists) {
-        return jsonError("Upload non retrouve dans le stockage.", 400)
-      }
-
+      const info = await saveDesktopAppReleaseUrl(payload.downloadUrl)
       return NextResponse.json({
         ok: true,
         file: {
+          downloadUrl: info.downloadUrl,
           exists: info.exists,
           fileName: info.fileName,
+          source: info.source,
           sizeBytes: info.sizeBytes,
           updatedAt: info.updatedAt?.toISOString() ?? null,
         },
       })
+    }
+
+    if (action === "status") {
+      const info = await getDesktopAppFileInfo()
+      return NextResponse.json({ ok: true, file: info })
     }
 
     return jsonError("Action admin inconnue.", 400)

@@ -1,28 +1,22 @@
 "use client"
 
-import { Upload } from "lucide-react"
+import { ExternalLink, Link as LinkIcon, Save } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
 import { formatFileSize } from "@/lib/utils"
 
-const desktopAppMaxSizeBytes = 120 * 1024 * 1024
-
 interface AdminDesktopAppManagerProps {
+  downloadUrl: string | null
   exists: boolean
   fileName: string
   sizeBytes: number
+  source: "github-release" | "storage-file" | "missing"
   updatedAt: string | null
 }
 
 interface AdminDesktopAppResponse {
   error?: string
   ok?: boolean
-  upload?: {
-    bucket: string
-    path: string
-    token: string
-  }
 }
 
 async function readJsonResponse(response: Response): Promise<AdminDesktopAppResponse> {
@@ -40,102 +34,65 @@ async function readJsonResponse(response: Response): Promise<AdminDesktopAppResp
 }
 
 export function AdminDesktopAppManager({
+  downloadUrl,
   exists,
   fileName,
   sizeBytes,
+  source,
   updatedAt,
 }: AdminDesktopAppManagerProps) {
   const router = useRouter()
-  const [isUploading, setIsUploading] = useState(false)
+  const [releaseUrl, setReleaseUrl] = useState(downloadUrl ?? "")
+  const [isSaving, setIsSaving] = useState(false)
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
 
-  const uploadInstaller = async (event: React.FormEvent<HTMLFormElement>) => {
+  const saveReleaseUrl = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    setIsUploading(true)
+    setIsSaving(true)
     setMessage("")
     setError("")
 
     try {
-      const form = event.currentTarget
-      const formData = new FormData(form)
-      const installer = formData.get("installer")
-
-      if (!(installer instanceof File)) {
-        throw new Error("Selectionnez un setup.exe.")
-      }
-
-      if (!installer.name.toLowerCase().endsWith(".exe")) {
-        throw new Error("Le fichier doit etre un executable .exe.")
-      }
-
-      if (installer.size <= 0) {
-        throw new Error("Le fichier est vide.")
-      }
-
-      if (installer.size > desktopAppMaxSizeBytes) {
-        throw new Error("Le fichier est trop volumineux pour cet upload.")
-      }
-
-      const prepareResponse = await fetch("/api/admin/desktop-app", {
+      const response = await fetch("/api/admin/desktop-app", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          action: "prepare-upload",
-          fileName: installer.name,
-          sizeBytes: installer.size,
+          action: "update-release-url",
+          downloadUrl: releaseUrl,
         }),
       })
-      const preparePayload = await readJsonResponse(prepareResponse)
+      const payload = await readJsonResponse(response)
 
-      if (!prepareResponse.ok || !preparePayload.ok || !preparePayload.upload) {
-        throw new Error(preparePayload.error ?? "Preparation de l'upload impossible.")
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.error ?? "Impossible d'enregistrer l'URL.")
       }
 
-      const supabase = getSupabaseBrowserClient()
-      const { error: uploadError } = await supabase.storage
-        .from(preparePayload.upload.bucket)
-        .uploadToSignedUrl(preparePayload.upload.path, preparePayload.upload.token, installer, {
-          cacheControl: "60",
-          contentType: "application/vnd.microsoft.portable-executable",
-        })
-
-      if (uploadError) {
-        throw new Error(uploadError.message)
-      }
-
-      const completeResponse = await fetch("/api/admin/desktop-app", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ action: "complete-upload" }),
-      })
-      const completePayload = await readJsonResponse(completeResponse)
-
-      if (!completeResponse.ok || !completePayload.ok) {
-        throw new Error(completePayload.error ?? "Finalisation de l'upload impossible.")
-      }
-
-      form.reset()
-      setMessage("Application bureau remplacee.")
+      setMessage("URL GitHub Release enregistree.")
       router.refresh()
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : "Upload impossible.")
+      setError(caughtError instanceof Error ? caughtError.message : "Impossible d'enregistrer l'URL.")
     } finally {
-      setIsUploading(false)
+      setIsSaving(false)
     }
   }
 
+  const statusLabel =
+    source === "github-release"
+      ? "GitHub Release configuree"
+      : source === "storage-file"
+        ? "Ancien fichier disponible"
+        : "Aucune URL"
+
   return (
-    <form onSubmit={uploadInstaller} className="rounded-[20px] border border-slate-200/80 bg-white/85 p-4">
+    <form onSubmit={saveReleaseUrl} className="rounded-[20px] border border-slate-200/80 bg-white/85 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h3 className="font-semibold text-slate-950">Application bureau</h3>
           <p className="mt-1 text-sm leading-6 text-slate-600">
-            Remplace le setup telecharge par les utilisateurs depuis le bouton du header.
+            Collez l'URL directe de l'asset setup.exe publie dans une GitHub Release.
           </p>
         </div>
         <div
@@ -145,7 +102,7 @@ export function AdminDesktopAppManager({
               : "w-fit rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800"
           }
         >
-          {exists ? "Fichier disponible" : "Aucun fichier"}
+          {statusLabel}
         </div>
       </div>
 
@@ -155,32 +112,51 @@ export function AdminDesktopAppManager({
         </p>
         <p>
           <strong className="text-slate-900">Statut :</strong>{" "}
-          {exists
-            ? `${formatFileSize(sizeBytes)}${updatedAt ? `, remplace le ${updatedAt}` : ""}`
-            : "Ajoutez un setup.exe pour activer le telechargement."}
+          {source === "github-release"
+            ? updatedAt
+              ? `URL remplacee le ${updatedAt}`
+              : "URL GitHub Release active"
+            : source === "storage-file"
+              ? `${formatFileSize(sizeBytes)}${updatedAt ? `, remplace le ${updatedAt}` : ""}`
+              : "Ajoutez une URL GitHub Release pour activer le telechargement."}
         </p>
+        {downloadUrl && (
+          <a
+            href={downloadUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-flex items-center gap-2 font-medium text-sky-800 underline"
+          >
+            <ExternalLink className="h-4 w-4" />
+            Ouvrir l'asset configure
+          </a>
+        )}
       </div>
 
-      <fieldset disabled={isUploading} className="mt-4 grid gap-3">
+      <fieldset disabled={isSaving} className="mt-4 grid gap-3">
         <label className="grid gap-2 text-sm font-medium text-slate-700">
-          Nouveau setup.exe
-          <input
-            type="file"
-            name="installer"
-            accept=".exe,application/vnd.microsoft.portable-executable,application/x-msdownload"
-            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition file:mr-4 file:rounded-full file:border-0 file:bg-slate-950 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
-            required
-          />
+          URL GitHub Release
+          <div className="relative">
+            <LinkIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="url"
+              value={releaseUrl}
+              onChange={(event) => setReleaseUrl(event.currentTarget.value)}
+              placeholder="https://github.com/..."
+              className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+              required
+            />
+          </div>
         </label>
 
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="submit"
-            disabled={isUploading}
+            disabled={isSaving}
             className="inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50"
           >
-            <Upload className="mr-2 h-4 w-4" />
-            {isUploading ? "Upload..." : "Remplacer le setup"}
+            <Save className="mr-2 h-4 w-4" />
+            {isSaving ? "Enregistrement..." : "Enregistrer l'URL"}
           </button>
           {message && <p className="text-sm font-medium text-emerald-700">{message}</p>}
           {error && <p className="text-sm font-medium text-red-600">{error}</p>}
