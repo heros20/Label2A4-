@@ -76,6 +76,15 @@ async function ensureDesktopAppBucket() {
   const { error: getBucketError } = await supabase.storage.getBucket(DESKTOP_APP_BUCKET)
 
   if (!getBucketError) {
+    const { error: updateBucketError } = await supabase.storage.updateBucket(DESKTOP_APP_BUCKET, {
+      fileSizeLimit: DESKTOP_APP_MAX_SIZE_BYTES,
+      public: false,
+    })
+
+    if (updateBucketError) {
+      throw new Error(updateBucketError.message)
+    }
+
     return
   }
 
