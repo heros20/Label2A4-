@@ -1,9 +1,11 @@
 import { AdminLoginForm } from "@/components/admin-login-form"
 import { AdminLogoutButton } from "@/components/admin-logout-button"
+import { AdminDesktopAppManager } from "@/components/admin-desktop-app-manager"
 import { AdminPromoManager } from "@/components/admin-promo-manager"
 import { PageShell } from "@/components/page-shell"
 import { isAdminAuthenticated, isAdminDashboardConfigured } from "@/lib/admin-auth"
 import { getAdminDashboardData } from "@/lib/admin-dashboard"
+import { getDesktopAppFileInfo } from "@/lib/desktop-app"
 
 export const metadata = {
   title: "Admin",
@@ -80,7 +82,7 @@ export default async function AdminPage() {
     )
   }
 
-  const dashboard = await getAdminDashboardData()
+  const [dashboard, desktopAppFile] = await Promise.all([getAdminDashboardData(), getDesktopAppFileInfo()])
   const stripeDashboardBaseUrl = (process.env.STRIPE_SECRET_KEY ?? "").startsWith("sk_test_")
     ? "https://dashboard.stripe.com/test"
     : "https://dashboard.stripe.com"
@@ -119,6 +121,12 @@ export default async function AdminPage() {
           className="rounded-full border border-slate-200/80 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-sky-300 hover:text-sky-800"
         >
           Promos
+        </a>
+        <a
+          href="#application-bureau"
+          className="rounded-full border border-slate-200/80 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-sky-300 hover:text-sky-800"
+        >
+          App bureau
         </a>
         <a
           href="#operations-admin"
@@ -182,6 +190,25 @@ export default async function AdminPage() {
           <div className="mt-4">
             <AdminPromoManager configured={dashboard.promoCodesConfigured} promoCodes={dashboard.promoCodes} />
           </div>
+        </div>
+      </section>
+
+      <section id="application-bureau" className={cardClass}>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-700">
+              Application bureau
+            </div>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Setup de telechargement</h2>
+          </div>
+        </div>
+        <div className="mt-5">
+          <AdminDesktopAppManager
+            exists={desktopAppFile.exists}
+            fileName={desktopAppFile.fileName}
+            sizeBytes={desktopAppFile.sizeBytes}
+            updatedAt={desktopAppFile.updatedAt?.toLocaleString("fr-FR") ?? null}
+          />
         </div>
       </section>
 

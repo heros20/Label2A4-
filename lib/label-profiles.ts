@@ -149,6 +149,19 @@ export const LABEL_PROFILES = [
     cropRect: MONDIAL_RELAY_VARIANTS[0].cropRect,
   },
   {
+    id: "vinted",
+    slug: "vinted",
+    title: "Vinted",
+    shortLabel: "Vinted",
+    mode: "preset",
+    cropRect: {
+      x: 0,
+      y: 0,
+      width: 0.5,
+      height: 0.5,
+    },
+  },
+  {
     id: "happy-post",
     slug: "happy-post",
     title: "Happy Post",

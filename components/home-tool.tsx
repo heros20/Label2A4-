@@ -114,6 +114,10 @@ const TRANSPORTER_LOGOS: Record<string, { src: string; alt: string }> = {
     src: "/images/logo/mondial-relais.png",
     alt: "Logo Mondial Relay",
   },
+  vinted: {
+    src: "/images/logo/vinted.jpg",
+    alt: "Logo Vinted",
+  },
   fedex: {
     src: "/images/logo/Fedex.png",
     alt: "Logo FedEx",
@@ -1477,6 +1481,13 @@ export function HomeTool({ locale }: { locale: Locale }) {
         <header className="relative mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <SiteLogo markClassName="h-11 w-11" textClassName="text-2xl" />
           <div className="flex flex-wrap items-center gap-2">
+            <a
+              href="/api/desktop-app/download"
+              className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-900 shadow-sm transition hover:border-emerald-300 hover:bg-white"
+            >
+              <Download className="h-4 w-4" />
+              {locale === "en" ? "Desktop app" : "Application bureau"}
+            </a>
             {isLoadingAccess && !accessSnapshot ? (
               <span className="rounded-full border border-slate-200/80 bg-white/70 px-4 py-2 text-sm font-semibold text-slate-500">
                 {locale === "en" ? "Account..." : "Compte..."}
@@ -1543,7 +1554,7 @@ export function HomeTool({ locale }: { locale: Locale }) {
 
             <div className="mt-6 flex flex-wrap gap-3 text-sm text-slate-700">
               <span className="rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 shadow-sm">
-                Chronopost, Colissimo, Mondial Relay, Happy Post, FedEx, DHL
+                Chronopost, Colissimo, Mondial Relay, Vinted, Happy Post, FedEx, DHL
               </span>
               <span className="rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 shadow-sm">
                 {locale === "en" ? "Free test with preview" : "Test gratuit avec aperçu"}

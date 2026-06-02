@@ -3,17 +3,18 @@ import type { Locale } from "@/lib/i18n"
 
 const profileDisplay = {
   fr: {
-    chronopost: { title: "Chronopost", shortLabel: "Chronopost", description: "Format optimisé automatiquement." },
-    colissimo: { title: "Colissimo", shortLabel: "Colissimo", description: "Format optimisé automatiquement." },
+    chronopost: { title: "Chronopost", shortLabel: "Chronopost", description: "Format optimise automatiquement." },
+    colissimo: { title: "Colissimo", shortLabel: "Colissimo", description: "Format optimise automatiquement." },
     "mondial-relay": {
       title: "Mondial Relay",
       shortLabel: "Mondial Relay",
-      description: "Format optimisé automatiquement.",
+      description: "Format optimise automatiquement.",
     },
-    "happy-post": { title: "Happy Post", shortLabel: "Happy Post", description: "Format optimisé automatiquement." },
-    fedex: { title: "FedEx", shortLabel: "FedEx", description: "Format optimisé automatiquement." },
-    dhl: { title: "DHL", shortLabel: "DHL", description: "Format optimisé automatiquement." },
-    manual: { title: "Rognage manuel", shortLabel: "Manuel", description: "Sélection directe sur l’aperçu du PDF." },
+    vinted: { title: "Vinted", shortLabel: "Vinted", description: "Rognage Vinted pret a imprimer." },
+    "happy-post": { title: "Happy Post", shortLabel: "Happy Post", description: "Format optimise automatiquement." },
+    fedex: { title: "FedEx", shortLabel: "FedEx", description: "Format optimise automatiquement." },
+    dhl: { title: "DHL", shortLabel: "DHL", description: "Format optimise automatiquement." },
+    manual: { title: "Rognage manuel", shortLabel: "Manuel", description: "Selection directe sur l'aperçu du PDF." },
   },
   en: {
     chronopost: { title: "Chronopost", shortLabel: "Chronopost", description: "Carrier layout applied automatically." },
@@ -23,6 +24,7 @@ const profileDisplay = {
       shortLabel: "Mondial Relay",
       description: "Carrier layout applied automatically.",
     },
+    vinted: { title: "Vinted", shortLabel: "Vinted", description: "Vinted crop ready to print." },
     "happy-post": { title: "Happy Post", shortLabel: "Happy Post", description: "Carrier layout applied automatically." },
     fedex: { title: "FedEx", shortLabel: "FedEx", description: "Carrier layout applied automatically." },
     dhl: { title: "DHL", shortLabel: "DHL", description: "Carrier layout applied automatically." },
@@ -43,8 +45,8 @@ const chronopostVariantDisplay = {
 
 const mondialRelayVariantDisplay = {
   fr: {
-    "variant-1": { title: "Variante 1", shortLabel: "V1", description: "Découpe principale" },
-    "variant-2": { title: "Variante 2", shortLabel: "V2", description: "Découpe alternative" },
+    "variant-1": { title: "Variante 1", shortLabel: "V1", description: "Decoupe principale" },
+    "variant-2": { title: "Variante 2", shortLabel: "V2", description: "Decoupe alternative" },
   },
   en: {
     "variant-1": { title: "Variant 1", shortLabel: "V1", description: "Primary layout" },
