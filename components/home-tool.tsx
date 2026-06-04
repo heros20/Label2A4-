@@ -1625,7 +1625,7 @@ export function HomeTool({ locale }: { locale: Locale }) {
               </div>
             </div>
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div className="rounded-[22px] border border-emerald-200/80 bg-emerald-50/80 p-4 text-emerald-950">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
                   <Leaf className="h-4 w-4" />
@@ -1636,6 +1636,20 @@ export function HomeTool({ locale }: { locale: Locale }) {
                 </div>
                 <p className="mt-1 text-sm leading-5 text-emerald-900">
                   {locale === "en" ? "A4 sheets already saved" : "feuilles A4 déjà économisées"}
+                </p>
+              </div>
+              <div className="rounded-[22px] border border-sky-200/80 bg-sky-50/80 p-4 text-sky-950">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-sky-700">
+                  <FileText className="h-4 w-4" />
+                  {locale === "en" ? "Labels" : "Étiquettes"}
+                </div>
+                <div className="mt-2 text-2xl font-semibold">
+                  {formatInteger(impactSnapshot?.platform.labelsOptimized ?? 0)}
+                </div>
+                <p className="mt-1 text-sm leading-5 text-sky-900">
+                  {locale === "en"
+                    ? "labels generated since the project launched"
+                    : "étiquettes générées depuis la création du projet"}
                 </p>
               </div>
               <div className="rounded-[22px] border border-slate-200/80 bg-white/86 p-4 text-slate-900">

@@ -566,6 +566,18 @@ export async function consumeExportQuota(
   const exportId = normalizeExportId(input.exportId)
 
   if (planState.isPremium) {
+    const exportedDocuments = readExportedDocumentsCookie(request, anonymousId, quota.dayKey)
+    const alreadyExported = exportId ? exportedDocuments.has(exportId) : false
+
+    if (exportId && !alreadyExported) {
+      exportedDocuments.add(exportId)
+      writeExportedDocumentsCookie(response, {
+        anonymousId,
+        dayKey: quota.dayKey,
+        exportIds: exportedDocuments,
+      })
+    }
+
     logEvent({
       anonymousId,
       plan: planState.plan,
@@ -574,11 +586,12 @@ export async function consumeExportQuota(
       fileName: input.fileName,
       quotaKind,
       result: "premium-allowed",
+      alreadyExported,
     })
 
     return {
       allowed: true,
-      consumedSheets: input.sheetCount,
+      consumedSheets: alreadyExported ? 0 : input.sheetCount,
       snapshot: buildSnapshot(anonymousId, quota, planState, authState),
     }
   }
