@@ -1,4 +1,5 @@
 import { degrees, PDFDocument, rgb, StandardFonts } from "pdf-lib"
+import * as QRCode from "qrcode"
 import {
   DEFAULT_MANUAL_CROP_RECT,
   getResolvedLabelProfile,
@@ -23,8 +24,11 @@ const ROWS = 2
 const COLUMNS = 2
 const MIN_CROP_SIZE = 0.01
 const BRAND_SIGNATURE_TEXT = "imprimé par Label2a4.com"
+const BRAND_SIGNATURE_URL = "https://label2a4.com"
 const BRAND_SIGNATURE_LOGO_URL = "/images/logo/label2a4-mark.png"
-const BRAND_SIGNATURE_RESERVED_HEIGHT = 13
+const BRAND_SIGNATURE_RESERVED_HEIGHT = 26
+const BRAND_SIGNATURE_QR_SIZE = 20
+const BRAND_SIGNATURE_QR_QUIET_MODULES = 2
 
 // The user wants labels to fill the A4 in this exact order.
 const SLOT_ORDER = [1, 0, 3, 2] as const
@@ -360,30 +364,79 @@ function drawBrandSignature({
   const logoSize = 8
   const gap = 3
   const { font, logo } = assets
+  const qrCode = QRCode.create(BRAND_SIGNATURE_URL, { errorCorrectionLevel: "M" })
   const textWidth = font.widthOfTextAtSize(BRAND_SIGNATURE_TEXT, fontSize)
-  const signatureWidth = (logo ? logoSize + gap : 0) + textWidth
+  const signatureWidth = (logo ? logoSize + gap : 0) + BRAND_SIGNATURE_QR_SIZE + gap + textWidth
   const x = slot.x + slot.width - signatureWidth - 4
-  const y = slot.y + 3
+  const qrY = slot.y + 3
+  const textY = qrY + (BRAND_SIGNATURE_QR_SIZE - fontSize) / 2
   const color = rgb(0.32, 0.36, 0.42)
+  const qrX = logo ? x + logoSize + gap : x
+  const textX = qrX + BRAND_SIGNATURE_QR_SIZE + gap
 
   if (logo) {
     page.drawImage(logo, {
       x,
-      y: y - 1,
+      y: qrY + (BRAND_SIGNATURE_QR_SIZE - logoSize) / 2,
       width: logoSize,
       height: logoSize,
       opacity: 0.82,
     })
   }
 
+  drawQrCode({ page, qrCode, x: qrX, y: qrY, size: BRAND_SIGNATURE_QR_SIZE })
+
   page.drawText(BRAND_SIGNATURE_TEXT, {
-    x: logo ? x + logoSize + gap : x,
-    y,
+    x: textX,
+    y: textY,
     size: fontSize,
     font,
     color,
     opacity: 0.95,
   })
+}
+
+function drawQrCode({
+  page,
+  qrCode,
+  x,
+  y,
+  size,
+}: {
+  page: ReturnType<PDFDocument["addPage"]>
+  qrCode: QRCode.QRCode
+  x: number
+  y: number
+  size: number
+}) {
+  const quietModules = BRAND_SIGNATURE_QR_QUIET_MODULES
+  const moduleCount = qrCode.modules.size
+  const totalModules = moduleCount + quietModules * 2
+  const moduleSize = size / totalModules
+
+  page.drawRectangle({
+    x,
+    y,
+    width: size,
+    height: size,
+    color: rgb(1, 1, 1),
+  })
+
+  for (let row = 0; row < moduleCount; row += 1) {
+    for (let column = 0; column < moduleCount; column += 1) {
+      if (!qrCode.modules.get(row, column)) {
+        continue
+      }
+
+      page.drawRectangle({
+        x: x + (column + quietModules) * moduleSize,
+        y: y + size - (row + quietModules + 1) * moduleSize,
+        width: moduleSize,
+        height: moduleSize,
+        color: rgb(0, 0, 0),
+      })
+    }
+  }
 }
 
 export async function getPdfPageCount(file: Blob) {
